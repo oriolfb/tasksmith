@@ -2,31 +2,33 @@ import { ItemView, type WorkspaceLeaf } from "obsidian";
 import type { TaskIndex } from "../index/TaskIndex";
 import type { TaskActions } from "../tasks/TaskActions";
 import type { TaskConsoleSettings } from "../settings/Config";
-import { DEFAULT_QUERY, type QueryContext, type QueryState, runQuery } from "../query/Query";
+import { DEFAULT_QUERY, type QueryContext, type QueryState, type TaskGroup, runQuery } from "../query/Query";
 import { startOfToday } from "../index/dates";
-import { TaskListRenderer, type RendererOptions } from "./TaskListRenderer";
 
+/**
+ * The plumbing a query-driven view needs: the query state, the index subscription, a coalesced
+ * refresh, and the hand-off filter from the dock's "N més". It knows nothing about how the
+ * result is drawn — that is `paint`.
+ */
 export abstract class BaseTaskView extends ItemView {
   protected query: QueryState = { ...DEFAULT_QUERY };
-  protected renderer: TaskListRenderer;
-  protected listHost!: HTMLElement;
   private unsubscribe: (() => void) | null = null;
   private queued = false;
+  private built = false;
 
   constructor(
     leaf: WorkspaceLeaf,
     protected readonly index: TaskIndex,
     protected readonly actions: TaskActions,
-    protected settings: TaskConsoleSettings,
-    rendererOptions: RendererOptions
+    protected settings: TaskConsoleSettings
   ) {
     super(leaf);
-    this.renderer = new TaskListRenderer(this.app, this.actions, rendererOptions, () => this.onSelectionChange());
   }
 
   async onOpen(): Promise<void> {
     this.unsubscribe = this.index.onChange(() => this.scheduleRefresh());
     this.build();
+    this.built = true;
     this.refresh();
   }
 
@@ -46,10 +48,10 @@ export abstract class BaseTaskView extends ItemView {
     this.refresh();
   }
 
-  /** Builds the chrome once; `refresh` only rebuilds the list. */
+  /** Builds the chrome once; `refresh` only redraws what the data changes. */
   protected abstract build(): void;
 
-  protected onSelectionChange(): void {}
+  protected abstract paint(groups: TaskGroup[], today: Date): void;
 
   protected context(): QueryContext {
     return {
@@ -60,14 +62,10 @@ export abstract class BaseTaskView extends ItemView {
   }
 
   refresh(): void {
-    if (!this.listHost) return;
+    if (!this.built) return;
     const ctx = this.context();
-    const groups = runQuery(this.index.all(), this.query, ctx);
-    this.renderer.render(this.listHost, groups, ctx.today);
-    this.afterRefresh();
+    this.paint(runQuery(this.index.all(), this.query, ctx), ctx.today);
   }
-
-  protected afterRefresh(): void {}
 
   /** Coalesces the burst of change events a single file save produces. */
   private scheduleRefresh(): void {

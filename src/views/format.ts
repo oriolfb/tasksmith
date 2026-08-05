@@ -40,6 +40,17 @@ export function shortDate(date: Date | null): string {
   return `${date.getDate()} ${month} ${date.getFullYear()}`;
 }
 
+/** Axis label for the throughput chart. The year comes along only when it is not this one. */
+export function monthLabel(year: number, month: number, today: Date = startOfToday()): string {
+  const name = MONTHS[month] ?? "";
+  return year === today.getFullYear() ? name : `${name} ${String(year).slice(2)}`;
+}
+
+/** Catalan decimal: 2,5 closed per working day, not 2.5. */
+export function decimal(value: number, digits = 1): string {
+  return value.toFixed(digits).replace(".", ",");
+}
+
 export function isoOrDash(date: Date | null): string {
   return date ? formatIsoDate(date) : "—";
 }

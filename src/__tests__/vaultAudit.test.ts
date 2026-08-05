@@ -2,6 +2,8 @@ import * as fs from "fs";
 import * as path from "path";
 import { bucketOf } from "../index/Buckets";
 import { bucketCounts, countByKind } from "../query/Query";
+import { closingState, monthlyClosed, openState } from "../query/Metrics";
+import { healthFindings } from "../query/Health";
 import { focusSections } from "../query/Focus";
 import { ScopeFilter, parseObsidianIgnoreFilters } from "../index/ScopeFilter";
 import { tasksFromFile } from "../index/buildTasks";
@@ -190,6 +192,74 @@ describeVault("real vault audit", () => {
       `[audit] focus view: ${sections.urgent.length} urgent · ${sections.renegotiate.length} to renegotiate · ` +
         `${sections.undated.length} undated · ${sections.later.length} later`
     );
+  });
+
+  /**
+   * The control centre's strip, measured rather than pinned. Every assertion is a relation
+   * between numbers — the counts themselves move every time Oriol triages something, and pinning
+   * them is the trap this file exists to avoid.
+   */
+  it("agrees with the bucket counters about what is open", () => {
+    const open = openState(tasks, REFERENCE_DAY);
+    const shown = bucketCounts(tasks, REFERENCE_DAY);
+
+    expect(open.open).toBe(shown.overdue + shown.today + shown.week + shown.later + shown.undated);
+    expect(open.renegotiate).toBe(shown.overdue);
+    expect(open.undated).toBe(shown.undated);
+    // A task lives in exactly one note, so notes can never outnumber tasks.
+    expect(open.notes).toBeGreaterThan(0);
+    expect(open.notes).toBeLessThanOrEqual(open.open);
+    expect(open.datableFromNote).toBeLessThanOrEqual(open.undated);
+    if (open.oldestOverdueDays !== null) expect(open.oldestOverdueDays).toBeGreaterThan(0);
+
+    const closings = closingState(tasks, REFERENCE_DAY);
+    expect(closings.done + closings.cancelled).toBe(closings.closed);
+
+    const months = monthlyClosed(tasks, REFERENCE_DAY);
+    const inWindow = months.reduce((sum, month) => sum + month.total, 0);
+    expect(inWindow).toBeLessThanOrEqual(closings.closed);
+    expect(months.at(-1)?.current).toBe(true);
+
+    console.log(
+      `[audit] centre de control: ${open.open} obertes en ${open.notes} notes · ` +
+        `${open.renegotiate} per renegociar (la més antiga fa ${open.oldestOverdueDays} dies) · ` +
+        `${open.undated} sense data (${open.datableFromNote} amb data a la nota) · ` +
+        `${closings.perWorkingDay === null ? "—" : closings.perWorkingDay.toFixed(1)} tancades/dia laborable ` +
+        `(${closings.done} amb ✅, ${closings.cancelled} amb ❌)`
+    );
+    console.log(
+      `[audit] tancades per mes: ${months
+        .map((month) => `${month.year}-${String(month.month + 1).padStart(2, "0")} ${month.total}`)
+        .join(" · ")}`
+    );
+  });
+
+  it("finds something concrete to fix, and every finding can act on something real", () => {
+    const findings = healthFindings(tasks, {
+      today: REFERENCE_DAY,
+      staleThresholdDays: DEFAULT_SETTINGS.staleThresholdDays,
+      notes: scanned.length,
+      lines: tasks.length,
+    });
+    expect(findings.length).toBeGreaterThan(0);
+
+    for (const finding of findings) {
+      expect(finding.title.trim()).not.toBe("");
+      expect(finding.detail.trim()).not.toBe("");
+      // An action with nowhere to go is a dead link dressed as help.
+      if (finding.action) expect(finding.filter !== undefined || finding.fix !== undefined).toBe(true);
+      if (finding.fix) expect(finding.tasks?.length ?? 0).toBeGreaterThan(0);
+    }
+
+    // The only finding that writes must never touch a task that already has a date of its own.
+    const dating = findings.find((finding) => finding.fix === "apply-note-date");
+    for (const task of dating?.tasks ?? []) {
+      expect(task.open).toBe(true);
+      expect(task.effectiveDate).toBeNull();
+      expect(task.noteDate).not.toBeNull();
+    }
+
+    console.log(`[audit] salut: ${findings.map((finding) => finding.title).join(" · ")}`);
   });
 
   it("resolves people from the frontmatter, so the who-with lens has something to group by", () => {

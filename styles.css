@@ -1,375 +1,8 @@
 /* Task Console */
 
-.tc-sidebar,
-.tc-triage {
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  height: 100%;
-  overflow: hidden;
-}
-
-.tc-hidden {
-  display: none !important;
-}
-
-/* ── toolbars ───────────────────────────────────────────── */
-
-.tc-toolbar,
-.tc-controls {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.tc-search {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.tc-select-small {
-  font-size: var(--font-ui-smaller);
-  padding: 2px 6px;
-}
-
-.tc-toggle {
-  font-size: var(--font-ui-smaller);
-  padding: 3px 8px;
-  cursor: pointer;
-}
-
-.tc-toggle-on {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-}
-
-.tc-triage-bar {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
-  flex-wrap: wrap;
-}
-
-.tc-field {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.tc-field-label {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-}
-
-.tc-saved-row {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
-/* ── summary pills ──────────────────────────────────────── */
-
-.tc-summary {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
-}
-
-.tc-pill {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 4px 2px;
-  border-radius: var(--radius-s);
-  background: var(--background-secondary);
-  cursor: pointer;
-  border: 1px solid transparent;
-}
-
-.tc-pill:hover {
-  background: var(--background-modifier-hover);
-}
-
-.tc-pill-active {
-  border-color: var(--interactive-accent);
-}
-
-.tc-pill-count {
-  font-size: var(--font-ui-medium);
-  font-weight: 600;
-  line-height: 1.1;
-}
-
-.tc-pill-label {
-  font-size: 10px;
-  color: var(--text-muted);
-  text-align: center;
-}
-
-.tc-pill-overdue .tc-pill-count {
-  color: var(--text-error);
-}
-
-.tc-pill-today .tc-pill-count {
-  color: var(--interactive-accent);
-}
-
-.tc-pill-undated .tc-pill-count {
-  color: var(--text-warning);
-}
-
-.tc-pill-stale .tc-pill-count {
-  color: var(--text-accent);
-}
-
-/* ── list ───────────────────────────────────────────────── */
-
-.tc-list {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  margin: 0 -4px;
-  padding: 0 4px;
-}
-
-.tc-empty {
-  padding: 16px 4px;
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-}
-
-.tc-group-header {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 2px;
-  cursor: pointer;
-  position: sticky;
-  top: 0;
-  background: var(--background-primary);
-  z-index: 1;
-}
-
-.tc-group-label {
-  font-size: var(--font-ui-smaller);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-}
-
-.tc-group-header.tc-overdue .tc-group-label {
-  color: var(--text-error);
-}
-
-.tc-group-count {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
-  margin-left: auto;
-}
-
-.tc-chevron {
-  display: flex;
-  color: var(--text-faint);
-}
-
-.tc-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 4px 2px;
-  border-radius: var(--radius-s);
-}
-
-.tc-row:hover {
-  background: var(--background-modifier-hover);
-}
-
-.tc-status {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  margin-top: 2px;
-  padding: 0;
-  border-radius: var(--radius-s);
-  border: 1px solid var(--text-faint);
-  background: transparent;
-  cursor: pointer;
-  font-size: 10px;
-  line-height: 1;
-  box-shadow: none;
-}
-
-.tc-status:hover {
-  border-color: var(--interactive-accent);
-}
-
-.tc-status-done,
-.tc-status-cancelled {
-  color: var(--text-muted);
-}
-
-.tc-status-doing {
-  border-color: var(--interactive-accent);
-  color: var(--interactive-accent);
-}
-
-.tc-main {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.tc-text {
-  font-size: var(--font-ui-small);
-  line-height: 1.35;
-  cursor: pointer;
-  overflow-wrap: anywhere;
-}
-
-.tc-text:hover {
-  text-decoration: underline;
-}
-
-.tc-done {
-  text-decoration: line-through;
-  color: var(--text-muted);
-}
-
-.tc-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 1px;
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-}
-
-.tc-date.tc-overdue {
-  color: var(--text-error);
-  font-weight: 600;
-}
-
-.tc-date.tc-today {
-  color: var(--interactive-accent);
-  font-weight: 600;
-}
-
-.tc-date.tc-undated {
-  color: var(--text-warning);
-}
-
-/* A date inherited from the note's filename, not written on the task itself. */
-.tc-date.tc-implicit {
-  border-bottom: 1px dotted currentColor;
-}
-
-.tc-chip {
-  padding: 0 5px;
-  border-radius: var(--radius-s);
-  background: var(--background-modifier-border);
-  font-size: 10px;
-}
-
-.tc-note {
-  color: var(--text-faint);
-  cursor: pointer;
-}
-
-.tc-note:hover {
-  text-decoration: underline;
-}
-
-.tc-actions {
-  flex: 0 0 auto;
-  display: flex;
-  gap: 1px;
-  opacity: 0;
-}
-
-.tc-row:hover .tc-actions,
-.tc-row:focus-within .tc-actions {
-  opacity: 1;
-}
-
-.tc-action {
-  padding: 2px;
-  height: 22px;
-  width: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  box-shadow: none;
-  cursor: pointer;
-  color: var(--text-muted);
-}
-
-.tc-action:hover {
-  color: var(--text-normal);
-  background: var(--background-modifier-border);
-}
-
-/* ── triage extras ──────────────────────────────────────── */
-
-.tc-row-wide {
-  padding: 5px 4px;
-}
-
-.tc-row-wide .tc-main {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.tc-row-wide .tc-text {
-  flex: 1 1 auto;
-}
-
-.tc-row-wide .tc-meta {
-  flex: 0 0 auto;
-  margin-top: 0;
-  justify-content: flex-end;
-}
-
-.tc-row-wide .tc-actions {
-  opacity: 1;
-}
-
-.tc-select {
-  margin-top: 4px;
-}
-
-.tc-bulk {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  padding: 6px 8px;
-  border-radius: var(--radius-s);
-  background: var(--background-secondary);
-}
-
-.tc-bulk-count {
-  font-size: var(--font-ui-smaller);
-  font-weight: 600;
-  margin-right: 4px;
-}
-
-.tc-bulk-action {
-  font-size: var(--font-ui-smaller);
-  padding: 3px 8px;
-  cursor: pointer;
-}
-
-.tc-bulk-danger {
-  color: var(--text-error);
-}
-
-.tc-bulk-clear {
-  margin-left: auto;
-}
+/* The stylesheet has one dense typographic language, used by both views: the focus dock
+   (`.tcf`) and the control centre (`.tcc`). The 370 lines that styled the old triage row — five
+   pills, a double checkbox, four icon buttons per row — went out with the markup that used them. */
 
 /* ══ focus view ═════════════════════════════════════════════
    A dense typographic list: no cards, no borders, no avatars. Three accents, one job each —
@@ -377,22 +10,27 @@
    text-only: twenty rows carry it, and as a filled badge the list would read as a traffic light.
    Override any of the three in your own snippet if your theme clashes. */
 
-.tcf {
+.tcf,
+.tcc {
   --tcf-lila: #6b5bd2;
   --tcf-terra: #c0553c;
   --tcf-ocre: #97652b;
+}
+
+.theme-dark .tcf,
+.theme-dark .tcc {
+  --tcf-lila: #a08ff5;
+  --tcf-terra: #e07a5f;
+  --tcf-ocre: #d6a866;
+}
+
+.tcf {
   padding: 10px 12px 12px;
   display: flex;
   flex-direction: column;
   gap: 0;
   height: 100%;
   overflow: hidden;
-}
-
-.theme-dark .tcf {
-  --tcf-lila: #a08ff5;
-  --tcf-terra: #e07a5f;
-  --tcf-ocre: #d6a866;
 }
 
 .tcf-hidden {
@@ -850,4 +488,560 @@
   text-align: center;
   font-weight: 700;
   pointer-events: none;
+}
+
+/* ══ control centre ═════════════════════════════════════════
+   Same language as the dock, one role further out: the dock asks what you do now, this asks how
+   the system is doing. So there are numbers at the top — and still no cards, no badges and no
+   rules between rows. The grid does the aligning a table of borders would otherwise do.
+   `container-type` on the root, so the table can drop columns when the tab is split narrow. */
+
+.tcc {
+  padding: 12px 16px 10px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  /* `container-type: inline-size` means this box's width can no longer come from its contents,
+     so it has to come from the parent — hence the explicit width and flex. Without them the
+     whole tab collapses to a 30px column anywhere the parent sizes to content. */
+  container-type: inline-size;
+  width: 100%;
+  flex: 1 1 auto;
+}
+
+.tcc-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 4px;
+}
+
+.tcc-head-tools {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* A real button, because it really is one: it takes you to the dock to plan the day. */
+.tcc-plan {
+  font-size: var(--font-ui-smaller);
+  padding: 4px 11px;
+  cursor: pointer;
+}
+
+/* ── the KPI strip ──────────────────────────────────────── */
+
+/* Four figures and no boxes. The dividers the mockup had between them turned out to be the
+   thing that made it look like a dashboard rather than a page: air separates them fine. */
+.tcc-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  padding: 10px 0 14px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.tcc-kpi {
+  cursor: pointer;
+  border-radius: var(--radius-s);
+  padding: 2px 6px 2px 0;
+  margin: -2px -6px -2px 0;
+}
+
+.tcc-kpi:hover {
+  background: var(--background-modifier-hover);
+}
+
+.tcc-kpi:focus-visible {
+  outline: 2px solid var(--tcf-lila);
+  outline-offset: 1px;
+}
+
+.tcc-kpi-value {
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.tcc-kpi-label {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.tcc-kpi-detail {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+/* ── the throughput strip ───────────────────────────────── */
+
+.tcc-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.tcc-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.tcc-bar-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  width: 26px;
+}
+
+/* Lila, faded: the accent means "what you chose", and a month you closed is a month you chose.
+   Opacity rather than `color-mix`, which would put a Chromium version between the user and a bar. */
+.tcc-bar {
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+  background: var(--tcf-lila);
+  opacity: 0.3;
+}
+
+.tcc-bar-now {
+  opacity: 1;
+}
+
+.tcc-bar-value,
+.tcc-bar-month {
+  font-size: 9px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+}
+
+.tcc-chart-note {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  line-height: 1.5;
+  max-width: 320px;
+}
+
+.tcc-chart-note b {
+  color: var(--text-normal);
+  font-weight: 600;
+}
+
+/* ── filters as a sentence ──────────────────────────────── */
+
+.tcc-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+}
+
+.tcc-search {
+  width: 170px;
+  font-size: var(--font-ui-smaller);
+}
+
+.tcc-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Soft pills, same shape as the lens tabs: the filter reads as a sentence and clears with an ×. */
+.tcc-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 12px;
+  background: var(--background-secondary);
+  color: var(--tcf-lila);
+  font-size: var(--font-ui-smaller);
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.tcc-chip-x {
+  cursor: pointer;
+  opacity: 0.5;
+}
+
+.tcc-chip-x:hover {
+  opacity: 1;
+}
+
+.tcc-chip-add {
+  background: transparent;
+  color: var(--text-faint);
+  border: 1px dashed var(--background-modifier-border);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tcc-chip-add:hover {
+  color: var(--tcf-lila);
+  border-color: var(--tcf-lila);
+}
+
+.tcc-summary {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── table and health rail ──────────────────────────────── */
+
+.tcc-layout {
+  flex: 1 1 auto;
+  display: flex;
+  gap: 20px;
+  min-height: 0;
+}
+
+.tcc-table {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin: 0 -8px;
+  padding: 0 8px;
+}
+
+.tcc-th,
+.tcc-tr {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 92px 104px 92px 128px 116px;
+  gap: 12px;
+  align-items: baseline;
+  padding: 7px 8px;
+}
+
+.tcc-th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--background-primary);
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 750;
+  color: var(--text-faint);
+}
+
+.tcc-th-cell[role="button"] {
+  cursor: pointer;
+}
+
+.tcc-th-cell[role="button"]:hover {
+  color: var(--text-muted);
+}
+
+.tcc-th-on,
+.tcc-th-on:hover {
+  color: var(--tcf-lila);
+}
+
+.tcc-th-cell:focus-visible {
+  outline: 2px solid var(--tcf-lila);
+  outline-offset: 2px;
+}
+
+/* Air instead of rules here too: the columns already align, so hairlines would only add weight
+   to twenty rows of things you have not done. */
+.tcc-tr {
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-small);
+}
+
+.tcc-tr:hover {
+  background: var(--background-modifier-hover);
+}
+
+.tcc-tr:focus-visible {
+  outline: 2px solid var(--tcf-lila);
+  outline-offset: -2px;
+}
+
+.tcc-select {
+  margin: 0;
+  align-self: center;
+}
+
+.tcc-cell-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tcc-cell-text:hover {
+  text-decoration: underline;
+}
+
+.tcc-closed {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.tcc-cell-due,
+.tcc-cell-who,
+.tcc-cell-area,
+.tcc-cell-origin {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tcc-cell-origin {
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.tcc-cell-origin:hover {
+  text-decoration: underline;
+}
+
+/* Ochre as text, never a filled badge: twenty rows carry it. */
+.tcc-late {
+  color: var(--tcf-ocre);
+}
+
+.tcc-now {
+  color: var(--tcf-terra);
+  font-weight: 600;
+}
+
+.tcc-none {
+  color: var(--text-faint);
+}
+
+/* Words, and only on the row you are on. `tcc-cell-actions` is the column — the header cell
+   carries it too — and `tcc-acts` is the state. One class doing both jobs made the "Accions"
+   heading inherit `opacity: 0` and vanish. */
+.tcc-acts {
+  display: flex;
+  gap: 11px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.tcc-tr:hover .tcc-acts,
+.tcc-tr:focus-within .tcc-acts,
+.tcc-tr:focus-visible .tcc-acts {
+  opacity: 1;
+}
+
+.tcc-act {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tcc-act:hover {
+  color: var(--tcf-lila);
+  text-decoration: underline;
+}
+
+.tcc-act-warn:hover {
+  color: var(--tcf-terra);
+}
+
+.tcc-sec {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 20px 0 2px;
+  padding: 0 8px 5px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  cursor: pointer;
+}
+
+.tcc-th + .tcc-sec {
+  margin-top: 10px;
+}
+
+.tcc-sec:focus-visible {
+  outline: 2px solid var(--tcf-lila);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.tcc-sec-name {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 750;
+  color: var(--text-faint);
+}
+
+.tcc-sec:hover .tcc-sec-name {
+  color: var(--text-muted);
+}
+
+.tcc-sec-count {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.tcc-empty {
+  padding: 26px 8px;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+/* ── the health panel ───────────────────────────────────── */
+
+/* Not statistics: three things to fix, each with its one action. No boxes — a card per finding
+   was what made the mockup read as a dashboard someone else built for you. */
+.tcc-health {
+  flex: 0 0 250px;
+  width: 250px;
+  overflow-y: auto;
+  padding-left: 20px;
+  border-left: 1px solid var(--background-modifier-border);
+}
+
+.tcc-health-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 750;
+  color: var(--text-faint);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.tcc-finding {
+  padding-top: 15px;
+}
+
+.tcc-finding-title {
+  font-size: var(--font-ui-small);
+  font-weight: 620;
+  line-height: 1.35;
+}
+
+.tcc-finding-detail {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: 3px;
+}
+
+/* The system doing its job, so it whispers. */
+.tcc-finding-ok .tcc-finding-title {
+  font-weight: 550;
+  color: var(--text-muted);
+}
+
+.tcc-finding-ok .tcc-finding-detail {
+  color: var(--text-faint);
+}
+
+.tcc-finding-action {
+  display: inline-block;
+  margin-top: 5px;
+  font-size: var(--font-ui-smaller);
+  font-weight: 600;
+  color: var(--tcf-lila);
+  cursor: pointer;
+}
+
+.tcc-finding-action:hover {
+  text-decoration: underline;
+}
+
+/* ── the footer: the keys, or the selection ─────────────── */
+
+.tcc-footer {
+  flex: 0 0 auto;
+}
+
+.tcc-bulk {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.tcc-bulk-count {
+  font-size: var(--font-ui-smaller);
+  font-weight: 650;
+}
+
+.tcc-bulk-clear {
+  margin-left: auto;
+}
+
+/* ── narrow: the tab can be split in half ───────────────── */
+
+@container (max-width: 780px) {
+  .tcc-layout {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .tcc-health {
+    flex: 0 0 auto;
+    width: auto;
+    padding: 12px 0 0;
+    border-left: none;
+    border-top: 1px solid var(--background-modifier-border);
+  }
+}
+
+/* Columns go in the order the row's tooltips can cover for them, and the task text keeps the
+   space they free: a 90px description column is not a table, it is a hint. */
+@container (max-width: 620px) {
+  .tcc-th,
+  .tcc-tr {
+    grid-template-columns: 16px minmax(0, 1fr) 84px 92px 104px;
+    gap: 10px;
+  }
+
+  .tcc-cell-area,
+  .tcc-cell-origin {
+    display: none;
+  }
+
+  .tcc-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 18px;
+  }
+
+  .tcc-chart-note {
+    display: none;
+  }
+}
+
+@container (max-width: 470px) {
+  .tcc-th,
+  .tcc-tr {
+    grid-template-columns: 16px minmax(0, 1fr) 84px 104px;
+  }
+
+  .tcc-cell-who {
+    display: none;
+  }
 }

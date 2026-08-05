@@ -1,9 +1,74 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — the control centre
 
-### Added
+### Added — the wide view is now a panel, not a second list
 
+- **The triage tab is the control centre.** Same view id and same command id, so an existing
+  workspace layout and an existing hotkey keep working. The dock answers *what do I do now*; this
+  tab answers *how is the system doing*, and no control is duplicated between them.
+- **A KPI strip of four measured numbers**: open (and how many notes they live in), to renegotiate
+  (with the age of the oldest), undated (and how many of those have a date sitting in their note's
+  frontmatter), and **closings per working day**. The last one is the measured capacity the focus
+  view's three slots come from. Each figure is a one-click filter, and the strip describes the
+  **vault, not the filter** — a strip that moved with every chip would answer nothing.
+- **A throughput strip**: closed per month over eight months, split into ✅ and ❌ in the tooltip,
+  with the month in progress marked so the 5th of August does not read as a collapse.
+- **Filters as chips instead of six permanent dropdowns.** The bar reads as a sentence — "obertes ·
+  per renegociar · és una tasca (no documentació)" — each chip clears itself, and `+ filtre` opens
+  the rest. The two filters that are on by default are chips too, so they are visible and can be
+  switched off; the exclusion chip only appears in a vault that actually holds such lines.
+- **A sortable table**: Tasca · Termini · Amb qui · Àrea · Origen · Accions. Click a column to sort
+  by it, click it again to turn it around. One checkbox per row for the bulk actions and the row's
+  own actions as words — the row this replaces had a select checkbox *and* a status button *and*
+  four icon buttons.
+- **A health panel that acts, not a wall of statistics.** Each finding names one thing and the one
+  action that fixes it: never having cancelled anything in eight months → renegotiate them one by
+  one; tasks whose note carries a date the plugin deliberately does not treat as a deadline → put
+  that date on them (guarded, one undo step, and it asks first, because it writes to several notes);
+  notes with open tasks and no `Projecte` → see them; tasks stale past the threshold → see them.
+  The documentation lines and the index line read as the system working rather than as a problem.
+- The same three lenses as the dock (Per data / Amb qui / Per àrea), `Planificar el dia` back to the
+  dock, and the keyboard from the dock plus `Espai` to select.
+- Saved views moved into a menu behind one icon. Nothing was lost; at rest the bar shows data.
+- `Metrics.ts`, `Health.ts` and `Filters.ts` are **pure**, like `Focus.ts`: the vault audit runs
+  them over the real vault, so the panel's figures and the figures CI prints cannot drift apart.
+  43 new unit tests (215 in total), plus two audit assertions — the KPI strip has to agree with `bucketCounts`
+  about what is open, and every finding has to be able to act on something real. Measured on the
+  real vault: 33 open in 23 notes · 14 to renegotiate (oldest 37 days) · 12 undated, all 12 with a
+  date in their note · 2.3 closed per working day · 428 with ✅ and **0 with ❌**.
+
+### Changed
+
+- `DateMenu.ts` holds the date menu both views open. It was duplicated, and what sits at the bottom
+  of it — "No ho faré", separated and marked as a warning — is a rule worth exactly as much as the
+  number of places that implement it.
+- `sortTasks` takes a direction, and `SortKey` gains `text`, `person` and `area` for the table's
+  columns. A row with nothing in the sorted column goes last whichever way the column points.
+- `BaseTaskView` no longer owns a renderer: it owns the query, the index subscription and the
+  coalesced refresh, and the view decides how the result is drawn.
+
+### Removed
+
+- The old triage view, its row renderer, and **370 lines of stylesheet** that styled five health
+  pills, a double checkbox and four icon buttons per row. Every answer in this redesign has been a
+  removal.
+
+### Fixed
+
+- `container-type: inline-size` on the control centre's root means its width can no longer come
+  from its contents — without an explicit `width: 100%` the whole tab collapsed to a 30px column
+  wherever the parent sized to content. Caught by the new render harness, not by a screenshot.
+- The table's "Accions" heading was invisible: the header cell and the row's hover-only action
+  container shared one class, so the heading inherited `opacity: 0`. Same shape of mistake as
+  `lead.className = "ord"`, and the second time this project has made it — the column class and
+  the state class are now separate.
+
+### Added — documentation
+
+- [`mockups/07-centre-real.html`](mockups/07-centre-real.html): the control centre's real DOM
+  against the real `styles.css`, at full width and at a 660px split, with Obsidian's own button
+  styling left switched on so a regression to grey chrome is visible. It found both bugs above.
 - `Docs/ARCHITECTURE.md` gains a **Rendering inside Obsidian** section: why a `<button>` cannot be
   used for something that is not a button, why `styles.css` reloading live while `main.js` does not
   produces a misleading "nothing changed" state, why the row lays out for a 300px dock, why the lens

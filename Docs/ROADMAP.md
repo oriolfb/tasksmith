@@ -1,9 +1,9 @@
 # Roadmap
 
-Where the plugin is, what was decided and why, and what the next two phases are. Written so a
-new session can pick up phase 4 without re-deriving any of it.
+Where the plugin is, what was decided and why, and what is left. Written so a new session can pick
+up the next phase without re-deriving any of it.
 
-Current version: **0.2.2**. The plugin's settings tab shows the version actually loaded —
+Current version: **0.3.0**. The plugin's settings tab shows the version actually loaded —
 Obsidian only re-reads `main.js` when the plugin is re-enabled, so "I pressed ⌘R" and "the new
 code is running" are not the same claim.
 
@@ -14,16 +14,20 @@ real vault and prints two lines: the raw counts and *what the views actually sho
 documentation checklists are excluded).
 
 ```
-865 notes · 474 task lines · 40 open · overdue 18 · today 0 · week 2 · later 5 · undated 15
+866 notes · 474 task lines · 36 open · overdue 14 · today 0 · week 2 · later 5 · undated 15
 reference 3 · someday 0 · people Armando, Carmen, Dani Barreiro, Mireia, Mónica, Oscar Fafián, Xoel
-shown to the user: overdue 18 · today 0 · week 2 · later 5 · undated 12
+shown to the user: overdue 14 · today 0 · week 2 · later 5 · undated 12
+centre de control: 33 obertes en 23 notes · 14 per renegociar (la més antiga fa 37 dies) ·
+12 sense data (12 amb data a la nota) · 2,3 tancades/dia laborable (428 amb ✅, 0 amb ❌)
+tancades per mes: gen 73 · febr 80 · març 51 · abr 30 · maig 34 · juny 65 · jul 33 · ag 24
 ```
 
 Two of those numbers shaped the whole design: **today was 0 and this week was 0** for weeks, while
-overdue sat at 20–23 with ages up to 37 days. The plugin's most prominent counters were
+overdue sat at 14–23 with ages up to 37 days. The plugin's most prominent counters were
 structurally empty, and the overdue list was not a list of failures — it was a list of decisions
-never made. Meanwhile **434 tasks have been closed since December and not one has ever been
-cancelled**: at 404 with `✅` and 0 with `❌`, saying "no" effectively did not exist.
+never made. Meanwhile **428 tasks have been closed since December and not one has ever been
+cancelled**: at 428 with `✅` and 0 with `❌`, saying "no" effectively did not exist. That number is
+now a finding in the control centre's health panel rather than a line in this document.
 
 ## Done
 
@@ -34,12 +38,17 @@ cancelled**: at 404 with `✅` and 0 with `❌`, saying "no" effectively did not
 | **Phase 1** | The note's frontmatter as context | `data`, `Persones`, `tipus`, `title`, `tags` |
 | **Phase 2** | The focus view (`SidebarView`) | Three slots, urgency, two lenses, keyboard, FLIP transition |
 | | Priority removed from the UI | Not one open task in this vault has a priority marker |
+| **Phase 4** | The control centre (`ControlCentreView`) | KPI strip, throughput, filter chips, sortable table, health panel |
+| | The old triage view and 370 lines of CSS | Deleted with the markup that used them |
 
-## Phase 3 — dates in natural language
+## Phase 3 — dates in natural language (next, and now the only one left)
 
-The remaining half of "renegotiate". Today the **Data** menu offers six fixed options (Demà,
-Divendres, Dilluns que ve, +1 setmana, +1 mes, Treure la data). Anything else — "15 September" —
-means opening the note and typing `📅 2026-09-15` by hand.
+The remaining half of "renegotiate", and the one thing the control centre could not give you: the
+table lets you sort twenty overdue tasks by age and act on each, but "15 September" still means
+opening the note. Both views open the same menu now (`DateMenu.ts`), so the input lands in one place.
+
+The menu offers six fixed options (Demà, Divendres, Dilluns que ve, +1 setmana, +1 mes, Treure la
+data) and nothing else.
 
 A pure parser (like `Focus.ts`, so it is testable without a DOM) plus a small input:
 
@@ -55,32 +64,45 @@ With the matches listed under the field as you type and `↵` accepting the firs
 
 Half a day, low risk, no new writes to the vault beyond the `📅` the plugin already writes.
 
-## Phase 4 — the control centre
+## Phase 4 — the control centre (done, 0.3.0)
 
-`TriageView` is still the original: six permanent dropdowns, a double checkbox per row, four
-icons per row. It looks nothing like what was agreed, and it occupies two thirds of the window.
-The design is mocked up in [mockups/04-centre-de-control.html](mockups/04-centre-de-control.html).
+`ControlCentreView` replaced `TriageView`, keeping the view id and the command id so layouts and
+hotkeys survive. Six permanent dropdowns, a double checkbox and four icon buttons per row are gone.
 
 **Two roles, not two lists.** The dock answers *what do I do now*; this tab answers *how is the
-system doing*. No control is duplicated between them — search, sort and filters currently exist
-in both.
+system doing*. Nothing is duplicated: the dock has the day's three slots and no table; the tab has
+the numbers, the table and the health panel and no day plan.
 
-1. **KPI strip** — 40 open (in 24 notes) · 18 to renegotiate (oldest 37 days) · 12 undated
-   (3 classifiable by frontmatter) · **2.5 closed per working day** (404 with `✅` since December).
-   That last one is why the focus view has three slots and not ten: it is measured capacity.
-2. **Throughput chart** — closed per month, real numbers: gen 73 · febr 80 · març 51 · abr 30 ·
-   maig 35 · juny 73 · jul 33 · ag 20.
-3. **Filters as chips, not dropdowns** — the active filter reads as a sentence ("obertes · per
-   renegociar · és una tasca"), clears with an ×, and at rest the bar is nearly empty. `+ filtre`
-   opens the full list when wanted.
-4. **Detailed sortable table** — Tasca · Termini · Amb qui · Àrea · Origen · Accions.
-5. **Health panel** — three concrete things to fix, each with its own action:
-   - *No task cancelled in 8 months* (434 closed, 404 `✅`, 0 `❌`) → renegotiate them one by one.
-   - *3 template lines counted as tasks* in `CLAUDE - Plantilla equip.md` (`tipus: documentacio`).
-   - *12 notes with open tasks and no `Projecte`* → assign it in one click.
-6. Same lens switcher as the dock (Per data / Amb qui / Per àrea).
+1. **KPI strip** — open (and the notes they live in) · to renegotiate (with the oldest) · undated
+   (and how many have a date in their note) · **closings per working day**, the measured capacity
+   the three slots come from. Each figure filters the table in one click, and the strip always
+   describes the vault, never the current filter.
+2. **Throughput strip** — closed per month over eight months, `✅` and `❌` split in the tooltip,
+   the month in progress marked so the 5th of August does not read as a collapse.
+3. **Filter chips** — the bar reads as a sentence, each chip clears itself, `+ filtre` opens the
+   rest. The two filters that are on by default are chips too, so they can be seen and switched off.
+4. **Sortable table** — Tasca · Termini · Amb qui · Àrea · Origen · Accions; click a column again to
+   turn it around. Columns drop (Àrea, Origen, then Amb qui) as the tab is split narrower, because
+   all three are in the row's tooltips anyway.
+5. **Health panel** — each finding names one thing and the one action that fixes it, computed from
+   the vault rather than written down here. Today: no cancellation in 8 months → renegotiate them;
+   12 undated tasks whose note has a date → put that date on them; 22 notes without `Projecte` → see
+   them; 20 stale → see them. The documentation lines and the index line read as the system working.
+6. Same three lenses as the dock, and `Planificar el dia` back to it.
 
-Reuse `Focus.ts` and `Query.ts`; nothing new is needed in the index.
+Three decisions taken while building it, all of them narrowing the mockup:
+
+- **The mockup's cards did not survive.** [mockups/04](mockups/04-centre-de-control.html) carries
+  its own "superseded" banner for a reason: bordered KPI boxes and a card per finding are what made
+  it read as a dashboard someone else built for you. The panel uses the same dense typographic
+  language as the dock, and the real DOM is verified in
+  [mockups/07-centre-real.html](mockups/07-centre-real.html).
+- **"Assign `Projecte` in one click" was not built.** Every write this plugin makes is a single
+  guarded, undoable line; writing frontmatter is a different kind of write, and the panel points at
+  the notes instead. The one fix that does write — copying a note's own `data:` onto its undated
+  tasks — is exactly the kind of write the plugin already does, and it asks first.
+- **The health panel is not capped at three items.** It shows every finding, severity first. A
+  silent "top 3" reads as "that is all there is".
 
 ## Not scheduled
 
@@ -136,6 +158,10 @@ is undoable.
   rest — other people, full path, exact date — goes in the tooltip.
 - **Five rows per section**, then a quiet "N més" that hands over to the control centre. The dock
   is where you decide what to do next, not where you audit the backlog.
+- **The same language holds in the wide view.** A table gets a grid instead of borders: one hairline
+  under the header, air between rows, background on hover, and the deadline still ochre text rather
+  than a badge. Numbers may be large — the KPI strip is the one place where they are the content —
+  but they are not boxed.
 - **Actions only on the row you are on.** Three words across twenty rows was sixty clickable
   things competing with the tasks. The key hints at the bottom keep them discoverable.
 - **Air instead of rules.** Nothing separates two rows but space.
@@ -169,3 +195,12 @@ worse.
    diagnostics that would have settled it in one step: grep the *deployed* bundle for the new
    markers, list every copy of the plugin on disk, check which vault Obsidian actually has open,
    and put the loaded version in the settings tab.
+7. **One class placing a column *and* hiding it.** Trap 5 in a second costume: the control centre's
+   table gave the header cell and the row's action container one class, so the `opacity: 0` that
+   keeps the action words hidden until hover also made the "Accions" *heading* invisible. Hook and
+   state coexist — `"tcc-cell-actions tcc-acts"` — and the harness caught it, not a screenshot.
+8. **`container-type` means the width can no longer come from the contents.** `container-type:
+   inline-size`, added to the control centre's root so the table could drop columns in a split tab,
+   collapsed the whole tab to a 30px column: an inline-size container cannot be sized by what is
+   inside it, so it needs `width: 100%` from its parent. One computed-style read settles it;
+   the screenshot just looks broken.

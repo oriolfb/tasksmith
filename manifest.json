@@ -1,7 +1,7 @@
 {
   "id": "task-console",
   "name": "Task Console",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "minAppVersion": "1.6.0",
   "description": "Vault-wide task console: sidebar and triage views over Tasks-compatible markdown",
   "author": "Oriol Farré",

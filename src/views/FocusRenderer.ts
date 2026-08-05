@@ -1,9 +1,10 @@
-import { type App, Menu, Notice, TFile, setIcon, setTooltip } from "obsidian";
+import { type App, Notice, TFile, setTooltip } from "obsidian";
 import type { Task } from "../types/task";
 import type { TaskActions } from "../tasks/TaskActions";
 import { ageInDays, bucketOf } from "../index/Buckets";
 import { dayKey } from "../query/Focus";
-import { addDays, startOfToday } from "../index/dates";
+import { addDays } from "../index/dates";
+import { openDateMenu } from "./DateMenu";
 import { noteName, relativeLabel, shortDate } from "./format";
 
 export interface Section {
@@ -302,46 +303,11 @@ export class FocusRenderer {
 
   /** The date menu: what the plugin can already write, without a new parser. */
   dateMenu(task: Task, event: MouseEvent, onDone: () => void): void {
-    const menu = new Menu();
-    const today = startOfToday();
-
-    const entry = (title: string, run: () => Promise<unknown>): void => {
-      menu.addItem((item) =>
-        item.setTitle(title).onClick(async () => {
-          await run();
-          onDone();
-        })
-      );
-    };
-
-    entry("Demà", () => this.actions.tomorrow(task));
-    entry("Divendres", () => this.actions.scheduleOn(task, nextFriday(today)));
-    entry("Dilluns que ve", () => this.actions.scheduleOn(task, nextMonday(today)));
-    entry("+1 setmana", () => this.actions.nextWeek(task));
-    entry("+1 mes", () => this.actions.postpone(task, 30));
-    menu.addSeparator();
-    entry("Treure la data", () => this.actions.clearDue(task));
-    menu.addSeparator();
-    menu.addItem((item) =>
-      item
-        .setTitle("Obrir la nota")
-        .setIcon("file-text")
-        .onClick(() => this.callbacks.onOpen(task))
-    );
-    // Last, separated, and marked as a warning: discarding should take one deliberate step more
-    // than postponing. It is still undoable — but you should not reach it by accident.
-    menu.addSeparator();
-    menu.addItem((item) =>
-      item
-        .setTitle("No ho faré")
-        .setIcon("x")
-        .setWarning(true)
-        .onClick(async () => {
-          await this.callbacks.onDrop(task);
-          onDone();
-        })
-    );
-    menu.showAtMouseEvent(event);
+    openDateMenu(this.actions, task, event, {
+      onDrop: (dropped) => this.callbacks.onDrop(dropped),
+      onOpen: (opened) => this.callbacks.onOpen(opened),
+      onDone,
+    });
   }
 
   async openTask(task: Task): Promise<void> {
@@ -361,14 +327,4 @@ function dateNote(task: Task): string {
   return own
     ? ` · ${shortDate(task.effectiveDate)}`
     : ` · ${shortDate(task.effectiveDate)}, heretada de la nota`;
-}
-
-export function nextFriday(today: Date): Date {
-  const delta = (5 - today.getDay() + 7) % 7;
-  return addDays(today, delta === 0 ? 7 : delta);
-}
-
-export function nextMonday(today: Date): Date {
-  const delta = (8 - today.getDay()) % 7;
-  return addDays(today, delta === 0 ? 7 : delta);
 }

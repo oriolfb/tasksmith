@@ -8,7 +8,7 @@ import { EmptyTaskCleaner } from "./tasks/EmptyTaskCleaner";
 import { DEFAULT_SETTINGS, contextRulesOf, type TaskConsoleSettings } from "./settings/Config";
 import { TaskConsoleSettingTab } from "./settings/SettingsTab";
 import { SIDEBAR_VIEW, SidebarView } from "./views/SidebarView";
-import { TRIAGE_VIEW, TriageView } from "./views/TriageView";
+import { CONTROL_CENTRE_VIEW, ControlCentreView } from "./views/ControlCentre";
 import { bucketCounts, type QueryState } from "./query/Query";
 import { Logger } from "./utils/Logger";
 
@@ -42,14 +42,22 @@ export default class TaskConsolePlugin extends Plugin {
           this.index,
           this.actions,
           this.settings,
-          (filter) => void this.openTriage(filter),
+          (filter) => void this.openControlCentre(filter),
           // The day's plan and the folded sections live in settings, so they survive a reload.
           () => this.saveData(this.settings)
         )
     );
     this.registerView(
-      TRIAGE_VIEW,
-      (leaf) => new TriageView(leaf, this.index, this.actions, this.settings, () => this.saveSettings())
+      CONTROL_CENTRE_VIEW,
+      (leaf) =>
+        new ControlCentreView(
+          leaf,
+          this.index,
+          this.actions,
+          this.settings,
+          () => void this.openSidebar(),
+          () => this.saveData(this.settings)
+        )
     );
 
     this.ribbon = this.addRibbonIcon("list-checks", "Tasques", () => void this.openSidebar());
@@ -57,7 +65,12 @@ export default class TaskConsolePlugin extends Plugin {
     this.addSettingTab(new TaskConsoleSettingTab(this.app, this));
 
     this.addCommand({ id: "open-sidebar", name: "Obrir la barra lateral de tasques", callback: () => void this.openSidebar() });
-    this.addCommand({ id: "open-triage", name: "Obrir la vista de triatge", callback: () => void this.openTriage() });
+    // Same command id as when this tab was the triage view, so an existing hotkey keeps working.
+    this.addCommand({
+      id: "open-triage",
+      name: "Obrir el centre de control",
+      callback: () => void this.openControlCentre(),
+    });
     this.addCommand({ id: "rebuild-index", name: "Refer l'índex de tasques", callback: () => void this.rebuild() });
     this.addCommand({
       id: "clean-empty-tasks",
@@ -125,10 +138,10 @@ export default class TaskConsolePlugin extends Plugin {
     this.index.setScope(await this.buildScope());
     this.index.setContextRules(contextRulesOf(this.settings));
     await this.rebuild();
-    for (const type of [SIDEBAR_VIEW, TRIAGE_VIEW]) {
+    for (const type of [SIDEBAR_VIEW, CONTROL_CENTRE_VIEW]) {
       for (const leaf of this.app.workspace.getLeavesOfType(type)) {
         const view = leaf.view;
-        if (view instanceof SidebarView || view instanceof TriageView) view.setSettings(this.settings);
+        if (view instanceof SidebarView || view instanceof ControlCentreView) view.setSettings(this.settings);
       }
     }
   }
@@ -210,11 +223,11 @@ export default class TaskConsolePlugin extends Plugin {
     await this.app.workspace.revealLeaf(leaf);
   }
 
-  private async openTriage(filter?: Partial<QueryState>): Promise<void> {
-    const existing = this.app.workspace.getLeavesOfType(TRIAGE_VIEW)[0];
+  private async openControlCentre(filter?: Partial<QueryState>): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(CONTROL_CENTRE_VIEW)[0];
     const leaf: WorkspaceLeaf = existing ?? this.app.workspace.getLeaf("tab");
-    await leaf.setViewState({ type: TRIAGE_VIEW, active: true });
+    await leaf.setViewState({ type: CONTROL_CENTRE_VIEW, active: true });
     await this.app.workspace.revealLeaf(leaf);
-    if (filter && leaf.view instanceof TriageView) leaf.view.applyFilter(filter);
+    if (filter && leaf.view instanceof ControlCentreView) leaf.view.applyFilter(filter);
   }
 }
