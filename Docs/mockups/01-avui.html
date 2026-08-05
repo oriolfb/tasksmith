@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<title>Task Console — mode clar, vista d'enfocament</title>
+<style>
+  :root{
+    --bg:#ffffff; --bg2:#f7f7f5; --bg3:#efeeeb; --line:#e6e4e0; --line2:#d6d3ce;
+    --tx:#26241f; --mut:#6f6b64; --faint:#a29d95;
+    --acc:#6b5bd2; --acc-s:#f0edfc; --late:#8a6a3a; --late-s:#faf3e6;
+    --r:6px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#eceae6;color:var(--tx);
+    font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;font-size:14px;padding:30px}
+  h1{font-size:17px;margin:0 0 5px;font-weight:640;letter-spacing:-.01em}
+  .sub{color:var(--mut);font-size:12.5px;margin:0 0 24px;max-width:940px;line-height:1.55}
+  .wrap{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+
+  .dock{width:320px;flex:0 0 320px;background:var(--bg);border:1px solid var(--line);
+    border-radius:9px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .head{padding:10px 13px 0;display:flex;align-items:baseline;gap:7px}
+  .head .t{font-size:13px;font-weight:650}
+  .head .n{font-size:11.5px;color:var(--faint);margin-left:auto}
+  .body{padding:11px 13px 15px}
+
+  /* question */
+  .q{font-size:12.5px;color:var(--mut);margin:2px 0 9px}
+
+  /* three slots */
+  .slots{display:flex;flex-direction:column;gap:5px;margin-bottom:6px}
+  .slot{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--r);
+    border:1px dashed var(--line2);background:var(--bg2);color:var(--faint);font-size:12.5px;cursor:pointer}
+  .slot:hover{border-color:var(--acc);color:var(--acc);background:var(--acc-s)}
+  .slot .num{width:16px;font-weight:700;font-size:11px;color:var(--faint)}
+  .slot.full{border:1px solid var(--line);background:var(--bg);color:var(--tx);cursor:default}
+  .slot.full .num{color:var(--acc)}
+  .box{width:15px;height:15px;border:1.5px solid var(--line2);border-radius:4px;flex:0 0 auto}
+  .slot.full .box{border-color:var(--acc)}
+  .slot .who{margin-left:auto;font-size:10.5px;color:var(--mut);background:var(--bg3);
+    border-radius:10px;padding:1.5px 7px;white-space:nowrap}
+
+  .hr{height:1px;background:var(--line);margin:15px -13px 0}
+
+  /* pool */
+  .pool{padding-top:12px}
+  .pool .lab{display:flex;align-items:baseline;gap:6px;font-size:11px;color:var(--faint);
+    text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:7px}
+  .pool .lab .c{margin-left:auto;letter-spacing:0}
+  .row{display:flex;gap:9px;padding:6px 3px;align-items:flex-start;border-radius:var(--r)}
+  .row:hover{background:var(--bg2)}
+  .row.foc{background:var(--acc-s);box-shadow:inset 2px 0 0 var(--acc)}
+  .row .m{flex:1;min-width:0}
+  .row .txt{font-size:12.7px;line-height:1.38;color:#3e3a34}
+  .row .meta{display:flex;gap:7px;align-items:center;margin-top:2px;font-size:11px;color:var(--faint)}
+  .age{color:var(--late)}
+  .who{background:var(--bg3);border-radius:10px;padding:1px 7px;font-size:10.5px;color:var(--mut)}
+  .who.p{background:#eef1fb;color:#4c5b96}
+  .acts{display:flex;gap:2px;flex:0 0 auto;padding-top:1px}
+  .b{font-size:10.5px;padding:2.5px 7px;border-radius:5px;border:1px solid var(--line2);
+    background:var(--bg);color:var(--mut);cursor:pointer;white-space:nowrap}
+  .b:hover{border-color:var(--acc);color:var(--acc)}
+  .b.no:hover{border-color:#b98c8c;color:#a05a5a}
+  .dim{opacity:.55}
+
+  .more{margin-top:11px;font-size:11.5px;color:var(--faint);text-align:center}
+  .more a{color:var(--acc);text-decoration:none}
+  .keys{display:flex;gap:9px;margin-top:13px;font-size:10.5px;color:var(--faint);align-items:center;
+    border-top:1px solid var(--line);padding-top:9px;flex-wrap:wrap}
+  .kbd{font:600 9.5px/1 ui-monospace,monospace;background:var(--bg2);border:1px solid var(--line2);
+    border-radius:3px;padding:2.5px 4.5px;color:var(--mut)}
+
+  /* annotations */
+  .notes{flex:1;min-width:310px;max-width:540px}
+  .note{padding-left:13px;border-left:2px solid var(--acc);margin-bottom:17px}
+  .note h3{margin:0 0 4px;font-size:12.5px;color:var(--acc);font-weight:700}
+  .note p{margin:0;font-size:12.5px;line-height:1.6;color:var(--mut)}
+  .note p+p{margin-top:5px}
+  .note b{color:var(--tx)}
+  .strike{text-decoration:line-through;color:var(--faint)}
+  code{font:11.5px ui-monospace,monospace;background:var(--bg3);padding:1px 4px;border-radius:3px}
+  .cap{font-size:11.5px;color:var(--faint);margin-top:10px}
+</style>
+</head>
+<body>
+<h1>Proposta A · Una pregunta, tres caselles</h1>
+<p class="sub">Mateix dock de 320px. De <b>18 controls</b> repartits en dues vistes a <b>tres caselles i tres botons per fila</b>. Cap desplegable, cap píndola de color, cap prioritat, cap agrupació. Dades reals del vault net: 42 obertes, 20 per renegociar, 18 sense data.</p>
+
+<div class="wrap">
+  <div class="dock">
+    <div class="head"><span class="t">Avui</span><span class="n">42 obertes</span></div>
+    <div class="body">
+
+      <p class="q">Què faràs avui? Tria'n tres.</p>
+
+      <div class="slots">
+        <div class="slot full">
+          <span class="num">1</span><span class="box"></span>
+          <span>Parlar amb el Javi del talk</span>
+          <span class="who">Javi</span>
+        </div>
+        <div class="slot">
+          <span class="num">2</span><span class="box"></span>
+          <span>Afegeix-hi la segona…</span>
+        </div>
+        <div class="slot">
+          <span class="num">3</span><span class="box"></span>
+          <span>…i la tercera</span>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="pool">
+        <div class="lab">Per renegociar <span class="c">20</span></div>
+
+        <div class="row foc">
+          <span class="m">
+            <span class="txt">Demanar-li a la Marina una plantilla de PPT</span>
+            <span class="meta"><span class="age">fa 5 setmanes</span> · <span class="who p">Marina</span> <span class="who">Seguiment BI</span></span>
+          </span>
+          <span class="acts"><span class="b">Avui</span><span class="b">Data…</span><span class="b no">No</span></span>
+        </div>
+
+        <div class="row">
+          <span class="m">
+            <span class="txt">Demanar a en Dani l'API de calendari</span>
+            <span class="meta"><span class="age">fa 5 setmanes</span> · <span class="who p">Dani Barreiro</span> <span class="who">Estratègia IA Zara</span></span>
+          </span>
+          <span class="acts"><span class="b">Avui</span><span class="b">Data…</span><span class="b no">No</span></span>
+        </div>
+
+        <div class="row">
+          <span class="m">
+            <span class="txt">Enviar al xat de responsables la proposta d'agrupació de mercats</span>
+            <span class="meta"><span class="age">fa 5 setmanes</span> · <span class="who">Diari 11 març</span></span>
+          </span>
+          <span class="acts"><span class="b">Avui</span><span class="b">Data…</span><span class="b no">No</span></span>
+        </div>
+
+        <div class="row dim">
+          <span class="m">
+            <span class="txt">Preguntar a la Rocío pel tag d'IA d'Emplifi</span>
+            <span class="meta"><span class="age">fa 6 dies</span> · <span class="who p">Rocío</span></span>
+          </span>
+          <span class="acts"><span class="b">Avui</span><span class="b">Data…</span><span class="b no">No</span></span>
+        </div>
+
+        <div class="more">17 més · <a href="#">continua renegociant</a></div>
+      </div>
+
+      <div class="keys">
+        <span><span class="kbd">J K</span> moure</span>
+        <span><span class="kbd">A</span> avui</span>
+        <span><span class="kbd">D</span> data</span>
+        <span><span class="kbd">N</span> no ho faré</span>
+        <span><span class="kbd">⌘Z</span> desfés</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note">
+      <h3>① Una pregunta, no cinc números</h3>
+      <p>Les cinc píndoles de colors passen a una frase i un recompte discret a la cantonada. <b>“Què faràs avui? Tria'n tres.”</b> El sistema demana una decisió en lloc d'exhibir un balanç.</p>
+    </div>
+    <div class="note">
+      <h3>② Tres caselles, i el límit és el disseny</h3>
+      <p>No hi ha camp “límit de WIP” a la configuració: hi ha <b>tres forats</b>. Un límit que s'entén sense llegir res.</p>
+      <p>El que no facis avui torna al pou, <b>no a endarrerides</b>. És precisament el deute acumulat el que t'ha portat a 20 tasques amb data pròpia vençuda.</p>
+    </div>
+    <div class="note">
+      <h3>③ “Per renegociar”, no “endarrerides”</h3>
+      <p>Res en vermell. Aquestes 20 tasques no estan malament: estan <b>pendents d'una decisió</b> que fa 5 setmanes que no prens. El to del text canvia el que fas amb elles.</p>
+      <p>Tres botons al mateix nivell: <b>Avui · Data… · No</b>. Dir “no ho faré” ha de costar exactament el mateix que anar tirant — ara viu tres nivells avall, dins del menú <code>···</code>.</p>
+    </div>
+    <div class="note">
+      <h3>④ El context surt del frontmatter</h3>
+      <p><span class="who p">Marina</span> <span class="who p">Dani Barreiro</span> venen de <code>Persones:</code> de la nota, que són wikilinks: resolució exacta, sense endevinar noms dins del text.</p>
+      <p>El segon xip és el <code>title</code> de la nota, no el nom del fitxer. <i>“Seguiment BI”</i> en lloc de <code>2026-06-29 - 15-01 - Seguimiento BI 2026-06-29</code>.</p>
+    </div>
+    <div class="note">
+      <h3>⑤ El que desapareix</h3>
+      <p><span class="strike">Prioritat (fila, menú i ordenació)</span> — cap de les 42 tasques en té cap marcador.</p>
+      <p><span class="strike">Filtre de projecte</span> — <code>Projecte:</code> és buit a gairebé totes les notes; <code>Persones</code> i <code>Àrea</code> sí que hi són.</p>
+      <p><span class="strike">Agrupar per · Ordenar per · Estat · Només sense data · Vistes desades</span> — 42 tasques i 24 notes no necessiten cinc eixos de consulta.</p>
+      <p><span class="strike">Segona vista de triatge</span> — la mateixa llista implementada dues vegades amb un flag <code>wide</code>.</p>
+    </div>
+  </div>
+</div>
+<p class="cap">Mockup en mode clar — no és codi de producció. Contingut real del vault a 5 d'agost de 2026.</p>
+</body>
+</html>

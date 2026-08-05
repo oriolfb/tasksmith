@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<title>Task Console — transició Data ↔ Persona</title>
+<style>
+  :root{
+    --bg:#fff; --bg2:#f7f7f5; --bg3:#efeeeb; --line:#e6e4e0; --line2:#d8d5d0;
+    --tx:#26241f; --mut:#6f6b64; --faint:#a29d95;
+    --acc:#6b5bd2; --acc-s:#f2effd; --late:#9a6b2f; --late-s:#fdf5e7; --late-b:#e8c894;
+    --ok:#4a8a5f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#eceae6;color:var(--tx);
+    font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;font-size:14px;padding:30px}
+  h1{font-size:17px;margin:0 0 5px;font-weight:640;letter-spacing:-.01em}
+  .sub{color:var(--mut);font-size:12.5px;margin:0 0 22px;max-width:900px;line-height:1.55}
+  .wrap{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+
+  .panel{width:352px;flex:0 0 352px;background:var(--bg);border:1px solid var(--line);
+    border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden}
+  .top{padding:12px 14px 10px}
+  .title{font-size:13px;font-weight:650;margin-bottom:9px}
+
+  /* segmented control */
+  .seg{display:flex;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:2px;
+    position:relative}
+  .seg button{flex:1;position:relative;z-index:2;background:none;border:0;font:inherit;font-size:12px;
+    font-weight:600;color:var(--mut);padding:6px 0;cursor:pointer;border-radius:6px;
+    transition:color .25s}
+  .seg button.on{color:var(--acc)}
+  .thumb{position:absolute;top:2px;bottom:2px;left:2px;width:calc(50% - 2px);background:var(--bg);
+    border-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,.09);
+    transition:transform .42s cubic-bezier(.22,.9,.24,1);z-index:1}
+  .seg.p .thumb{transform:translateX(100%)}
+
+  .hint{font-size:11.5px;color:var(--faint);margin:9px 0 2px;min-height:16px;
+    transition:opacity .3s}
+
+  /* stage */
+  #stage{position:relative;margin:4px 14px 16px;height:452px;
+    transition:height .5s cubic-bezier(.22,.9,.24,1)}
+  .gh{position:absolute;left:0;right:0;height:22px;display:flex;align-items:center;gap:6px;
+    font-size:10px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;color:var(--faint);
+    transition:transform .5s cubic-bezier(.22,.9,.24,1),opacity .3s ease;will-change:transform}
+  .gh .c{margin-left:auto;letter-spacing:0;font-weight:600}
+  .gh .agg{margin-left:auto;letter-spacing:0;font-weight:600;color:var(--late);text-transform:none}
+  .gh.late{color:var(--late)}
+  .av{width:17px;height:17px;border-radius:50%;background:var(--acc-s);color:var(--acc);
+    display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;
+    letter-spacing:0}
+
+  .card{position:absolute;left:0;right:0;height:50px;background:var(--bg);
+    border:1px solid var(--line);border-radius:8px;padding:7px 10px;display:flex;
+    align-items:center;gap:9px;
+    transition:transform .5s cubic-bezier(.22,.9,.24,1),box-shadow .2s,border-color .2s;
+    will-change:transform}
+  .card:hover{border-color:var(--line2);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .card.late{border-left:3px solid var(--late-b)}
+  .box{width:14px;height:14px;border:1.5px solid var(--line2);border-radius:4px;flex:0 0 auto}
+  .m{flex:1;min-width:0}
+  .t{font-size:12.4px;line-height:1.3;color:#39352f;display:-webkit-box;-webkit-line-clamp:2;
+    -webkit-box-orient:vertical;overflow:hidden}
+  .r{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:0 0 auto}
+  .badge{font-size:10px;padding:1.5px 6px;border-radius:10px;white-space:nowrap;
+    background:var(--bg3);color:var(--mut)}
+  .badge.late{background:var(--late-s);color:var(--late);border:1px solid var(--late-b)}
+  .badge.none{background:#fff;color:var(--faint);border:1px dashed var(--line2)}
+  .who{font-size:10px;color:var(--faint);white-space:nowrap;transition:opacity .3s}
+
+  .notes{flex:1;min-width:300px;max-width:500px}
+  .note{padding-left:13px;border-left:2px solid var(--acc);margin-bottom:16px}
+  .note h3{margin:0 0 4px;font-size:12.5px;color:var(--acc);font-weight:700}
+  .note p{margin:0;font-size:12.5px;line-height:1.6;color:var(--mut)}
+  .note p+p{margin-top:5px}
+  .note b{color:var(--tx)}
+  code{font:11.5px ui-monospace,monospace;background:var(--bg3);padding:1px 4px;border-radius:3px}
+  .cap{font-size:11.5px;color:var(--faint);margin-top:10px}
+  .try{display:inline-block;margin-top:2px;font-size:11.5px;color:var(--acc);font-weight:600}
+</style>
+</head>
+<body>
+<h1>Proposta B+ · La mateixa llista, dues lents — i el retard sempre visible</h1>
+<p class="sub"><b>Clica el commutador.</b> No es recarrega res: les mateixes fitxes es reordenen amb una transició FLIP (posició inicial → final, animada amb <code>transform</code>). Això és el que respon la teva pregunta: en canviar a “Amb qui” <b>no perds la informació de retard</b>, perquè el retard viu a la fitxa, no a la capçalera del grup.</p>
+
+<div class="wrap">
+  <div class="panel">
+    <div class="top">
+      <div class="title">Obertes · 9 de mostra</div>
+      <div class="seg" id="seg">
+        <span class="thumb"></span>
+        <button class="on" data-m="d">Per data</button>
+        <button data-m="p">Amb qui</button>
+      </div>
+      <div class="hint" id="hint">5 per renegociar · la més antiga fa 5 setmanes</div>
+    </div>
+    <div id="stage"></div>
+  </div>
+
+  <div class="notes">
+    <div class="note">
+      <h3>① El retard viatja amb la tasca</h3>
+      <p>La píndola de la dreta (<span class="badge late">fa 5 setmanes</span>) i la vora esquerra ambre són <b>propietats de la fitxa</b>. Canviïs de lent o no, hi són. En mode “Amb qui”, dins de cada persona les tasques s'ordenen <b>de més retardada a menys</b>.</p>
+    </div>
+    <div class="note">
+      <h3>② I la capçalera de persona resumeix</h3>
+      <p>Cada persona porta el seu propi indicador: <b>“3 retardades · fa 5 set.”</b> Així la vista de persones no és només un directori, també és un semàfor.</p>
+    </div>
+    <div class="note">
+      <h3>③ Per què una animació i no dos panells</h3>
+      <p>Quan els elements <b>es mouen</b> en lloc de desaparèixer i reaparèixer, el cervell manté la identitat de cada tasca i entén que és <i>la mateixa llista mirada d'una altra manera</i>. Dos panells separats obliguen a reconstruir el mapa mental cada vegada.</p>
+      <p>Cost tècnic real: llegir les posicions, aplicar <code>transform: translateY</code> i deixar que la transició faci la resta. Cap llibreria. Amb <code>prefers-reduced-motion</code> el salt és instantani.</p>
+    </div>
+    <div class="note">
+      <h3>④ Un cascade de 18 ms</h3>
+      <p>Les fitxes surten esglaonades (<code>transition-delay</code> per índex). És el detall que fa que 9 elements movent-se alhora no sembli un terratrèmol.</p>
+      <span class="try">Prova-ho unes quantes vegades →</span>
+    </div>
+  </div>
+</div>
+<p class="cap">Prototip funcional en mode clar. Contingut real del vault; la lògica d'animació és la que aniria al plugin.</p>
+
+<script>
+const TASKS = [
+  { id:1, t:"Enviar la proposta d'agrupació de mercats al xat de responsables", who:null,      late:37 },
+  { id:2, t:"Demanar-li a la Marina una plantilla de PPT",                      who:"Marina",  late:36 },
+  { id:3, t:"Demanar a en Dani l'API de calendari",                             who:"Dani",    late:36 },
+  { id:4, t:"Preparar el talk del Javi",                                        who:"Javi",    late:19 },
+  { id:5, t:"Parlar amb el Javi de les formacions",                             who:"Javi",    late:16 },
+  { id:6, t:"Definir l'estructura d'equip pel pla 2030 (ecommerce)",            who:"Carmen",  late:null, ahead:null },
+  { id:7, t:"Millorar la relació amb corporatiu i proposar com iterar-ho",      who:"Carmen",  late:null, ahead:null },
+  { id:8, t:"Integrar Kinetic Search amb Drive",                                who:"Carmen",  late:null, ahead:27 },
+  { id:9, t:"Situació de Zenit per a la reunió de directores",                   who:"Carmen",  late:null, ahead:31 },
+];
+
+const H_HEAD = 22, H_CARD = 50, GAP = 6, GROUP_GAP = 14;
+const stage = document.getElementById("stage");
+const hint = document.getElementById("hint");
+const seg = document.getElementById("seg");
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function weeks(d){ return Math.round(d/7); }
+function badge(task){
+  if (task.late) return { cls:"late", text:`fa ${weeks(task.late)} setmanes` };
+  if (task.ahead) return { cls:"", text:`en ${weeks(task.ahead)} setmanes` };
+  return { cls:"none", text:"sense data" };
+}
+
+// --- build DOM once: one element per task, one per possible group header ---
+const cardEls = new Map();
+for (const task of TASKS){
+  const el = document.createElement("div");
+  el.className = "card" + (task.late ? " late" : "");
+  const b = badge(task);
+  el.innerHTML = `<span class="box"></span><span class="m"><span class="t">${task.t}</span></span>
+    <span class="r"><span class="badge ${b.cls}">${b.text}</span>
+    <span class="who">${task.who ?? ""}</span></span>`;
+  stage.appendChild(el);
+  cardEls.set(task.id, el);
+}
+
+const GROUPS = {
+  d: [
+    { key:"ren", label:"Per renegociar", late:true, ids:[1,2,3,4,5] },
+    { key:"sd",  label:"Sense data",              ids:[6,7] },
+    { key:"lt",  label:"Més endavant",            ids:[8,9] },
+  ],
+  p: [
+    { key:"carmen", label:"Carmen", person:"C", ids:[6,7,8,9] },
+    { key:"javi",   label:"Javi",   person:"J", ids:[4,5] },
+    { key:"marina", label:"Marina", person:"M", ids:[2] },
+    { key:"dani",   label:"Dani",   person:"D", ids:[3] },
+    { key:"cap",    label:"Sense persona",       ids:[1] },
+  ],
+};
+
+const headEls = new Map();
+for (const mode of ["d","p"]){
+  for (const g of GROUPS[mode]){
+    const el = document.createElement("div");
+    el.className = "gh" + (g.late ? " late" : "");
+    const items = g.ids.map(id => TASKS.find(t => t.id === id));
+    const lateItems = items.filter(t => t.late);
+    const worst = lateItems.length ? Math.max(...lateItems.map(t => t.late)) : 0;
+    const noun = lateItems.length === 1 ? "retardada" : "retardades";
+    const right = mode === "p" && lateItems.length
+      ? `<span class="agg">${lateItems.length} ${noun} · fa ${weeks(worst)} set.</span>`
+      : `<span class="c">${g.ids.length}</span>`;
+    el.innerHTML = (g.person ? `<span class="av">${g.person}</span>` : "") +
+      `<span>${g.label}</span>` + right;
+    el.style.opacity = "0";
+    stage.appendChild(el);
+    headEls.set(mode + ":" + g.key, el);
+  }
+}
+
+function layout(mode, animate){
+  let y = 0, i = 0;
+  const active = new Set();
+
+  for (const g of GROUPS[mode]){
+    const head = headEls.get(mode + ":" + g.key);
+    active.add(head);
+    place(head, y, i++, animate);
+    y += H_HEAD;
+
+    // inside a person, most-delayed first — the answer to "how do I see what slipped?"
+    const ids = [...g.ids].sort((a,b) =>
+      (TASKS.find(t=>t.id===b).late ?? -1) - (TASKS.find(t=>t.id===a).late ?? -1));
+
+    for (const id of ids){
+      place(cardEls.get(id), y, i++, animate);
+      y += H_CARD + GAP;
+    }
+    y += GROUP_GAP - GAP;
+  }
+
+  for (const [, el] of headEls) if (!active.has(el)) el.style.opacity = "0";
+  stage.style.height = y + "px";
+
+  // the person chip on the card is redundant once the group says the name
+  for (const el of cardEls.values()){
+    const who = el.querySelector(".who");
+    who.style.opacity = mode === "p" ? "0" : "1";
+  }
+
+  hint.style.opacity = "0";
+  window.setTimeout(() => {
+    hint.textContent = mode === "d"
+      ? "5 per renegociar · la més antiga fa 5 setmanes"
+      : "4 converses tanquen les 9 · Carmen en concentra 4";
+    hint.style.opacity = "1";
+  }, animate ? 180 : 0);
+}
+
+function place(el, y, index, animate){
+  el.style.transitionDelay = animate && !reduce ? `${index * 18}ms` : "0ms";
+  el.style.transform = `translateY(${y}px)`;
+  el.style.opacity = "1";
+}
+
+seg.addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  const mode = button.dataset.m;
+  for (const b of seg.querySelectorAll("button")) b.classList.toggle("on", b === button);
+  seg.classList.toggle("p", mode === "p");
+  layout(mode, true);
+});
+
+layout("d", false);
+</script>
+</body>
+</html>

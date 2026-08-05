@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<title>Task Console — avui, urgent i persones</title>
+<style>
+  :root{
+    --bg:#fdfdfc; --hover:#f5f4f1; --line:#ebe9e5; --line2:#dcd9d3;
+    --tx:#24221e; --tx2:#3d3934; --mut:#6e6a63; --faint:#a5a098;
+
+    /* Three accents, each with one job — see note ⑤.
+       lila: the system's own voice (active lens, what YOU chose, links)
+       terra: urgency that arrived on its own, without you choosing it
+       ocre: age. Text-only, because twenty rows carry it and it must not shout. */
+    --lil:#6b5bd2; --lil-d:#5546b8;
+    --ter:#c0553c;
+    --ocr:#97652b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#e9e7e3;color:var(--tx);
+    font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;
+    font-size:14px;padding:26px 20px;-webkit-font-smoothing:antialiased}
+  .page{max-width:760px;margin:0 auto}
+  h1{font-size:16.5px;margin:0 0 5px;font-weight:640;letter-spacing:-.01em}
+  .sub{color:#5d5951;font-size:12.5px;margin:0 0 20px;line-height:1.6}
+  .sub b{color:var(--tx)}
+
+  /* ── the panel: a column of text, not a deck of cards ── */
+  .panel{background:var(--bg);border:1px solid var(--line);border-radius:4px;
+    padding:16px 18px 18px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+
+  .lens{display:flex;align-items:baseline;gap:16px;padding-bottom:11px;
+    border-bottom:1px solid var(--line);margin-bottom:3px}
+  .lens button{background:none;border:0;padding:0 0 3px;font:inherit;font-size:12.5px;
+    font-weight:600;color:var(--faint);cursor:pointer;border-bottom:2px solid transparent;
+    transition:color .2s,border-color .2s}
+  .lens button:hover{color:var(--mut)}
+  .lens button.on{color:var(--lil);border-bottom-color:var(--lil)}
+  .lens .tot{margin-left:auto;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+
+  .say{font-size:12.5px;color:var(--mut);line-height:1.5;padding:11px 0 3px;min-height:19px}
+  .say b{color:var(--tx);font-weight:600}
+  .say .l{color:var(--lil);font-weight:600}
+
+  /* ── section label: small caps, hairline, no box ── */
+  .sec{display:flex;align-items:baseline;gap:8px;margin:17px 0 2px;padding-bottom:5px;
+    border-bottom:1px solid var(--line)}
+  .sec .n{font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:750;color:var(--faint)}
+  .sec .why{font-size:10.5px;color:var(--faint)}
+  .sec .c{margin-left:auto;font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+  .sec.now .n{color:var(--lil)}
+  .sec.now .c{color:var(--lil);font-weight:600}
+
+  /* ── the row: what you liked. no border, no card, hover only ── */
+  /* The row bleeds 12px into a left gutter that belongs to the urgency rule alone, so the
+     checkbox and the text start exactly where the section labels do. */
+  .row{display:flex;align-items:flex-start;gap:10px;padding:7px 12px;
+    margin:0 -12px;border-radius:3px;position:relative}
+  .row:hover{background:var(--hover)}
+  .row + .row{box-shadow:inset 0 1px 0 #f4f2ef}
+
+  .mark{flex:0 0 auto;width:15px;height:15px;margin-top:1px;border:1.5px solid var(--line2);
+    border-radius:3px;cursor:pointer;transition:border-color .15s}
+  .row:hover .mark{border-color:var(--lil)}
+
+  /* Same width as .mark so the text column never shifts between a chosen row and a plain one. */
+  .ord{flex:0 0 auto;width:15px;margin-top:1px;font-size:11px;font-weight:700;color:var(--lil);
+    font-variant-numeric:tabular-nums;text-align:center;line-height:16px}
+  .ord.empty{color:var(--faint);font-weight:500}
+
+  .m{flex:1;min-width:0}
+  .t{font-size:13px;line-height:1.38;color:var(--tx2)}
+  /* Inline so a short task keeps its date on the same line, but never breaking inside itself:
+     "fa 5 / setmanes" split across two lines reads as noise. */
+  .meta{display:inline-block;white-space:nowrap;margin-left:7px;font-size:11px;
+    color:var(--faint);line-height:1.4}
+  .meta .late{color:var(--ocr)}
+  .meta .who{color:var(--mut)}
+  .meta .dot{padding:0 4px;color:#cfcac2}
+  .meta .today{color:var(--ter);font-weight:600}
+
+  /* Arrived on its own: a terracotta rule in the gutter the row already bleeds into, so the
+     text column stays put. A rule that indents its own row is worse than no rule. */
+  .row.urgent::before{content:"";position:absolute;left:3px;top:6px;bottom:6px;width:2px;
+    background:var(--ter);border-radius:2px}
+
+  .do{flex:0 0 auto;display:flex;gap:11px;align-items:center;padding-top:2px;
+    font-size:11px;color:var(--faint);opacity:.75;transition:opacity .15s}
+  .row:hover .do{opacity:1}
+  .do span{cursor:pointer}
+  .do span:hover{color:var(--lil);text-decoration:underline}
+  .do span.no:hover{color:#a3573f}
+
+  .empty-slot{display:flex;align-items:flex-start;gap:10px;padding:7px 0;color:var(--faint);
+    font-size:12.5px;cursor:pointer}
+  .empty-slot:hover{color:var(--lil)}
+
+  .fold{margin-top:12px;font-size:11.5px;color:var(--faint)}
+  .fold a{color:var(--lil);text-decoration:none;font-weight:600}
+  .keys{margin-top:15px;padding-top:11px;border-top:1px solid var(--line);
+    font-size:10.5px;color:var(--faint);display:flex;gap:13px;flex-wrap:wrap}
+  .keys b{color:var(--mut);font:600 10px ui-monospace,monospace}
+
+  /* ── annotations ── */
+  .notes{margin-top:24px}
+  .note{padding-left:14px;border-left:2px solid var(--lil);margin-bottom:16px}
+  .note h3{margin:0 0 4px;font-size:12.5px;color:var(--lil-d);font-weight:700}
+  .note p{margin:0;font-size:12.5px;line-height:1.65;color:#5d5951}
+  .note p+p{margin-top:5px}
+  .note b{color:var(--tx)}
+  .cap{font-size:11.5px;color:#8d887f;margin-top:14px;line-height:1.6}
+  code{font:11.5px ui-monospace,monospace;color:var(--lil-d)}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Avui, l'urgent, i la mateixa llista per persona</h1>
+  <p class="sub">Estil de llista densa, sense targetes ni cercles d'inicials. Tres accents amb una feina cadascun: <b style="color:#6b5bd2">lila</b> el que tries tu, <b style="color:#c0553c">terracota</b> el que arriba sol, <b style="color:#97652b">ocre</b> l'edat — i aquest últim només com a color de text, mai com a etiqueta. <b>Clica «Per data / Amb qui»</b>: les mateixes files es reordenen.</p>
+
+  <div class="panel">
+    <div class="lens" id="lens">
+      <button class="on" data-m="d">Per data</button>
+      <button data-m="p">Amb qui</button>
+      <span class="tot">42 obertes · 24 notes</span>
+    </div>
+    <div class="say" id="say"></div>
+    <div id="list"></div>
+
+    <div class="keys">
+      <span><b>J K</b> moure</span><span><b>A</b> avui</span><span><b>D</b> data</span>
+      <span><b>N</b> no ho faré</span><span><b>1-3</b> al dia</span><span><b>⌘Z</b> desfés</span>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note">
+      <h3>① El que té data d'avui no espera que el triïs</h3>
+      <p>Era el forat de la proposta anterior: si «Avui» només conté el que tu hi poses, una tasca urgent amb data d'avui podia quedar amagada al pou.</p>
+      <p>Ara la secció <b>AVUI</b> té dues procedències i es distingeixen a cop d'ull: les que <b>arriben soles</b> (data d'avui, o <code>🔺</code>, o <code>#urgent</code>) porten <b style="color:#c0553c">barra terracota</b> i el text «data d'avui», van sempre <b>primeres</b>, i <b>no ocupen cap de les teves tres places</b>. Les que tries porten el número <b style="color:#6b5bd2">1 2 3</b>. El comptador ho diu sense ambigüitat: <i>«2 han arribat soles · 1 de 3 triada»</i>.</p>
+      <p>Si n'entra una de nova mentre treballes, apareix a dalt amb la barra terracota. Impossible no veure-la.</p>
+    </div>
+    <div class="note">
+      <h3>② Per què aquesta fila i no una targeta</h3>
+      <p>Sense vora, sense fons, sense ombra: només text ben jerarquitzat i una hairline entre files. El fons apareix <b>només al passar-hi per sobre</b>. És la fila que t'agradava, i pesa la meitat que una targeta.</p>
+      <p>Les etiquetes pastel («fa 5 setmanes» dins d'una píndola ambre) desapareixen: el retard és <span style="color:var(--amb)">color de text</span>. Un color menys, una caixa menys, i es llegeix igual de ràpid.</p>
+    </div>
+    <div class="note">
+      <h3>③ La persona és una capçalera, no un avatar</h3>
+      <p>En mode «Amb qui», el nom fa de capçalera de secció amb el mateix estil que «AVUI» o «PER RENEGOCIAR» — <b>cap cercle amb inicial</b>. La informació de retard es queda a la fila i es resumeix a la capçalera: <i>«2 retardades · la més antiga fa 5 setmanes»</i>.</p>
+    </div>
+    <div class="note">
+      <h3>④ Les accions són text</h3>
+      <p><b>Avui · Data · No</b> com a enllaços discrets, sempre presents (no només al hover) i en lila al passar-hi. Tres paraules pesen menys que tres botons amb vora, i «No» deixa de ser l'opció amagada del menú <code>···</code>.</p>
+    </div>
+    <div class="note">
+      <h3>⑤ Tres accents, una feina cadascun</h3>
+      <p><b style="color:#6b5bd2">Lila</b> — la veu del sistema: la lent activa, els números <b style="color:#6b5bd2">1 2 3</b> del que <i>tu</i> has triat, els enllaços.</p>
+      <p><b style="color:#c0553c">Terracota</b> — el que ha <i>arribat sol</i>: la barra de la fila i l'etiqueta «data d'avui». Amb un únic accent, «ho he triat jo» i «ha entrat sol» es confonien; ara la diferència es veu sense llegir.</p>
+      <p><b style="color:#97652b">Ocre</b> — l'edat, i <b>només com a color de text</b>. Vint files el porten: si fos una etiqueta amb fons, la llista seria un semàfor.</p>
+      <p>Res més. Cap verd d'èxit, cap vermell d'error: una tasca endarrerida no és un error, i el fons blanc ja fa de quart color.</p>
+    </div>
+  </div>
+
+  <p class="cap">Mockup en mode clar, contingut real del vault. Nota honesta: <b>avui el vault no té cap tasca amb data d'avui</b> (0 al bucket «today»), així que les dues de la secció AVUI il·lustren el comportament amb dues endarrerides reals. La resta de xifres són les mesurades el 5 d'agost de 2026.</p>
+</div>
+
+<script>
+const T = [
+  { id:1, t:"Revisar amb databsk com estan tots els informes de PBI", who:null,            urgent:true,  late:16 },
+  { id:2, t:"Parlar amb Alten sobre les formacions d'IA — no va bé el que fan", who:null,  urgent:true,  late:15 },
+  { id:3, t:"Parlar amb el Javi", who:"Javi",                                              chosen:1,     late:16 },
+  { id:4, t:"Enviar la proposta d'agrupació de mercats al xat de responsables", who:null,  late:37 },
+  { id:5, t:"Demanar-li a la Marina una plantilla de PPT", who:"Marina",                   late:36 },
+  { id:6, t:"Demanar a en Dani l'API de calendari", who:"Dani Barreiro",                   late:36 },
+  { id:7, t:"Preparar el talk del Javi", who:"Javi",                                       late:19 },
+  { id:8, t:"Definir l'estructura d'equip pel pla 2030 (ecommerce)", who:"Carmen" },
+  { id:9, t:"Millorar la relació amb corporatiu i proposar com iterar-ho", who:"Carmen" },
+  { id:10, t:"Integrar Kinetic Search amb Drive", who:"Carmen",                            ahead:27 },
+  { id:11, t:"Permisos GrowthBook ↔ Snowflake", who:"Xoel" },
+];
+
+const SECTIONS = {
+  d: [
+    { key:"avui", label:"Avui",           why:"2 han arribat soles · 1 de 3 triada", ids:[1,2,3], now:true, slots:2 },
+    { key:"ren",  label:"Per renegociar", why:"decisió pendent, no fracàs",          ids:[4,5,6,7] },
+    { key:"pou",  label:"Sense data",     why:"",                                    ids:[8,9,11] },
+    { key:"lat",  label:"Més endavant",   why:"",                                    ids:[10] },
+  ],
+  p: [
+    { key:"carmen", label:"Carmen", ids:[8,9,10] },
+    { key:"javi",   label:"Javi",   ids:[3,7] },
+    { key:"marina", label:"Marina", ids:[5] },
+    { key:"dani",   label:"Dani Barreiro", ids:[6] },
+    { key:"xoel",   label:"Xoel",   ids:[11] },
+    { key:"cap",    label:"Sense persona", ids:[1,2,4] },
+  ],
+};
+
+const list = document.getElementById("list");
+const say = document.getElementById("say");
+const lens = document.getElementById("lens");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const weeks = (d) => Math.round(d / 7);
+
+function metaOf(task, mode){
+  const bits = [];
+  // "data d'avui" already says everything about the date; adding an age next to it would
+  // contradict itself.
+  if (task.urgent) bits.push(`<span class="today">data d'avui</span>`);
+  else if (task.late) bits.push(`<span class="late">fa ${weeks(task.late)} setmanes</span>`);
+  else if (task.ahead) bits.push(`en ${weeks(task.ahead)} setmanes`);
+  else bits.push("sense data");
+  // in person mode the section header already says the name
+  if (task.who && mode === "d") bits.push(`<span class="who">${task.who}</span>`);
+  return bits.join(`<span class="dot">·</span>`);
+}
+
+const rows = new Map();
+for (const task of T){
+  const el = document.createElement("div");
+  el.className = "row";
+  el.innerHTML = `<span class="lead"></span><span class="m"><span class="t">${task.t}</span>
+    <span class="meta"></span></span>
+    <span class="do"><span>Avui</span><span>Data</span><span class="no">No</span></span>`;
+  rows.set(task.id, el);
+}
+
+const heads = new Map();
+for (const mode of ["d","p"]){
+  for (const s of SECTIONS[mode]){
+    const el = document.createElement("div");
+    el.className = "sec" + (s.now ? " now" : "");
+    heads.set(mode + ":" + s.key, el);
+  }
+}
+
+function paint(mode){
+  const frag = document.createDocumentFragment();
+
+  for (const s of SECTIONS[mode]){
+    const head = heads.get(mode + ":" + s.key);
+    const items = s.ids.map((id) => T.find((t) => t.id === id));
+    const lates = items.filter((t) => t.late);
+
+    let right = `${s.ids.length}`;
+    let why = s.why ?? "";
+    if (mode === "p" && lates.length){
+      const worst = Math.max(...lates.map((t) => t.late));
+      why = `${lates.length} ${lates.length === 1 ? "retardada" : "retardades"} · la més antiga fa ${weeks(worst)} setmanes`;
+    }
+    head.innerHTML = `<span class="n">${s.label}</span>` +
+      (why ? `<span class="why">${why}</span>` : "") + `<span class="c">${right}</span>`;
+    frag.appendChild(head);
+
+    // In Avui, provenance beats age: what arrived on its own goes first, then your 1-2-3.
+    // Everywhere else, most delayed first, so nothing rots at the bottom of a person.
+    const ordered = [...items].sort((a, b) => {
+      if (s.now){
+        const rank = (t) => (t.urgent ? 0 : 1);
+        if (rank(a) !== rank(b)) return rank(a) - rank(b);
+        if (a.chosen && b.chosen) return a.chosen - b.chosen;
+      }
+      return (b.late ?? -1) - (a.late ?? -1);
+    });
+    for (const task of ordered){
+      const el = rows.get(task.id);
+      el.classList.toggle("urgent", Boolean(task.urgent) && mode === "d");
+      el.querySelector(".meta").innerHTML = metaOf(task, mode);
+      // `lead` is the hook, `mark`/`ord` the state. Overwriting the hook with the state made
+      // the second paint fail to find it — and a paint that throws never reaches the reorder.
+      const lead = el.querySelector(".lead");
+      const chosen = task.chosen && mode === "d";
+      lead.className = chosen ? "lead ord" : "lead mark";
+      lead.textContent = chosen ? String(task.chosen) : "";
+      frag.appendChild(el);
+    }
+
+    // the empty slots only exist in the date lens, under Avui
+    if (s.slots !== undefined && mode === "d"){
+      for (const n of [2, 3]){
+        const slot = document.createElement("div");
+        slot.className = "empty-slot";
+        slot.innerHTML = `<span class="ord empty">${n}</span>
+          <span>tria la ${n === 2 ? "segona" : "tercera"}…</span>`;
+        frag.appendChild(slot);
+      }
+    }
+  }
+
+  const fold = document.createElement("div");
+  fold.className = "fold";
+  fold.innerHTML = mode === "d"
+    ? `16 més al pou · <a href="#">obre el centre de control</a>`
+    : `4 persones més amb 1 tasca · <a href="#">veure-les</a>`;
+  frag.appendChild(fold);
+
+  list.replaceChildren(frag);
+  say.innerHTML = mode === "d"
+    ? `<b>2 tasques han arribat soles a avui.</b> Tries <span class="l">1 de 3</span>, i queden 20 per renegociar.`
+    : `<b>Cinc converses tanquen 8 de les 42.</b> La Carmen concentra <span class="l">3</span>.`;
+}
+
+/* FLIP over real geometry: measure, reorder, invert, play. Handles wrapped text and any
+   width, which a fixed-height layout does not. */
+function switchTo(mode){
+  const all = [...rows.values(), ...heads.values()];
+  const before = new Map(all.map((el) => [el, el.getBoundingClientRect()]));
+  paint(mode);
+  if (reduce) return;
+
+  let i = 0;
+  for (const el of all){
+    const f = before.get(el);
+    const l = el.getBoundingClientRect();
+    if (!l.height) continue;
+    if (!f || !f.height){
+      el.animate([{ opacity:0, transform:"translateY(-4px)" }, { opacity:1, transform:"none" }],
+        { duration:280, easing:"ease-out", delay: i++ * 12 });
+      continue;
+    }
+    const dy = f.top - l.top;
+    const dx = f.left - l.left;
+    if (!dx && !dy) continue;
+    el.animate([{ transform:`translate(${dx}px,${dy}px)` }, { transform:"none" }],
+      { duration:460, easing:"cubic-bezier(.22,.9,.24,1)", delay: i++ * 12 });
+  }
+}
+
+lens.addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  for (const b of lens.querySelectorAll("button")) b.classList.toggle("on", b === button);
+  switchTo(button.dataset.m);
+});
+
+paint("d");
+</script>
+</body>
+</html>

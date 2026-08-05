@@ -1,0 +1,410 @@
+/* Task Console */
+
+.tc-sidebar,
+.tc-triage {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  overflow: hidden;
+}
+
+.tc-hidden {
+  display: none !important;
+}
+
+/* ── toolbars ───────────────────────────────────────────── */
+
+.tc-toolbar,
+.tc-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tc-search {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tc-select-small {
+  font-size: var(--font-ui-smaller);
+  padding: 2px 6px;
+}
+
+.tc-toggle {
+  font-size: var(--font-ui-smaller);
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.tc-toggle-on {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.tc-triage-bar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.tc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tc-field-label {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.tc-saved-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* ── summary pills ──────────────────────────────────────── */
+
+.tc-summary {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.tc-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 2px;
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.tc-pill:hover {
+  background: var(--background-modifier-hover);
+}
+
+.tc-pill-active {
+  border-color: var(--interactive-accent);
+}
+
+.tc-pill-count {
+  font-size: var(--font-ui-medium);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.tc-pill-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.tc-pill-overdue .tc-pill-count {
+  color: var(--text-error);
+}
+
+.tc-pill-today .tc-pill-count {
+  color: var(--interactive-accent);
+}
+
+.tc-pill-undated .tc-pill-count {
+  color: var(--text-warning);
+}
+
+.tc-pill-stale .tc-pill-count {
+  color: var(--text-accent);
+}
+
+/* ── list ───────────────────────────────────────────────── */
+
+.tc-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+
+.tc-empty {
+  padding: 16px 4px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.tc-group-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 2px;
+  cursor: pointer;
+  position: sticky;
+  top: 0;
+  background: var(--background-primary);
+  z-index: 1;
+}
+
+.tc-group-label {
+  font-size: var(--font-ui-smaller);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.tc-group-header.tc-overdue .tc-group-label {
+  color: var(--text-error);
+}
+
+.tc-group-count {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  margin-left: auto;
+}
+
+.tc-chevron {
+  display: flex;
+  color: var(--text-faint);
+}
+
+.tc-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 2px;
+  border-radius: var(--radius-s);
+}
+
+.tc-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.tc-status {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  padding: 0;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--text-faint);
+  background: transparent;
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.tc-status:hover {
+  border-color: var(--interactive-accent);
+}
+
+.tc-status-done,
+.tc-status-cancelled {
+  color: var(--text-muted);
+}
+
+.tc-status-doing {
+  border-color: var(--interactive-accent);
+  color: var(--interactive-accent);
+}
+
+.tc-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tc-text {
+  font-size: var(--font-ui-small);
+  line-height: 1.35;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.tc-text:hover {
+  text-decoration: underline;
+}
+
+.tc-done {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.tc-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 1px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.tc-date.tc-overdue {
+  color: var(--text-error);
+  font-weight: 600;
+}
+
+.tc-date.tc-today {
+  color: var(--interactive-accent);
+  font-weight: 600;
+}
+
+.tc-date.tc-undated {
+  color: var(--text-warning);
+}
+
+/* A date inherited from the note's filename, not written on the task itself. */
+.tc-date.tc-implicit {
+  border-bottom: 1px dotted currentColor;
+}
+
+.tc-chip {
+  padding: 0 5px;
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-border);
+  font-size: 10px;
+}
+
+.tc-note {
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.tc-note:hover {
+  text-decoration: underline;
+}
+
+.tc-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 1px;
+  opacity: 0;
+}
+
+.tc-row:hover .tc-actions,
+.tc-row:focus-within .tc-actions {
+  opacity: 1;
+}
+
+.tc-action {
+  padding: 2px;
+  height: 22px;
+  width: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.tc-action:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-border);
+}
+
+/* ── triage extras ──────────────────────────────────────── */
+
+.tc-row-wide {
+  padding: 5px 4px;
+}
+
+.tc-row-wide .tc-main {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.tc-row-wide .tc-text {
+  flex: 1 1 auto;
+}
+
+.tc-row-wide .tc-meta {
+  flex: 0 0 auto;
+  margin-top: 0;
+  justify-content: flex-end;
+}
+
+.tc-row-wide .tc-actions {
+  opacity: 1;
+}
+
+.tc-select {
+  margin-top: 4px;
+}
+
+.tc-bulk {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+}
+
+.tc-bulk-count {
+  font-size: var(--font-ui-smaller);
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.tc-bulk-action {
+  font-size: var(--font-ui-smaller);
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.tc-bulk-danger {
+  color: var(--text-error);
+}
+
+.tc-bulk-clear {
+  margin-left: auto;
+}
+
+/* ── undo inside a notice ───────────────────────────────── */
+
+.notice .tc-undo {
+  margin-left: 10px;
+  padding: 2px 9px;
+  font-size: var(--font-ui-smaller);
+  font-weight: 600;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.notice .tc-undo:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── ribbon badge ───────────────────────────────────────── */
+
+.tc-ribbon {
+  position: relative;
+}
+
+.tc-ribbon .tc-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--text-error);
+  color: var(--text-on-accent);
+  font-size: 9px;
+  line-height: 14px;
+  text-align: center;
+  font-weight: 700;
+  pointer-events: none;
+}

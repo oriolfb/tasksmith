@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<title>Task Console — centre de control</title>
+<style>
+  :root{
+    --bg:#fff; --bg2:#f8f8f6; --bg3:#efeeeb; --line:#e6e4e0; --line2:#d8d5d0;
+    --tx:#26241f; --mut:#6f6b64; --faint:#a29d95;
+    --acc:#6b5bd2; --acc-s:#f2effd; --late:#9a6b2f; --late-s:#fdf5e7; --late-b:#e8c894;
+    --ok:#4a8a5f; --ok-s:#eff7f1;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#eceae6;color:var(--tx);
+    font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;font-size:14px;padding:28px}
+  h1{font-size:17px;margin:0 0 5px;font-weight:640;letter-spacing:-.01em}
+  .sub{color:var(--mut);font-size:12.5px;margin:0 0 20px;max-width:960px;line-height:1.55}
+  .app{background:var(--bg);border:1px solid var(--line);border-radius:10px;overflow:hidden;
+    box-shadow:0 1px 3px rgba(0,0,0,.05)}
+
+  /* header */
+  .hd{display:flex;align-items:center;gap:12px;padding:13px 16px 12px;border-bottom:1px solid var(--line)}
+  .hd .t{font-size:14px;font-weight:650}
+  .seg{display:flex;background:var(--bg2);border:1px solid var(--line);border-radius:7px;padding:2px;margin-left:6px}
+  .seg span{font-size:11.5px;font-weight:600;color:var(--mut);padding:4px 12px;border-radius:5px;cursor:pointer}
+  .seg span.on{background:var(--bg);color:var(--acc);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .hd .r{margin-left:auto;display:flex;gap:7px;align-items:center}
+  .b{font-size:11.5px;padding:4px 10px;border-radius:6px;border:1px solid var(--line2);
+    background:var(--bg);color:var(--mut);cursor:pointer}
+  .b:hover{border-color:var(--acc);color:var(--acc)}
+  .b.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+
+  /* kpis */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+  .kpi{padding:13px 16px;border-right:1px solid var(--line)}
+  .kpi:last-child{border-right:none}
+  .kpi .n{font-size:23px;font-weight:680;letter-spacing:-.02em;line-height:1.1}
+  .kpi .l{font-size:11px;color:var(--mut);margin-top:2px}
+  .kpi .d{font-size:10.5px;color:var(--faint);margin-top:3px}
+  .kpi.late .n{color:var(--late)}
+  .kpi.ok .n{color:var(--ok)}
+
+  /* chart */
+  .chart{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:flex-end;gap:9px}
+  .bars{display:flex;align-items:flex-end;gap:5px;height:44px}
+  .bar{width:20px;background:var(--acc-s);border-radius:3px 3px 0 0;position:relative}
+  .bar.now{background:var(--acc)}
+  .bar span{position:absolute;top:-14px;left:0;right:0;text-align:center;font-size:9px;color:var(--faint)}
+  .bar em{position:absolute;bottom:-15px;left:0;right:0;text-align:center;font-size:9px;color:var(--faint);
+    font-style:normal}
+  .chart .cl{font-size:11px;color:var(--mut);line-height:1.5;max-width:250px;margin-left:6px}
+  .chart .cl b{color:var(--tx)}
+
+  /* filters */
+  .filters{display:flex;align-items:center;gap:6px;padding:10px 16px;background:var(--bg2);
+    border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .filters input{background:var(--bg);border:1px solid var(--line2);border-radius:6px;
+    font-size:12px;padding:4px 9px;width:170px;color:var(--tx)}
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:3.5px 8px;
+    border-radius:14px;background:var(--acc-s);color:var(--acc);border:1px solid #ded6fa;font-weight:550}
+  .chip .x{opacity:.55;cursor:pointer;font-size:12px}
+  .chip.add{background:var(--bg);color:var(--mut);border:1px dashed var(--line2);font-weight:500}
+  .filters .n{margin-left:auto;font-size:11px;color:var(--faint)}
+
+  /* table */
+  .layout{display:flex}
+  .tbl{flex:1;min-width:0}
+  .th,.tr{display:grid;grid-template-columns:1fr 118px 96px 118px 132px 104px;gap:10px;
+    padding:8px 16px;align-items:center}
+  .th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:700;
+    border-bottom:1px solid var(--line)}
+  .th span{cursor:pointer}
+  .th span.s{color:var(--acc)}
+  .tr{border-bottom:1px solid #f1f0ed;font-size:12.5px}
+  .tr:hover{background:var(--bg2)}
+  .tr .txt{color:#39352f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .badge{font-size:10.5px;padding:1.5px 7px;border-radius:11px;background:var(--bg3);color:var(--mut);
+    white-space:nowrap}
+  .badge.late{background:var(--late-s);color:var(--late);border:1px solid var(--late-b)}
+  .badge.none{background:#fff;color:var(--faint);border:1px dashed var(--line2)}
+  .badge.soon{background:var(--ok-s);color:var(--ok);border:1px solid #cde5d4}
+  .who{font-size:11.5px;color:var(--mut)}
+  .who.no{color:var(--faint)}
+  .src{font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .acts{display:flex;gap:3px}
+  .mini{font-size:10.5px;padding:2px 7px;border-radius:5px;border:1px solid var(--line2);
+    background:var(--bg);color:var(--mut);cursor:pointer}
+  .mini:hover{border-color:var(--acc);color:var(--acc)}
+  .mini.no:hover{border-color:#c99;color:#a65}
+
+  /* health rail */
+  .health{width:268px;flex:0 0 268px;border-left:1px solid var(--line);background:var(--bg2);padding:13px 14px}
+  .health h4{margin:0 0 3px;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;
+    color:var(--faint);font-weight:700}
+  .hitem{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:9px 10px;margin:8px 0}
+  .hitem .h{font-size:12px;font-weight:600;margin-bottom:3px}
+  .hitem .p{font-size:11px;color:var(--mut);line-height:1.5}
+  .hitem .a{font-size:11px;color:var(--acc);font-weight:600;cursor:pointer;margin-top:5px;display:inline-block}
+  .hitem.warn{border-left:3px solid var(--late-b)}
+  .hitem.good{border-left:3px solid #cde5d4}
+
+  .notes{margin-top:22px;max-width:900px}
+  .note{padding-left:13px;border-left:2px solid var(--acc);margin-bottom:15px}
+  .note h3{margin:0 0 4px;font-size:12.5px;color:var(--acc);font-weight:700}
+  .note p{margin:0;font-size:12.5px;line-height:1.6;color:var(--mut)}
+  .note p+p{margin-top:5px}
+  .note b{color:var(--tx)}
+  code{font:11.5px ui-monospace,monospace;background:var(--bg3);padding:1px 4px;border-radius:3px}
+  .cap{font-size:11.5px;color:var(--faint);margin-top:10px}
+</style>
+</head>
+<body>
+<h1>Proposta 5 (revisada) · La vista gran com a centre de control</h1>
+<p class="sub">Retiro el “una vista, no dues”: tens raó que fa falta un lloc detallat. Però amb <b>papers diferents</b>, no dues llistes bessones. El dock respon <i>“què faig ara”</i>; aquesta pestanya respon <i>“com va el sistema”</i>. I els filtres deixen de ser sis desplegables permanents: són <b>xips que s'afegeixen quan els necessites</b>, de manera que en repòs la vista només mostra dades. Totes les xifres són reals.</p>
+
+<div class="app">
+  <div class="hd">
+    <span class="t">Centre de control</span>
+    <span class="seg"><span class="on">Per data</span><span>Amb qui</span><span>Per àrea</span></span>
+    <span class="r">
+      <button class="b">Exportar</button>
+      <button class="b pri">Planificar el dia</button>
+    </span>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="n">42</div><div class="l">obertes</div><div class="d">en 24 notes</div></div>
+    <div class="kpi late"><div class="n">20</div><div class="l">per renegociar</div><div class="d">la més antiga fa 37 dies</div></div>
+    <div class="kpi"><div class="n">18</div><div class="l">sense data</div><div class="d">6 classificables pel frontmatter</div></div>
+    <div class="kpi ok"><div class="n">2,5</div><div class="l">tancades/dia laborable</div><div class="d">404 amb ✅ des del desembre</div></div>
+  </div>
+
+  <div class="chart">
+    <div class="bars">
+      <div class="bar" style="height:33px"><span>73</span><em>gen</em></div>
+      <div class="bar" style="height:36px"><span>80</span><em>febr</em></div>
+      <div class="bar" style="height:23px"><span>51</span><em>març</em></div>
+      <div class="bar" style="height:14px"><span>30</span><em>abr</em></div>
+      <div class="bar" style="height:16px"><span>35</span><em>maig</em></div>
+      <div class="bar" style="height:33px"><span>73</span><em>juny</em></div>
+      <div class="bar" style="height:15px"><span>33</span><em>jul</em></div>
+      <div class="bar now" style="height:9px"><span>20</span><em>ag</em></div>
+    </div>
+    <p class="cl">Tancades per mes. La mitjana real és <b>2,5 al dia laborable</b> — per això la vista d'enfocament té <b>tres</b> caselles i no deu.</p>
+  </div>
+
+  <div class="filters">
+    <input placeholder="Cerca…">
+    <span class="chip">obertes <span class="x">×</span></span>
+    <span class="chip">per renegociar <span class="x">×</span></span>
+    <span class="chip">és una tasca (no referència) <span class="x">×</span></span>
+    <span class="chip add">+ filtre</span>
+    <span class="n">20 de 42 · ordenat per antiguitat</span>
+  </div>
+
+  <div class="layout">
+    <div class="tbl">
+      <div class="th">
+        <span>Tasca</span><span class="s">Termini ↓</span><span>Amb qui</span><span>Àrea</span><span>Origen</span><span>Accions</span>
+      </div>
+
+      <div class="tr">
+        <span class="txt">Enviar la proposta d'agrupació de mercats al xat de responsables</span>
+        <span><span class="badge late">fa 37 dies</span></span>
+        <span class="who no">—</span>
+        <span class="who">Data</span>
+        <span class="src">Diari 11 març</span>
+        <span class="acts"><span class="mini">Avui</span><span class="mini">Data</span><span class="mini no">No</span></span>
+      </div>
+      <div class="tr">
+        <span class="txt">Demanar-li a la Marina una plantilla de PPT</span>
+        <span><span class="badge late">fa 36 dies</span></span>
+        <span class="who">Marina</span>
+        <span class="who">BI</span>
+        <span class="src">Seguiment BI</span>
+        <span class="acts"><span class="mini">Avui</span><span class="mini">Data</span><span class="mini no">No</span></span>
+      </div>
+      <div class="tr">
+        <span class="txt">Demanar a en Dani l'API de calendari</span>
+        <span><span class="badge late">fa 36 dies</span></span>
+        <span class="who">Dani Barreiro</span>
+        <span class="who">IA</span>
+        <span class="src">Estratègia IA Zara</span>
+        <span class="acts"><span class="mini">Avui</span><span class="mini">Data</span><span class="mini no">No</span></span>
+      </div>
+      <div class="tr">
+        <span class="txt">Preparar el talk del Javi</span>
+        <span><span class="badge late">fa 19 dies</span></span>
+        <span class="who">Javi</span>
+        <span class="who">Data</span>
+        <span class="src">Diari 14 juliol</span>
+        <span class="acts"><span class="mini">Avui</span><span class="mini">Data</span><span class="mini no">No</span></span>
+      </div>
+      <div class="tr">
+        <span class="txt">Investigar l'estat de les llicències d'Office (Janis + Alejandro)</span>
+        <span><span class="badge late">fa 14 dies</span></span>
+        <span class="who no">—</span>
+        <span class="who">Gestió</span>
+        <span class="src">Diari 22 juliol</span>
+        <span class="acts"><span class="mini">Avui</span><span class="mini">Data</span><span class="mini no">No</span></span>
+      </div>
+      <div class="tr">
+        <span class="txt">Definir l'estructura d'equip pel pla 2030 (ecommerce)</span>
+        <span><span class="badge none">sense data</span></span>
+        <span class="who">Carmen</span>
+        <span class="who">Producte Digital</span>
+        <span class="src">Feedback juliol</span>
+        <span class="acts"><span class="mini">Avui</span><span class="mini">Data</span><span class="mini no">No</span></span>
+      </div>
+      <div class="tr">
+        <span class="txt">Integrar Kinetic Search amb Drive</span>
+        <span><span class="badge soon">en 4 setmanes</span></span>
+        <span class="who">Carmen</span>
+        <span class="who">Algolia</span>
+        <span class="src">1:1 30 juliol</span>
+        <span class="acts"><span class="mini">Avui</span><span class="mini">Data</span><span class="mini no">No</span></span>
+      </div>
+    </div>
+
+    <div class="health">
+      <h4>Salut del sistema</h4>
+
+      <div class="hitem warn">
+        <div class="h">Cap tasca cancel·lada en 8 mesos</div>
+        <div class="p">434 tancades, <b>404 amb ✅ i 0 amb ❌</b>. Mai has dit “no ho faré” — per això les 20 endarrerides s'acumulen en lloc de tancar-se.</div>
+        <span class="a">Renegociar-les una a una →</span>
+      </div>
+
+      <div class="hitem warn">
+        <div class="h">3 línies de plantilla comptades com a tasques</div>
+        <div class="p">A <i>CLAUDE - Plantilla equip</i>, que té <code>tipus: documentacio</code> al frontmatter.</div>
+        <span class="a">Excloure aquest tipus →</span>
+      </div>
+
+      <div class="hitem warn">
+        <div class="h">3 tasques sense data per un format</div>
+        <div class="p">A <i>Diari setmana 29</i>. La nota té <code>data: 2026-07-13</code>, però el plugin només llegeix el nom del fitxer.</div>
+        <span class="a">Llegir <code>data:</code> del frontmatter →</span>
+      </div>
+
+      <div class="hitem good">
+        <div class="h">Índex net</div>
+        <div class="p">864 notes · 476 línies · cap tasca buida · cap línia perduda pel parser.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <div class="note">
+    <h3>① Dos papers, no dues llistes</h3>
+    <p>El dock és una <b>lent</b>: tres caselles i el que ve després. Aquesta pestanya és un <b>panell</b>: mètriques, taula detallada, filtres i salut. Cap control es repeteix als dos llocs, que és el que ara passa amb cerca, ordenació i filtres duplicats.</p>
+  </div>
+  <div class="note">
+    <h3>② Filtres com a xips, no com a desplegables</h3>
+    <p>Sis desplegables sempre visibles pesen encara que no els facis servir. Amb xips, l'estat del filtre <b>es llegeix com una frase</b> (“obertes · per renegociar · és una tasca”), s'esborra amb una ×, i en repòs la barra està gairebé buida. <code>+ filtre</code> obre la llista completa quan la vols.</p>
+  </div>
+  <div class="note">
+    <h3>③ El panell de salut és la part que et fa costat</h3>
+    <p>No són estadístiques: són <b>tres coses concretes per arreglar</b>, cada una amb la seva acció. I la primera és la troballa més incòmoda de tot l'exercici: en vuit mesos i 434 tasques tancades, <b>cap no s'ha cancel·lat</b>.</p>
+  </div>
+</div>
+<p class="cap">Mockup en mode clar. Xifres reals de l'auditoria del vault (5 d'agost de 2026).</p>
+</body>
+</html>

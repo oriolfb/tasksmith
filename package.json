@@ -1,0 +1,29 @@
+{
+  "name": "task-console",
+  "version": "0.1.0",
+  "description": "Obsidian plugin: robust task console over Tasks-compatible markdown",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
+    "deploy": "npm run build && node scripts/deploy.mjs",
+    "test": "jest",
+    "audit:vault": "node scripts/audit-vault.mjs"
+  },
+  "keywords": [],
+  "author": "Oriol Farré",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "builtin-modules": "^3.3.0",
+    "esbuild": "^0.19.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "tslib": "^2.6.0",
+    "typescript": "5.0.4"
+  },
+  "dependencies": {
+    "obsidian": "latest"
+  }
+}

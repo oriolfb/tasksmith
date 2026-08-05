@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<title>Task Console — agenda per persona i context del frontmatter</title>
+<style>
+  :root{
+    --bg:#ffffff; --bg2:#f7f7f5; --bg3:#efeeeb; --line:#e6e4e0; --line2:#d6d3ce;
+    --tx:#26241f; --mut:#6f6b64; --faint:#a29d95;
+    --acc:#6b5bd2; --acc-s:#f0edfc; --late:#8a6a3a; --r:6px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#eceae6;color:var(--tx);
+    font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;font-size:14px;padding:30px}
+  h1{font-size:17px;margin:0 0 5px;font-weight:640;letter-spacing:-.01em}
+  h2{font-size:14px;margin:34px 0 6px;font-weight:640}
+  .sub{color:var(--mut);font-size:12.5px;margin:0 0 22px;max-width:940px;line-height:1.55}
+  .wrap{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+  code{font:11.5px ui-monospace,monospace;background:var(--bg3);padding:1px 4px;border-radius:3px}
+
+  .dock{width:320px;flex:0 0 320px;background:var(--bg);border:1px solid var(--line);
+    border-radius:9px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .head{padding:10px 13px;display:flex;align-items:baseline;gap:8px;border-bottom:1px solid var(--line)}
+  .head .t{font-size:13px;font-weight:650}
+  .head .sw{margin-left:auto;font-size:11px;color:var(--acc);cursor:pointer}
+  .body{padding:11px 13px 14px}
+  .q{font-size:12.5px;color:var(--mut);margin:0 0 10px}
+
+  .pr{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:var(--r);cursor:pointer}
+  .pr:hover{background:var(--bg2)}
+  .pr.on{background:var(--acc-s)}
+  .av{width:23px;height:23px;border-radius:50%;background:var(--bg3);color:var(--mut);
+    display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;flex:0 0 auto}
+  .pr.on .av{background:var(--acc);color:#fff}
+  .pr .nm{font-size:12.8px;font-weight:550}
+  .pr .sub2{font-size:10.5px;color:var(--faint);margin-top:1px}
+  .pr .n{margin-left:auto;font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
+  .pr.on .n{color:var(--acc);font-weight:700}
+
+  .open{border:1px solid var(--line);border-radius:var(--r);margin:6px 0 10px;overflow:hidden}
+  .open .oh{padding:8px 11px;background:var(--acc-s);display:flex;align-items:baseline;gap:8px}
+  .open .oh b{font-size:12.5px}
+  .open .oh .x{margin-left:auto;font-size:11px;color:var(--mut);cursor:pointer}
+  .it{display:flex;gap:9px;padding:7px 11px;border-top:1px solid var(--line);align-items:flex-start}
+  .it .box{width:14px;height:14px;border:1.5px solid var(--line2);border-radius:4px;flex:0 0 auto;margin-top:2px}
+  .it .m{flex:1;min-width:0}
+  .it .txt{font-size:12.5px;line-height:1.35;color:#3e3a34}
+  .it .meta{font-size:10.5px;color:var(--faint);margin-top:2px}
+  .it .age{color:var(--late)}
+  .cta{padding:9px 11px;border-top:1px solid var(--line);background:var(--bg2);display:flex;gap:6px;align-items:center}
+  .b{font-size:11px;padding:3.5px 9px;border-radius:5px;border:1px solid var(--line2);
+    background:var(--bg);color:var(--mut);cursor:pointer}
+  .b.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+  .b:hover{border-color:var(--acc);color:var(--acc)}
+  .b.pri:hover{color:#fff}
+  .cta .hint{font-size:10.5px;color:var(--faint);margin-left:auto}
+
+  /* mapping table */
+  .map{background:var(--bg);border:1px solid var(--line);border-radius:9px;overflow:hidden;max-width:960px;
+    box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mrow{display:grid;grid-template-columns:186px 1fr 240px;gap:0;border-top:1px solid var(--line);align-items:center}
+  .mrow:first-child{border-top:none;background:var(--bg2);font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.07em;color:var(--faint);font-weight:700}
+  .mrow>div{padding:9px 13px}
+  .mrow .k{font:12px ui-monospace,monospace;color:var(--acc)}
+  .mrow .v{font-size:12.5px;color:var(--tx)}
+  .mrow .n{font-size:11.5px;color:var(--mut)}
+  .tick{color:#4a8a5f;font-weight:700}
+  .cross{color:#a05a5a;font-weight:700}
+
+  .notes{flex:1;min-width:310px;max-width:520px}
+  .note{padding-left:13px;border-left:2px solid var(--acc);margin-bottom:17px}
+  .note h3{margin:0 0 4px;font-size:12.5px;color:var(--acc);font-weight:700}
+  .note p{margin:0;font-size:12.5px;line-height:1.6;color:var(--mut)}
+  .note p+p{margin-top:5px}
+  .note b{color:var(--tx)}
+  .cap{font-size:11.5px;color:var(--faint);margin-top:12px}
+</style>
+</head>
+<body>
+<h1>Proposta B · Agenda per persona</h1>
+<p class="sub">La segona i última vista. Surt sencera de <code>Persones:</code> del frontmatter, sense sintaxi nova ni feina teva. Converteix “20 tasques incomplertes” en <b>“5 converses pendents”</b>: 9 de les tasques obertes apunten a la Carmen, repartides ara en 4 notes de reunió diferents.</p>
+
+<div class="wrap">
+  <div class="dock">
+    <div class="head"><span class="t">Amb qui</span><span class="sw">↔ Avui</span></div>
+    <div class="body">
+      <p class="q">Cinc converses tanquen 14 de les 42.</p>
+
+      <div class="pr on">
+        <span class="av">C</span>
+        <span><span class="nm">Carmen</span><div class="sub2">4 notes · la més antiga fa 5 setmanes</div></span>
+        <span class="n">9</span>
+      </div>
+
+      <div class="open">
+        <div class="oh"><b>Per parlar amb la Carmen</b><span class="x">plegar</span></div>
+        <div class="it"><span class="box"></span><span class="m">
+          <span class="txt">Definir l'estructura d'equip pel pla 2030 (ecommerce)</span>
+          <span class="meta">Feedback juliol · sense data</span></span></div>
+        <div class="it"><span class="box"></span><span class="m">
+          <span class="txt">Estructura i pressupost per ampliar l'abast a tota l'empresa</span>
+          <span class="meta">Feedback juliol · sense data</span></span></div>
+        <div class="it"><span class="box"></span><span class="m">
+          <span class="txt">Com millorar la relació amb corporatiu</span>
+          <span class="meta">Feedback juliol · sense data</span></span></div>
+        <div class="it"><span class="box"></span><span class="m">
+          <span class="txt">Integrar Kinetic Search amb Drive</span>
+          <span class="meta">1:1 del 30 de juliol · en 4 setmanes</span></span></div>
+        <div class="it"><span class="box"></span><span class="m">
+          <span class="txt">Situació de Zenit per a la reunió de directores</span>
+          <span class="meta">Seguiment Digitals · <span class="age">preparar 2 setmanes abans</span></span></span></div>
+        <div class="cta">
+          <button class="b pri">Agendar una estona</button>
+          <button class="b">Obrir les 9</button>
+          <span class="hint">+4 més</span>
+        </div>
+      </div>
+
+      <div class="pr"><span class="av">M</span><span><span class="nm">Mireia</span><div class="sub2">2 notes</div></span><span class="n">2</span></div>
+      <div class="pr"><span class="av">M</span><span><span class="nm">Mónica</span><div class="sub2">2 notes</div></span><span class="n">2</span></div>
+      <div class="pr"><span class="av">D</span><span><span class="nm">Dani Barreiro</span><div class="sub2">fa 5 setmanes</div></span><span class="n">1</span></div>
+      <div class="pr"><span class="av">X</span><span><span class="nm">Xoel</span><div class="sub2">1:1 del 29 de juliol</div></span><span class="n">1</span></div>
+      <div class="pr" style="opacity:.6"><span class="av">·</span><span><span class="nm">Sense persona</span><div class="sub2">tasques del diari</div></span><span class="n">27</span></div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note">
+      <h3>① Nou tasques, una acció</h3>
+      <p>Quan la vista diu <b>Carmen 9</b>, la conclusió no és “tinc nou tasques”: és <b>“he d'agendar una estona amb la Carmen”</b>. Nou elements col·lapsen en una sola decisió.</p>
+    </div>
+    <div class="note">
+      <h3>② Zero feina d'entrada</h3>
+      <p><code>Persones:</code> ja hi és a 9 de les 24 notes amb tasques obertes, i són wikilinks (<code>[[Carmen]]</code>): la resolució és exacta, no cal buscar noms dins del text de la tasca.</p>
+      <p>Les tasques del diari no tenen persona i queden agrupades al final, sense inventar-ne cap.</p>
+    </div>
+    <div class="note">
+      <h3>③ Un sol commutador</h3>
+      <p>Tota la interfície són <b>dues vistes</b> i una fletxa per canviar: <b>Avui</b> ↔ <b>Amb qui</b>. Cap desplegable, cap combinació de filtres a recordar.</p>
+    </div>
+  </div>
+</div>
+
+<h2>El frontmatter que ja tens → el que el plugin n'hauria de fer</h2>
+<p class="sub" style="margin-bottom:14px">Les 42 tasques obertes viuen en 24 notes. Aquestes són les claus disponibles i el seu ús actual.</p>
+
+<div class="map">
+  <div class="mrow"><div>Clau</div><div>Ús proposat</div><div>Presència / estat actual</div></div>
+  <div class="mrow">
+    <div class="k">data:</div>
+    <div class="v">Data heretada de la nota, substituint el <i>parsing</i> del nom del fitxer</div>
+    <div class="n"><b>24 de 24</b> · <span class="cross">no es llegeix</span> — per això les 3 tasques de la nota setmanal no tenen data</div>
+  </div>
+  <div class="mrow">
+    <div class="k">Persones:</div>
+    <div class="v">Vista “Amb qui” i xip de persona a cada fila</div>
+    <div class="n">9 notes, wikilinks · <span class="cross">no es llegeix</span></div>
+  </div>
+  <div class="mrow">
+    <div class="k">tipus:</div>
+    <div class="v"><code>documentacio</code> → no és tasca · <code>idea</code> → algun dia · <code>reunió</code>/<code>projecte</code> → compromís</div>
+    <div class="n">4 notes · <span class="cross">no es llegeix</span> — classifica 6 de les 18 sense data</div>
+  </div>
+  <div class="mrow">
+    <div class="k">title:</div>
+    <div class="v">Nom llegible de l'origen al xip de context</div>
+    <div class="n">17 notes · <span class="cross">no es llegeix</span> — ara es mostra el nom del fitxer</div>
+  </div>
+  <div class="mrow">
+    <div class="k">Àrea: · Disciplina: · Eina:</div>
+    <div class="v">Context secundari al tooltip; agrupació opcional</div>
+    <div class="n">7 · 10 · 10 notes · <span class="tick">Àrea</span> sí, la resta no</div>
+  </div>
+  <div class="mrow">
+    <div class="k">estat:</div>
+    <div class="v">Amagar tasques de notes que no estan <code>actiu</code></div>
+    <div class="n">5 notes · <span class="cross">no es llegeix</span></div>
+  </div>
+  <div class="mrow" style="opacity:.7">
+    <div class="k">Projecte:</div>
+    <div class="v">— deixa de ser un eix de la interfície</div>
+    <div class="n">7 notes, <b>gairebé sempre buida</b> · <span class="tick">és l'única que es llegeix avui</span></div>
+  </div>
+</div>
+
+<p class="cap">Mockup en mode clar — no és codi de producció. Frontmatter i contingut reals del vault.</p>
+</body>
+</html>
