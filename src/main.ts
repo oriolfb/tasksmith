@@ -9,7 +9,7 @@ import { DEFAULT_SETTINGS, contextRulesOf, type TaskConsoleSettings } from "./se
 import { TaskConsoleSettingTab } from "./settings/SettingsTab";
 import { SIDEBAR_VIEW, SidebarView } from "./views/SidebarView";
 import { TRIAGE_VIEW, TriageView } from "./views/TriageView";
-import { bucketCounts } from "./query/Query";
+import { bucketCounts, type QueryState } from "./query/Query";
 import { Logger } from "./utils/Logger";
 
 export default class TaskConsolePlugin extends Plugin {
@@ -42,7 +42,7 @@ export default class TaskConsolePlugin extends Plugin {
           this.index,
           this.actions,
           this.settings,
-          () => void this.openTriage(),
+          (filter) => void this.openTriage(filter),
           // The day's plan and the folded sections live in settings, so they survive a reload.
           () => this.saveData(this.settings)
         )
@@ -210,10 +210,11 @@ export default class TaskConsolePlugin extends Plugin {
     await this.app.workspace.revealLeaf(leaf);
   }
 
-  private async openTriage(): Promise<void> {
+  private async openTriage(filter?: Partial<QueryState>): Promise<void> {
     const existing = this.app.workspace.getLeavesOfType(TRIAGE_VIEW)[0];
     const leaf: WorkspaceLeaf = existing ?? this.app.workspace.getLeaf("tab");
     await leaf.setViewState({ type: TRIAGE_VIEW, active: true });
     await this.app.workspace.revealLeaf(leaf);
+    if (filter && leaf.view instanceof TriageView) leaf.view.applyFilter(filter);
   }
 }

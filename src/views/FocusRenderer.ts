@@ -50,8 +50,8 @@ export interface RowCallbacks {
   onOpen: (task: Task) => void;
   onToggleSection: (key: string) => void;
   isCollapsed: (key: string) => boolean;
-  /** "18 més" — hands the rest over to the wide view. */
-  onMore: () => void;
+  /** "18 més" — hands the rest over to the wide view, filtered to the same section. */
+  onMore: (section: Section) => void;
 }
 
 /**
@@ -124,7 +124,7 @@ export class FocusRenderer {
       more.setAttribute("role", "button");
       more.tabIndex = 0;
       more.setText(`${hidden} més`);
-      more.addEventListener("click", () => this.callbacks.onMore());
+      more.addEventListener("click", () => this.callbacks.onMore(section));
     }
 
     for (const slot of section.emptySlots ?? []) {

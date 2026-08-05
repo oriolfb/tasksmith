@@ -2,11 +2,11 @@ import { ItemView, Notice, setIcon, setTooltip, type WorkspaceLeaf } from "obsid
 import type { TaskIndex } from "../index/TaskIndex";
 import type { TaskActions } from "../tasks/TaskActions";
 import type { TaskConsoleSettings } from "../settings/Config";
-import type { Task } from "../types/task";
+import type { Bucket, Task } from "../types/task";
 import { ageInDays, bucketOf } from "../index/Buckets";
 import { isEmptyTask } from "../index/EmptyTasks";
 import { startOfToday } from "../index/dates";
-import { NO_PERSON, peopleOf } from "../query/Query";
+import { NO_PERSON, type QueryState, peopleOf } from "../query/Query";
 import { DAY_LIMIT, dayKey, focusSections } from "../query/Focus";
 import { DaySelection } from "./DaySelection";
 import { FocusRenderer, type Section } from "./FocusRenderer";
@@ -49,7 +49,7 @@ export class SidebarView extends ItemView {
     private readonly index: TaskIndex,
     private readonly actions: TaskActions,
     private settings: TaskConsoleSettings,
-    private readonly openControlCentre: () => void,
+    private readonly openControlCentre: (filter?: Partial<QueryState>) => void,
     private readonly persist: () => Promise<void>
   ) {
     super(leaf);
@@ -64,7 +64,7 @@ export class SidebarView extends ItemView {
       onOpen: (task) => void this.renderer.openTask(task),
       onToggleSection: (key) => void this.toggleSection(key),
       isCollapsed: (key) => this.settings.collapsedSections.includes(key),
-      onMore: () => this.openControlCentre(),
+      onMore: (section) => this.openControlCentre(this.filterFor(section)),
     });
   }
 
@@ -317,6 +317,20 @@ export class SidebarView extends ItemView {
       );
     }
     return sections;
+  }
+
+  /** The wide view's equivalent filter for a dock section, so "N més" lands on the same tasks. */
+  private filterFor(section: Section): Partial<QueryState> {
+    if (section.key.startsWith("person:")) {
+      return { group: "person", person: section.key.slice("person:".length), statusScope: "open" };
+    }
+    const buckets: Partial<Record<string, Bucket[]>> = {
+      renegociar: ["overdue"],
+      "sense-data": ["undated"],
+      "mes-endavant": ["week", "later"],
+    };
+    const wanted = buckets[section.key];
+    return wanted ? { group: "bucket", buckets: wanted, statusScope: "open" } : {};
   }
 
   private openCount(all: Task[]): number {

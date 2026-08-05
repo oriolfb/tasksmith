@@ -40,6 +40,12 @@ export abstract class BaseTaskView extends ItemView {
     this.refresh();
   }
 
+  /** Lands the view on a specific filter, e.g. handed off from the dock's "N més". */
+  applyFilter(patch: Partial<QueryState>): void {
+    this.query = { ...this.query, ...patch };
+    this.refresh();
+  }
+
   /** Builds the chrome once; `refresh` only rebuilds the list. */
   protected abstract build(): void;
 
