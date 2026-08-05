@@ -164,6 +164,15 @@ side effect of dodging the styling.
 The lens tabs are soft filled pills, deliberately copying the metadata "Add property" button —
 the underlined-tab version read as a stray link inside the dock.
 
+**Build the control the public API actually has, not the one the app is seen using.**
+`MenuItem.setSubmenu` is not in `obsidian.d.ts` (1.13.1) even though the app itself uses submenus,
+so the obvious "Projecte ▸" nesting inside `+ filtre` would have meant calling an undocumented
+method — and by the silent-failure symptom above, a menu that throws halfway just does nothing at
+all. `FuzzySuggestModal` *is* public: `PickModal` picks a project, an area or a person, searchable
+and keyboard-first, which suits a vault with more people than a submenu wants anyway. The same
+rule settled the menu's group headings: `setIsLabel(true)` is the public way to put a heading in a
+menu, where a disabled item still reads as something that ought to be clickable.
+
 **`styles.css` reloads live; `main.js` does not.** Obsidian only re-reads a plugin's JavaScript
 when the plugin is re-enabled, so *new CSS on old JS* is a real and misleading state: after the
 markup moved off `<button>`, the CSS reset that neutralised Obsidian's button styling was removed
@@ -182,6 +191,14 @@ nowrap belongs on each fragment, so the line wraps *between* items but never ins
 read every row's rect, rebuild the list, invert, play. A fixed-height absolutely-positioned
 version broke as soon as a description wrapped to a third line, which at dock width is the common
 case. `prefers-reduced-motion` skips straight to the end state.
+
+**Sizes that CSS cannot resolve are computed in the view.** The throughput bars set their height in
+pixels from one constant, because a percentage height inside a flex column resolves against a box
+the value and month labels also share — the busiest month would overflow the strip by exactly the
+height of its own labels. The same instinct keeps the faded bars on `opacity` instead of
+`color-mix`: `minAppVersion: 1.6.0` means the plugin's floor is the app's Chromium, not the
+machine's, and while that floor is new enough for `color-mix`, "new enough" is not a property worth
+having in a bar chart when a decades-old declaration does the job.
 
 **A class used as a hook must never be overwritten by state, or double as one.** Two versions of the
 same mistake. `lead.className = "ord"` destroyed the `.lead` hook the next paint queried, so

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Two more platform facts in `ARCHITECTURE.md`'s **Rendering inside Obsidian**, both learnt while
+  building the control centre. `MenuItem.setSubmenu` is not in the public typings even though the
+  app uses submenus, so `+ filtre` reaches for `FuzzySuggestModal` (`PickModal`) and for
+  `setIsLabel(true)` instead of an undocumented call that would fail silently. And sizes CSS cannot
+  resolve are computed in the view: a percentage bar height inside a flex column resolves against a
+  box its own labels share, and the faded bars use `opacity` rather than `color-mix`, because
+  `minAppVersion` makes the plugin's floor the app's Chromium rather than the machine's.
+
 ## 0.3.0 — the control centre
 
 ### Added — the wide view is now a panel, not a second list
@@ -33,8 +45,8 @@
 - Saved views moved into a menu behind one icon. Nothing was lost; at rest the bar shows data.
 - `Metrics.ts`, `Health.ts` and `Filters.ts` are **pure**, like `Focus.ts`: the vault audit runs
   them over the real vault, so the panel's figures and the figures CI prints cannot drift apart.
-  43 new unit tests (215 in total), plus two audit assertions — the KPI strip has to agree with `bucketCounts`
-  about what is open, and every finding has to be able to act on something real. Measured on the
+  43 new unit tests (215 in total), plus two audit assertions — the KPI strip has to agree with
+  `bucketCounts` about what is open, and every finding has to be able to act on something real. On the
   real vault: 33 open in 23 notes · 14 to renegotiate (oldest 37 days) · 12 undated, all 12 with a
   date in their note · 2.3 closed per working day · 428 with ✅ and **0 with ❌**.
 
