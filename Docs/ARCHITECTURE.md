@@ -126,6 +126,61 @@ stand-in used only when no parsed frontmatter is supplied — the vault audit te
 Every open task then falls in exactly one bucket: `overdue`, `today`, `week`, `later`,
 `undated`. Closed tasks go to `closed`.
 
+## Rendering inside Obsidian
+
+Every rule below was learnt from a screenshot that looked nothing like the design it came from.
+They are platform facts, not taste; the visual language they serve lives in
+[ROADMAP.md](ROADMAP.md#the-design-language).
+
+**Never use `<button>` for something that is not a button.** Obsidian styles bare `button`
+elements with a background, a radius, padding, a height and a shadow, and in practice that wins
+over a plugin's own class — a `background: none` in our stylesheet did not survive. The symptom
+was unmistakable and took two rounds to diagnose: section labels rendered as **full-width grey
+boxes**
+and the three action words as **grey pills heavier than the tasks themselves**. Section headings,
+the checkbox and the row actions are now `div`/`span` with `role="button"`, `tabIndex` and an
+Enter/Space handler, so nothing is lost accessibility-wise — the roles are deliberate, not a
+side effect of dodging the styling.
+
+**Use Obsidian's own classes when the look should be native.** Header icons carry
+`clickable-icon` and only set `--icon-size`; they then match every other icon in the app for free.
+The lens tabs are soft filled pills, deliberately copying the metadata "Add property" button —
+the underlined-tab version read as a stray link inside the dock.
+
+**`styles.css` reloads live; `main.js` does not.** Obsidian only re-reads a plugin's JavaScript
+when the plugin is re-enabled, so *new CSS on old JS* is a real and misleading state: after the
+markup moved off `<button>`, the CSS reset that neutralised Obsidian's button styling was removed
+as no longer needed, which made that pairing render **worse than either version alone**. Two
+consequences: bump `manifest.version` on every user-visible change and surface it in the settings
+tab, and never trust "I reloaded" as evidence that the new code is running.
+
+**Lay out for a 300px dock, not for the mockup's width.** Actions in a third column of the row
+left the description about 190px, so every task broke into three or four lines. They moved to the
+row's second line beside the context, where the space was empty anyway. Similarly,
+`white-space: nowrap` on the whole meta line forced a horizontal scrollbar into the dock; the
+nowrap belongs on each fragment, so the line wraps *between* items but never inside
+"fa 5 setmanes".
+
+**Animate with measured geometry, never assumed row heights.** The lens transition is FLIP —
+read every row's rect, rebuild the list, invert, play. A fixed-height absolutely-positioned
+version broke as soon as a description wrapped to a third line, which at dock width is the common
+case. `prefers-reduced-motion` skips straight to the end state.
+
+**A class used as a hook must never be overwritten by state.** `lead.className = "ord"` destroyed
+the `.lead` hook the next paint queried, so `paint()` threw before reaching
+`list.replaceChildren` — the lens button appeared to do nothing at all and no animation ran, with
+no visible error. Hook and state coexist: `"lead ord"`. `TaskListRenderer` uses the same
+class-as-hook pattern and is exposed to the same mistake.
+
+**Build the summary sentence as DOM, not `innerHTML`.** It only ever interpolates counts today,
+but note content is one refactor away from reaching it.
+
+**Verify without the app where possible.** The harness at
+[`mockups/06-render-real.html`](mockups/06-render-real.html) loads the real `styles.css` with the
+renderer's DOM and Obsidian's CSS variables at two dock widths, and it renders bare `<button>`s
+with Obsidian's styling on purpose so a regression to grey chrome is visible. It catches
+structure, spacing and chrome; it cannot catch a user's theme or snippets.
+
 ## Known limitations
 
 - **Recurring tasks are not completed by the plugin.** Generating the next instance is the
@@ -133,3 +188,6 @@ Every open task then falls in exactly one bucket: `overdue`, `today`, `week`, `l
   action shows a notice and asks the user to tick it in the note instead.
 - No mobile-specific layout yet; the plugin loads on mobile but is designed for desktop.
 - Existing ` ```tasks ` query blocks are untouched and unmanaged.
+- **The rendered views cannot be verified from outside Obsidian.** Unit tests cover the pure
+  section logic (`Focus.ts`) and the harness above covers the stylesheet, but nothing exercises
+  `ItemView` itself — every visual regression so far was found by a user screenshot.

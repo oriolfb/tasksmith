@@ -129,10 +129,9 @@ is undoable.
   `--tcf-terra` what arrived on its own · `--tcf-ocre` age, **as text colour only** — twenty rows
   carry it and as a filled badge the list reads as a traffic light. No success green, no error red:
   an overdue task is not an error.
-- **Never a bare `<button>` for something that is not a button.** Obsidian's own button styling
-  (background, radius, padding, shadow) overrides ours and turns a section label into a grey box.
-  Section headings, the checkbox and the row actions are `div`/`span` with `role="button"`.
-  Icons use Obsidian's `clickable-icon`; the lens tabs are soft pills like "Add property".
+- **Never a bare `<button>` for something that is not a button**, and reach for Obsidian's own
+  classes when the look should be native. The platform reasons, the symptoms and the rest of the
+  rendering rules are in [ARCHITECTURE.md](ARCHITECTURE.md#rendering-inside-obsidian).
 - **One piece of context per row.** The person if the note names one, otherwise the origin. The
   rest — other people, full path, exact date — goes in the tooltip.
 - **Five rows per section**, then a quiet "N més" that hands over to the control centre. The dock
@@ -140,6 +139,12 @@ is undoable.
 - **Actions only on the row you are on.** Three words across twenty rows was sixty clickable
   things competing with the tasks. The key hints at the bottom keep them discoverable.
 - **Air instead of rules.** Nothing separates two rows but space.
+
+"It stresses me, everything is too tight" was the most useful piece of feedback in the whole
+redesign, and none of it was fixed by polish. Every answer was a **removal**: five rows instead of
+twenty-three, two action words instead of three, actions only on the active row, one context
+fragment instead of four, no hairlines. When density is the complaint, adding refinement makes it
+worse.
 
 ## The traps this project has already fallen into
 
@@ -154,3 +159,13 @@ is undoable.
 4. **Counting emoji with a character class.** `/[🔺⏫🔼🔽⏬]/` without the `u` flag matches the
    *surrogate halves*, so it also matches `📅`. It reported 28 tasks with a priority when the real
    answer is zero, and that wrong number was used to justify keeping the priority UI.
+5. **Overwriting a class that is also a query hook.** `lead.className = "ord"` erased the `.lead`
+   the next paint looked for; `paint()` threw before it swapped the list, so the lens button did
+   nothing and the animation never ran — with no visible error anywhere. Symptom to recognise: a
+   control that silently does nothing usually means the render threw halfway, leaving the previous
+   DOM in place.
+6. **Explaining away a screenshot instead of diagnosing it.** Faced with "it still looks wrong", the
+   deduction "your screenshot must be stale" was made from a single detail and was wrong. Cheap
+   diagnostics that would have settled it in one step: grep the *deployed* bundle for the new
+   markers, list every copy of the plugin on disk, check which vault Obsidian actually has open,
+   and put the loaded version in the settings tab.

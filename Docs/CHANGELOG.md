@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `Docs/ARCHITECTURE.md` gains a **Rendering inside Obsidian** section: why a `<button>` cannot be
+  used for something that is not a button, why `styles.css` reloading live while `main.js` does not
+  produces a misleading "nothing changed" state, why the row lays out for a 300px dock, why the lens
+  transition measures real geometry, and how `mockups/06-render-real.html` verifies the stylesheet
+  without opening Obsidian. Every rule came from a screenshot that looked nothing like its design.
+- Two more entries in the ROADMAP's trap list: overwriting a class that is also a query hook (a
+  control that silently does nothing means the render threw halfway), and explaining away a
+  screenshot instead of diagnosing it.
+
 ## 0.2.2
 
 ### Fixed
@@ -26,6 +39,9 @@
 
 ### Added
 
+- **"N més" opens the wide view already filtered to those tasks.** `filterFor` translates a dock
+  section into a `Partial<QueryState>` and `BaseTaskView.applyFilter` applies it, per bucket and per
+  person — the hand-off keeps the list you were looking at.
 - `Docs/ROADMAP.md`: the phases, the settled decisions, the design language, and the traps this
   project has already fallen into.
 - The settings tab shows the loaded version, because Obsidian only re-reads `main.js` when the
