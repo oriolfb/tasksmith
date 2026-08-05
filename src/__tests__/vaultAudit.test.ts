@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { bucketOf } from "../index/Buckets";
 import { bucketCounts, countByKind } from "../query/Query";
+import { focusSections } from "../query/Focus";
 import { ScopeFilter, parseObsidianIgnoreFilters } from "../index/ScopeFilter";
 import { tasksFromFile } from "../index/buildTasks";
 import { TASKS_PLUGIN_DATA, parseTasksData } from "../tasks/TasksPluginSettings";
@@ -125,15 +126,29 @@ describeVault("real vault audit", () => {
     for (const task of byBucket.undated) expect(task.effectiveDate).toBeNull();
   });
 
+  /**
+   * Invariant, not a count: `expect(weekly.length).toBeGreaterThan(0)` passed the day it was
+   * written and failed as soon as Oriol emptied the weekly notes for real. The rule that matters
+   * is that *if* such a task exists, it resolves a date from the frontmatter — vacuously true
+   * when there are none. This is the same trap the pinned bucket counts fell into.
+   */
   it("reads the note's own `data:` for the weekly notes the filename format misses", () => {
     const weekly = tasks.filter((t) => /Diari setmana/.test(t.location.path) && t.open);
-    expect(weekly.length).toBeGreaterThan(0);
     for (const task of weekly) {
-      // No date in the filename, so this used to fall through to "undated".
       expect(task.filenameDate).toBeNull();
       expect(task.noteDate).not.toBeNull();
       expect(task.effectiveDate).not.toBeNull();
     }
+    // A synthetic case keeps the rule covered even when the vault has no weekly task left.
+    const [synthetic] = tasksFromFile(
+      {
+        path: "01 Diari/2026/07/Diari setmana 29 de 2026.md",
+        content: "---\ndata: 2026-07-13\ntags: [Nota_Setmanal]\n---\n\n- [ ] tasca de setmana\n",
+      },
+      parseTasksData(read(path.join(VAULT, TASKS_PLUGIN_DATA)) ?? "{}")
+    );
+    expect(synthetic!.filenameDate).toBeNull();
+    expect(formatIsoDate(synthetic!.effectiveDate!)).toBe("2026-07-13");
   });
 
   it("does not turn a meeting's date into a deadline", () => {
@@ -156,6 +171,25 @@ describeVault("real vault audit", () => {
     const counted = bucketCounts(tasks, REFERENCE_DAY);
     const total = Object.values(counted).reduce((sum, n) => sum + n, 0);
     expect(total).toBe(tasks.filter((t) => t.kind === "commitment").length);
+  });
+
+  it("puts every open commitment in exactly one section of the focus view", () => {
+    const sections = focusSections({ tasks, chosen: [], today: REFERENCE_DAY });
+    const shown = [
+      ...sections.urgent,
+      ...sections.chosen,
+      ...sections.renegotiate,
+      ...sections.undated,
+      ...sections.later,
+    ];
+    const commitments = tasks.filter((t) => t.open && t.kind === "commitment" && !isEmptyTask(t));
+
+    expect(shown).toHaveLength(commitments.length);
+    expect(new Set(shown.map((t) => `${t.location.path}:${t.location.line}`)).size).toBe(shown.length);
+    console.log(
+      `[audit] focus view: ${sections.urgent.length} urgent · ${sections.renegotiate.length} to renegotiate · ` +
+        `${sections.undated.length} undated · ${sections.later.length} later`
+    );
   });
 
   it("resolves people from the frontmatter, so the who-with lens has something to group by", () => {

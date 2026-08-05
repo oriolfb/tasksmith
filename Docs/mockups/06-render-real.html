@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<title>Task Console — banc de proves del CSS real</title>
+
+<!-- Obsidian's own variables, default light theme values. -->
+<style>
+  :root{
+    --background-primary:#ffffff; --background-secondary:#f2f3f5;
+    --background-modifier-hover:rgba(0,0,0,.045); --background-modifier-border:#ddd;
+    --text-normal:#222; --text-muted:#6e6e6e; --text-faint:#999; --text-error:#c0392b;
+    --text-warning:#b9860b; --text-accent:#705dcf; --text-on-accent:#fff;
+    --interactive-accent:#705dcf; --radius-s:4px;
+    --font-ui-small:13px; --font-ui-smaller:12px; --font-ui-medium:15px;
+    --font-monospace:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  html,body{margin:0;background:#e9e7e3;font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif}
+  .frame{display:flex;gap:26px;padding:26px;align-items:flex-start;flex-wrap:wrap}
+  .dock{width:330px;flex:0 0 330px;height:640px;background:var(--background-primary);
+    border:1px solid #ccc;border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
+  .dock.wide{width:490px;flex:0 0 490px}
+  .cap{font:600 11px/1.4 -apple-system,sans-serif;color:#6b665e;padding:0 0 7px}
+  /* This is what the theme does to plain buttons, and what broke the first attempt. */
+  button{font-family:inherit;font-size:var(--font-ui-small);background-color:var(--background-secondary);
+    border:0;border-radius:var(--radius-s);padding:5px 12px;color:var(--text-normal);
+    box-shadow:0 1px 1px rgba(0,0,0,.06);cursor:pointer}
+  .note{max-width:420px;font:12.5px/1.6 -apple-system,sans-serif;color:#5d5951}
+  .note h3{font-size:12.5px;color:#5546b8;margin:0 0 5px}
+  .note p{margin:0 0 12px}
+  .note b{color:#24221e}
+</style>
+
+<!-- The real stylesheet, unmodified. -->
+<link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+<div class="frame">
+  <div>
+    <div class="cap">DOCK 330px — el que produeix el renderer amb el CSS real</div>
+    <div class="dock"><div class="tcf" id="narrow"></div></div>
+  </div>
+  <div>
+    <div class="cap">DOCK 490px — l'amplada de la teva captura</div>
+    <div class="dock wide"><div class="tcf" id="wide"></div></div>
+  </div>
+  <div class="note">
+    <h3>Què s'ha arreglat</h3>
+    <p><b>Capçaleres de secció.</b> Eren <code>&lt;button&gt;</code> i Obsidian els posava fons gris, radi i padding — sortien com a caixes plenes. Ara són <code>div</code> amb <code>role="button"</code>, i mantenen <code>aria-expanded</code> i Enter/Espai.</p>
+    <p><b>Avui · Data · No.</b> També eren botons: tres píndoles grises per fila pesaven més que la tasca. Ara són text.</p>
+    <p><b>La casella.</b> Igual: <code>div</code> en lloc de <code>button</code>, perquè el tema li posava ombra i mida pròpies.</p>
+    <p><b>La barra de scroll horitzontal.</b> Sortia perquè la línia de metadades era <code>nowrap</code> sencera. Ara pot partir <i>entre</i> elements, però mai dins de «fa 5 setmanes».</p>
+    <p><b>Massa atapeït.</b> Files amb 9px de padding i cap línia entre elles, seccions amb 26px d'aire, <b>una</b> peça de context per fila (la resta al tooltip), accions <b>només a la fila activa</b>, i un màxim de <b>5 files per secció</b> amb «19 més» cap al centre de control.</p>
+    <p>Passa el ratolí per sobre d'una fila per veure aparèixer Avui · Data · No.</p>
+    <p>Els botons d'aquesta pàgina porten a propòsit l'estil que aplica Obsidian, per comprovar que el CSS nou ja no s'hi deixa afectar.</p>
+  </div>
+</div>
+
+<script>
+const ROWS = [
+  { t:"Gestionar accés drive search", late:"fa 5 setmanes", src:"Notes 29 de juny 2026" },
+  { t:"enviar al xat de responsables proposta canvi agrupació de mercats online KPIs", late:"fa 5 setmanes", src:"Notes 11 de març 2026" },
+  { t:"pedirle a dani la api de calendario", late:"fa 5 setmanes", who:["Dani Barreiro"], src:"Estrategia IA Zara Data" },
+  { t:"Slaide -> demanar-li a la marina que ens faci una plantilla de ppt", late:"fa 5 setmanes", who:["Carmen","Mónica"], src:"Seguiment BI + Carmen" },
+];
+
+function build(host){
+  host.empty = () => { while (host.firstChild) host.removeChild(host.firstChild); };
+
+  const el = (tag, cls, text, parent) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    (parent ?? host).appendChild(node);
+    return node;
+  };
+
+  // lens
+  const lens = el("div","tcf-lens");
+  const a = el("button","tcf-tab tcf-tab-on","Per data",lens);
+  el("button","tcf-tab","Amb qui",lens);
+  const tools = el("div","tcf-lens-tools",undefined,lens);
+  el("button","tcf-icon","⌕",tools);
+  el("button","tcf-icon","▤",tools);
+  el("span","tcf-total","39 obertes",lens);
+
+  // sentence
+  const say = el("div","tcf-say");
+  const b = document.createElement("b"); b.textContent = "Què faràs avui?"; say.appendChild(b);
+  say.appendChild(document.createTextNode(" Tria'n 3. Hi ha 23 per renegociar i 12 sense data."));
+
+  const list = el("div","tcf-list");
+
+  // AVUI
+  const head = el("div","tcf-sec tcf-sec-now",undefined,list);
+  head.setAttribute("role","button");
+  el("span","tcf-sec-name","Avui",head);
+  el("span","tcf-sec-why","0 de 3 triades",head);
+  for (const [n,hint] of [[1,"tria la primera…"],[2,"tria la segona…"],[3,"i la tercera"]]) {
+    const slot = el("div","tcf-slot",undefined,list);
+    el("span","tcf-lead tcf-ord tcf-ord-empty",String(n),slot);
+    el("span",null,hint,slot);
+  }
+
+  // one urgent row, to check the terracotta rule
+  const urgentHead = el("div","tcf-sec",undefined,list);
+  el("span","tcf-sec-name","Exemple d'urgent",urgentHead);
+  el("span","tcf-sec-why","barra terracota, no gasta cap plaça",urgentHead);
+  row(list, { t:"Revisar databsk com estan tots els informes de pbi", now:"data d'avui", src:"Notes 20 de juliol" }, true);
+
+  // renegotiate
+  const head2 = el("div","tcf-sec",undefined,list);
+  head2.setAttribute("role","button");
+  el("span","tcf-sec-name","Per renegociar",head2);
+  el("span","tcf-sec-why","decisió pendent, no fracàs",head2);
+  el("span","tcf-sec-count","23",head2);
+  for (const data of ROWS) row(list, data, false);
+  const more = el("div","tcf-more","19 més",list);
+  more.setAttribute("role","button");
+
+  const keys = el("div","tcf-keys");
+  for (const [k,w] of [["J K","moure"],["A","avui"],["D","data"],["N","no"],["X","fet"],["/","cerca"]]) {
+    const hint = el("span",null,undefined,keys);
+    const kb = document.createElement("b"); kb.textContent = k; hint.appendChild(kb);
+    hint.appendChild(document.createTextNode(" "+w));
+  }
+
+  function row(parent, data, urgent){
+    const r = el("div","tcf-row"+(urgent?" tcf-urgent":""),undefined,parent);
+    r.tabIndex = 0;
+    const mark = el("div","tcf-lead tcf-mark",undefined,r);
+    mark.setAttribute("role","button");
+    const main = el("div","tcf-main",undefined,r);
+    el("div","tcf-text",data.t,main);
+    const foot = el("div","tcf-foot",undefined,main);
+    const meta = el("span","tcf-meta",undefined,foot);
+    if (data.now) el("span","tcf-now",data.now,meta);
+    else el("span","tcf-late",data.late,meta);
+    el("span","tcf-dot","·",meta);
+    const who = data.who ?? [];
+    if (who.length) el("span","tcf-who",who[0]+(who.length>1?" +"+(who.length-1):""),meta);
+    else el("span","tcf-src",data.src,meta);
+    const doers = el("div","tcf-do",undefined,foot);
+    el("span","tcf-act","Avui",doers);
+    el("span","tcf-act","Data",doers);
+    el("span","tcf-act tcf-no","No",doers);
+  }
+}
+
+build(document.getElementById("narrow"));
+build(document.getElementById("wide"));
+</script>
+</body>
+</html>

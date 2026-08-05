@@ -1,6 +1,70 @@
 # Changelog
 
+## 0.2.2
+
+### Fixed
+
+- **You can complete the three tasks you chose for today.** The ordinal replaced the checkbox, so
+  the only tasks in the view you could not tick off were the ones you had committed to. It now sits
+  beside the box.
+- The lens tabs are soft pills like Obsidian's own "Add property" button; the underlined version
+  read as a stray link.
+- Header icons use Obsidian's `clickable-icon`, so they lose the border and match every other icon
+  in the app.
+
+### Changed
+
+- **"No ho faré" moved out of the row** and into the bottom of the date menu, separated and marked
+  as a warning. It was one careless click from cancelling a task — recoverable, but you would have
+  had to go looking for it. There is deliberately no bare keyboard shortcut for it.
+- Once the three slots are full, the rest of the list drops to 45% opacity: the day is decided, and
+  the pool is there for reference rather than for more deciding. It brightens on hover.
+- A person is now a heading, not a filing label: full size, normal case, 30px of air above. The
+  "7 converses tanquen…" line gained a rule beneath it so it stops crowding the first name.
+- The vault audit no longer pins the number of weekly-note tasks — an invariant plus a synthetic
+  case, because the count went to zero the moment the notes were used for real.
+
+### Added
+
+- `Docs/ROADMAP.md`: the phases, the settled decisions, the design language, and the traps this
+  project has already fallen into.
+- The settings tab shows the loaded version, because Obsidian only re-reads `main.js` when the
+  plugin is re-enabled.
+
 ## Unreleased
+
+### Added — the focus view
+
+- The sidebar is now a focus view with **one question and three slots**. Same view id, so an
+  existing workspace layout keeps working.
+- **Two provenances in "Avui", and they look different.** Tasks that arrive on their own — dated
+  today, `🔺`, or `#urgent` — carry a terracotta rule, come first, and **never occupy one of your
+  three slots**. The ones you pick carry a lila 1·2·3. This was the hole in the first design:
+  with a hand-picked "today" only, something genuinely urgent could sit unseen in the pool.
+- **The day's plan is not written to the notes.** `DaySelection` keeps it in the plugin's own data,
+  stamped with the day; at midnight the stamp no longer matches and the plan is gone, so an
+  unfinished task returns to the pool instead of becoming overdue. Writing `📅 avui` would have
+  created exactly the debt that left twenty tasks rotting for up to five weeks. Identity is
+  `note|text`, not `path:line`, because line numbers shift the moment you type a line above.
+- **Two lenses over the same list**, "Per data" and "Amb qui", with a FLIP transition over real
+  geometry — measure, rebuild, invert, play — so rows move rather than blink. Real geometry
+  because a task's text wraps to two or three lines in a 300px dock. Honours
+  `prefers-reduced-motion`.
+- Sections are collapsible, remembered between sessions, and are `<button>`s with `aria-expanded`
+  rather than divs with a click handler.
+- Keyboard for the whole cycle: `J`/`K` move, `A` today, `D` date, `N` no, `X` done, `O` open,
+  `/` search. Rows are focusable with a visible focus ring.
+- Search is hidden until you ask for it (`/` or the magnifier), so the view shows data at rest.
+- `Focus.ts` holds the section logic as a pure function, so the unit tests and the vault audit see
+  exactly what the view renders. New audit assertion: every open commitment lands in exactly one
+  section, no duplicates.
+- 19 tests. Measured on the real vault: 0 urgent · 23 to renegotiate · 12 undated · 4 later.
+
+### Removed
+
+- **Priority is gone from the interface** — the row chip, the five menu entries and the sort
+  option. Not one open task in this vault carries a priority marker, so it was pure visual weight
+  with no signal. `TaskActions.setPriority` and the data model keep it.
 
 ### Added — the note as context
 

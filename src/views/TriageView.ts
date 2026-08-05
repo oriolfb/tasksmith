@@ -83,7 +83,6 @@ export class TriageView extends BaseTaskView {
     this.sortSelect = this.select(bar, "Ordenar", [
       ["date", "Per data"],
       ["age", "Per antiguitat"],
-      ["priority", "Per prioritat"],
       ["note", "Per nota"],
     ] as [SortKey, string][], (value) => {
       this.query = { ...this.query, sort: value };

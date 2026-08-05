@@ -1,12 +1,9 @@
 import { type App, Menu, Notice, TFile, setIcon, setTooltip } from "obsidian";
-import type { Priority, Task } from "../types/task";
+import type { Task } from "../types/task";
 import type { TaskActions } from "../tasks/TaskActions";
 import { bucketOf } from "../index/Buckets";
-import { markerForPriority } from "../index/TaskParser";
 import type { TaskGroup } from "../query/Query";
 import { noteName, relativeLabel, shortDate } from "./format";
-
-const PRIORITIES: Priority[] = ["highest", "high", "medium", "low", "lowest"];
 
 export interface RendererOptions {
   /** Wide layout adds the note and project columns plus multi-select. */
@@ -121,7 +118,8 @@ export class TaskListRenderer {
       { delay: 120 }
     );
 
-    if (task.priority) meta.createSpan({ cls: "tc-prio", text: markerForPriority(task.priority) });
+    // No priority chip: not one open task in this vault carries a priority marker, so the
+    // column was pure visual weight. `TaskActions.setPriority` still exists for the data model.
     if (task.fields.recurrence) meta.createSpan({ cls: "tc-recur", text: "🔁" });
     if (task.project) meta.createSpan({ cls: "tc-chip", text: task.project });
     if (this.options.wide) {
@@ -178,18 +176,6 @@ export class TaskListRenderer {
           .setIcon("clock")
           .onClick(async () => {
             await this.actions.postpone(task, days);
-          })
-      );
-    }
-
-    menu.addSeparator();
-    for (const priority of PRIORITIES) {
-      menu.addItem((item) =>
-        item
-          .setTitle(`Prioritat ${markerForPriority(priority)}`)
-          .setChecked(task.priority === priority)
-          .onClick(async () => {
-            await this.actions.setPriority(task, task.priority === priority ? null : priority);
           })
       );
     }

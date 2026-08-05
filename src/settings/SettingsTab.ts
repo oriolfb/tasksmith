@@ -10,6 +10,14 @@ export class TaskConsoleSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
+    // Which build is actually running. Obsidian only re-reads main.js when the plugin is
+    // re-enabled, so "I reloaded" and "the new code is running" are not the same claim.
+    new Setting(containerEl)
+      .setName("Versió carregada")
+      .setDesc(
+        `${this.plugin.manifest.version} · si no coincideix amb l'última desplegada, desactiva i torna a activar el plugin.`
+      );
+
     new Setting(containerEl)
       .setName("Carpetes excloses")
       .setDesc("Una per línia. Les tasques d'aquestes carpetes no s'indexen.")

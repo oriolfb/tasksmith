@@ -36,7 +36,16 @@ export default class TaskConsolePlugin extends Plugin {
 
     this.registerView(
       SIDEBAR_VIEW,
-      (leaf) => new SidebarView(leaf, this.index, this.actions, this.settings, () => void this.openTriage())
+      (leaf) =>
+        new SidebarView(
+          leaf,
+          this.index,
+          this.actions,
+          this.settings,
+          () => void this.openTriage(),
+          // The day's plan and the folded sections live in settings, so they survive a reload.
+          () => this.saveData(this.settings)
+        )
     );
     this.registerView(
       TRIAGE_VIEW,

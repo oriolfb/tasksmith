@@ -14,8 +14,25 @@
 
 | Id | Class | Where |
 |---|---|---|
-| `task-console-sidebar` | `SidebarView` | Right dock. Bucket pills, search, sort, stale toggle. |
-| `task-console-triage` | `TriageView` | Tab. Multi-select, bulk actions, grouping and project filter. |
+| `task-console-sidebar` | `SidebarView` | Right dock. The focus view: two lenses (date / who with), three day slots, collapsible sections, keyboard. |
+| `task-console-triage` | `TriageView` | Tab. Multi-select, bulk actions, grouping (including by person) and project filter. |
+
+### The focus view
+
+`Focus.focusSections` is pure and decides everything the view shows:
+
+| Section | Contents |
+|---|---|
+| **Avui** | `isUrgent` first (dated today, `🔺`, or `#urgent`) — these never take a slot — then the `DAY_LIMIT` (3) you chose, then the free slots. |
+| **Per renegociar** | Overdue, oldest first. Not "late": a decision not yet made. |
+| **Sense data** · **Més endavant** | The rest. |
+
+`DaySelection` holds the chosen keys in `settings.dayPlan`, stamped `YYYY-MM-DD`. A plan from
+another day is dropped on read; `prune` frees the slot of a task that has been completed, deleted
+or reworded. Nothing is written to the vault, which is why an unfinished day creates no debt.
+
+Row actions are words, not buttons: **Avui · Data · No**. `No` cancels the line (status `-`), so
+saying no costs exactly as much as postponing — and `⌘Z` gets it back.
 
 ## Quick actions (`TaskActions`)
 

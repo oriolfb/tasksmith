@@ -371,6 +371,449 @@
   margin-left: auto;
 }
 
+/* ══ focus view ═════════════════════════════════════════════
+   A dense typographic list: no cards, no borders, no avatars. Three accents, one job each —
+   lila for what you chose, terracotta for what arrived on its own, ochre for age. Ochre is
+   text-only: twenty rows carry it, and as a filled badge the list would read as a traffic light.
+   Override any of the three in your own snippet if your theme clashes. */
+
+.tcf {
+  --tcf-lila: #6b5bd2;
+  --tcf-terra: #c0553c;
+  --tcf-ocre: #97652b;
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.theme-dark .tcf {
+  --tcf-lila: #a08ff5;
+  --tcf-terra: #e07a5f;
+  --tcf-ocre: #d6a866;
+}
+
+.tcf-hidden {
+  display: none !important;
+}
+
+/* ── lens tabs ──────────────────────────────────────────── */
+
+.tcf-lens {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 6px;
+}
+
+/* Soft pills, like Obsidian's own "Add property" button: a filled shape with no border. The
+   underlined-tab version read as a stray link, which is what it looked like in the dock. */
+.tcf-tab {
+  background-color: transparent;
+  border: none;
+  border-radius: var(--radius-m, 8px);
+  box-shadow: none;
+  padding: 4px 11px;
+  height: auto;
+  font-size: var(--font-ui-smaller);
+  font-weight: 550;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.tcf-tab:hover {
+  color: var(--text-normal);
+  background-color: var(--background-modifier-hover);
+}
+
+.tcf-tab-on,
+.tcf-tab-on:hover {
+  background-color: var(--background-secondary);
+  color: var(--tcf-lila);
+  font-weight: 650;
+}
+
+.tcf-lens-tools {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+
+/* `clickable-icon` from Obsidian carries the look; we only set the size. */
+.tcf-icon {
+  --icon-size: 17px;
+  padding: 4px;
+}
+
+.tcf-icon:hover {
+  color: var(--tcf-lila);
+}
+
+.tcf-total {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.tcf-search {
+  padding-top: 8px;
+}
+
+.tcf-search input {
+  width: 100%;
+}
+
+/* ── the sentence ───────────────────────────────────────── */
+
+.tcf-say {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  line-height: 1.45;
+  padding: 11px 0 6px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: 2px;
+}
+
+.tcf-say b {
+  color: var(--text-normal);
+  font-weight: 600;
+}
+
+.tcf-l {
+  color: var(--tcf-lila);
+  font-weight: 600;
+}
+
+/* ── section heading ────────────────────────────────────── */
+
+.tcf-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin: 0 -12px;
+  padding: 0 12px;
+}
+
+/* A div, not a button: Obsidian's button styling would give this a filled background and a
+   radius, and a section label is a label, not a control. */
+.tcf-sec {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 26px 0 4px;
+  padding: 0 0 6px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  cursor: pointer;
+}
+
+.tcf-sec:first-child {
+  margin-top: 6px;
+}
+
+.tcf-sec:hover .tcf-sec-name {
+  color: var(--text-muted);
+}
+
+.tcf-sec:focus-visible {
+  outline: 2px solid var(--tcf-lila);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.tcf-sec-name {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 750;
+  color: var(--text-faint);
+}
+
+.tcf-sec-now .tcf-sec-name,
+.tcf-sec-now .tcf-sec-count {
+  color: var(--tcf-lila);
+}
+
+.tcf-sec-why {
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+
+.tcf-sec-count {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A person is a heading, not a filing label: normal case, real size, real space above. In the
+   "who with" lens the name is the thing you are looking for, so it stops whispering. */
+.tcf-sec-big {
+  margin-top: 30px;
+  padding-bottom: 7px;
+  align-items: baseline;
+}
+
+.tcf-sec-big .tcf-sec-name {
+  font-size: var(--font-ui-small);
+  font-weight: 650;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-normal);
+}
+
+.tcf-sec-big .tcf-sec-count {
+  font-size: var(--font-ui-smaller);
+}
+
+/* ── the day is decided: everything else steps back ─────── */
+
+.tcf-committed .tcf-secondary {
+  opacity: 0.45;
+  transition: opacity 0.18s ease;
+}
+
+.tcf-committed .tcf-secondary:hover,
+.tcf-committed .tcf-secondary:focus-within {
+  opacity: 1;
+}
+
+/* ── the row ────────────────────────────────────────────── */
+
+/* Air instead of rules: nothing separates two rows but space. Hairlines between twenty rows
+   read as a table, and a table of things you have not done is a lot to look at. */
+.tcf-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 9px 12px;
+  margin: 0 -12px;
+  border-radius: var(--radius-s);
+  position: relative;
+}
+
+.tcf-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.tcf-row:focus-visible {
+  outline: 2px solid var(--tcf-lila);
+  outline-offset: -2px;
+}
+
+/* Arrived on its own. The rule sits in the gutter the row already bleeds into, so the text
+   column never shifts — a rule that indents its own row is worse than no rule. */
+.tcf-urgent::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 7px;
+  bottom: 7px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--tcf-terra);
+}
+
+.tcf-lead {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 16px;
+  margin-top: 1px;
+}
+
+.tcf-mark {
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--text-faint);
+  border-radius: 3px;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.tcf-row:hover .tcf-mark {
+  border-color: var(--tcf-lila);
+}
+
+/* Sits beside the checkbox, not in place of it. */
+.tcf-ord {
+  flex: 0 0 auto;
+  width: 9px;
+  margin: 1px -3px 0 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--tcf-lila);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  line-height: 16px;
+}
+
+.tcf-ord-empty {
+  color: var(--text-faint);
+  font-weight: 500;
+}
+
+.tcf-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tcf-text {
+  font-size: var(--font-ui-small);
+  line-height: 1.45;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.tcf-text:hover {
+  text-decoration: underline;
+}
+
+/* Context on the left, actions on the right, both on the row's second line. */
+.tcf-foot {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+/* Inline so a short task keeps its date on the same line. The line may wrap *between* items,
+   but never inside one: "fa 5 / setmanes" split over two lines reads as noise — and forcing the
+   whole meta to one line was what pushed a horizontal scrollbar into the dock. */
+.tcf-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+}
+
+.tcf-meta > span {
+  white-space: nowrap;
+}
+
+.tcf-late {
+  color: var(--tcf-ocre);
+}
+
+.tcf-now {
+  color: var(--tcf-terra);
+  font-weight: 600;
+}
+
+.tcf-who {
+  color: var(--text-muted);
+}
+
+.tcf-dot {
+  padding: 0 4px;
+  color: var(--text-faint);
+  opacity: 0.6;
+}
+
+.tcf-src {
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.tcf-src:hover {
+  text-decoration: underline;
+}
+
+/* ── actions as words, not buttons ──────────────────────── */
+
+/* Only on the row you are pointing at or focused on.
+   Three words × twenty rows was sixty clickable things competing with the tasks themselves. The
+   keyboard row at the bottom (A · D · N) is what keeps them discoverable without the mouse. */
+.tcf-do {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.tcf-row:hover .tcf-do,
+.tcf-row:focus-within .tcf-do,
+.tcf-row:focus-visible .tcf-do {
+  opacity: 1;
+}
+
+/* Words, not buttons: a <button> here inherits the theme's padding, background and radius, and
+   three grey pills per row weigh more than the task itself. */
+.tcf-act {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tcf-act:hover {
+  color: var(--tcf-lila);
+  text-decoration: underline;
+}
+
+/* ── free slots and footer ──────────────────────────────── */
+
+.tcf-slot {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 0;
+  font-size: var(--font-ui-small);
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.tcf-slot:hover {
+  color: var(--tcf-lila);
+}
+
+.tcf-empty {
+  padding: 18px 0;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+/* "18 més" — the rest of the list, handed over to the wide view. */
+.tcf-more {
+  margin-top: 4px;
+  padding: 4px 0 2px 26px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.tcf-more:hover {
+  color: var(--tcf-lila);
+  text-decoration: underline;
+}
+
+.tcf-keys {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--background-modifier-border);
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.tcf-keys b {
+  font-family: var(--font-monospace);
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin-right: 3px;
+}
+
 /* ── undo inside a notice ───────────────────────────────── */
 
 .notice .tc-undo {

@@ -1,21 +1,15 @@
 /**
- * Copies only the three files Obsidian needs into the vault's plugin folder.
- * Development stays outside the vault so node_modules never enters iCloud sync.
+ * One-shot deploy: build first, then copy the three files Obsidian needs into the vault.
  *
- * Override the target with TASK_CONSOLE_VAULT.
+ * Override the target with TASK_CONSOLE_VAULT. For a loop that copies on every save, use
+ * `npm run deploy:watch` instead.
  */
-import { copyFileSync, existsSync, mkdirSync, readFileSync } from "fs";
-import { homedir } from "os";
-import { join } from "path";
+import { ARTIFACTS, copyArtifacts, resolveVault } from "./artifacts.mjs";
+import { existsSync } from "fs";
 
-const ARTIFACTS = ["main.js", "manifest.json", "styles.css"];
-
-const vault =
-  process.env.TASK_CONSOLE_VAULT ??
-  join(homedir(), "Library/Mobile Documents/iCloud~md~obsidian/Documents/Bershka");
-
-if (!existsSync(join(vault, ".obsidian"))) {
-  console.error(`No vault at ${vault}. Set TASK_CONSOLE_VAULT.`);
+const vault = resolveVault();
+if (!vault) {
+  console.error(`No vault found. Set TASK_CONSOLE_VAULT to your vault's path.`);
   process.exit(1);
 }
 
@@ -25,13 +19,7 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-const { id } = JSON.parse(readFileSync("manifest.json", "utf8"));
-const target = join(vault, ".obsidian", "plugins", id);
-mkdirSync(target, { recursive: true });
-
-for (const file of ARTIFACTS) {
-  copyFileSync(file, join(target, file));
-}
+const { id, target } = copyArtifacts(vault);
 
 console.log(`Deployed ${id} to ${target}`);
-console.log("Reload Obsidian (or disable/enable the plugin) to pick up the change.");
+console.log("Reload Obsidian (⌘R) or disable/enable the plugin to pick up the change.");

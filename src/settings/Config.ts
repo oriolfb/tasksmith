@@ -1,5 +1,6 @@
 import type { QueryState } from "../query/Query";
 import { DEFAULT_CONTEXT_RULES, type ContextRules } from "../index/ContextRules";
+import { EMPTY_PLAN, type DayPlan } from "../views/DaySelection";
 
 export interface SavedView {
   name: string;
@@ -28,6 +29,13 @@ export interface TaskConsoleSettings {
   referenceNoteTypes: string[];
   /** `tipus` values whose task lines are someday/maybe. */
   somedayNoteTypes: string[];
+  /**
+   * Today's chosen tasks, stamped with the day. Lives here and not in the notes, so an
+   * unfinished day expires instead of becoming a backlog of overdue tasks.
+   */
+  dayPlan: DayPlan;
+  /** Sections the user folded away, remembered between sessions. */
+  collapsedSections: string[];
 }
 
 export const DEFAULT_SETTINGS: TaskConsoleSettings = {
@@ -40,6 +48,8 @@ export const DEFAULT_SETTINGS: TaskConsoleSettings = {
   deadlineFromNotes: [...DEFAULT_CONTEXT_RULES.deadlineFrom],
   referenceNoteTypes: [...DEFAULT_CONTEXT_RULES.referenceTypes],
   somedayNoteTypes: [...DEFAULT_CONTEXT_RULES.somedayTypes],
+  dayPlan: EMPTY_PLAN,
+  collapsedSections: [],
 };
 
 export function contextRulesOf(settings: TaskConsoleSettings): ContextRules {
