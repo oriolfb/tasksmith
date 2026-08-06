@@ -222,7 +222,9 @@ export class SidebarView extends ItemView {
     const all = this.index.all();
 
     this.day.refresh(today);
-    this.day.prune(all);
+    // Only once the index has actually been read. Reconciling the plan against a scan still in
+    // flight is how a day's three chosen tasks disappeared between one Obsidian session and the next.
+    if (this.index.ready) this.day.prune(all);
 
     const sections = this.lens === "date" ? this.dateSections(all, today) : this.personSections(all, today);
     // The colour says which lens is active; `aria-pressed` says it out loud for a screen reader.
@@ -280,8 +282,18 @@ export class SidebarView extends ItemView {
     if (focus.done.length > 0) said.push({ text: ` ${doneSoFar(focus.done.length)}`, strong: true });
     this.say(...said);
 
+    /*
+     * "Tria la segona… i la tercera" is onboarding for a day that has not started. Once you have
+     * closed or picked your way to three, the goal is met — a finished task freeing its slot back
+     * up (see `DaySelection`) should not read as the app asking for two more. From then on, adding
+     * past three is your call alone, offered once, quietly, with no ordinal walking you through it.
+     */
+    const settled = focus.chosen.length + focus.done.length;
+    const goalMet = settled >= DAY_LIMIT;
     const emptySlots: number[] = [];
-    for (let slot = focus.chosen.length + 1; slot <= DAY_LIMIT; slot++) emptySlots.push(slot);
+    if (!goalMet) {
+      for (let slot = focus.chosen.length + 1; slot <= DAY_LIMIT; slot++) emptySlots.push(slot);
+    }
 
     return [
       {
@@ -294,6 +306,7 @@ export class SidebarView extends ItemView {
         done: focus.done,
         now: true,
         emptySlots,
+        optionalSlot: goalMet && focus.chosen.length < DAY_LIMIT,
         ordinals,
         urgent: focus.urgent.length > 0,
       },

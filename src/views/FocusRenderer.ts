@@ -27,6 +27,12 @@ export interface Section {
    * holds, because urgent tasks arrive on their own and never occupy one of your three.
    */
   emptySlots?: number[];
+  /**
+   * You have already closed or picked your way to three today, but there is room for one more if
+   * you want it. Rendered as a single quiet line with no ordinal — unlike `emptySlots`, this is
+   * not a walkthrough of what is left to do, since there is nothing left to do.
+   */
+  optionalSlot?: boolean;
   /** Ordinal shown instead of a checkbox, for the tasks you chose. */
   ordinals?: Map<string, number>;
   /** Terracotta rule: these arrived on their own. */
@@ -144,8 +150,18 @@ export class FocusRenderer {
 
     for (const slot of section.emptySlots ?? []) {
       const empty = host.createDiv({ cls: "tcf-slot" });
-      empty.createSpan({ cls: "tcf-lead tcf-ord tcf-ord-empty", text: String(slot) });
+      empty.createSpan({ cls: "tcf-ord tcf-ord-empty", text: String(slot) });
+      // Same width as the checkbox it stands in for, so the hint text lands under the task
+      // text above it instead of creeping left into the checkbox's own column.
+      empty.createDiv({ cls: "tcf-lead" });
       empty.createSpan({ text: SLOT_HINTS[slot] ?? "tria'n una més…" });
+    }
+
+    if (section.optionalSlot) {
+      const empty = host.createDiv({ cls: "tcf-slot tcf-slot-optional" });
+      empty.createSpan({ cls: "tcf-ord tcf-ord-empty" });
+      empty.createDiv({ cls: "tcf-lead" });
+      empty.createSpan({ text: "en pots afegir una més, si vols" });
     }
 
     // Last, under its own quiet label: what you have already closed today. The invitation to pick
@@ -184,10 +200,6 @@ export class FocusRenderer {
     const row = host.createDiv({ cls: "tcf-row" });
     row.dataset.tcfKey = `${task.location.path}:${task.location.line}`;
     row.tabIndex = 0;
-    // Per row, not per section: "Avui" holds what arrived on its own *and* what you chose, and a
-    // task you picked for tomorrow is not urgent just because an urgent one sits above it.
-    if (section.urgent && isUrgent(task, today)) row.addClass("tcf-urgent");
-    if (!section.now) row.addClass("tcf-secondary");
 
     /*
      * The ordinal goes *next to* the checkbox, never instead of it. Replacing the box with the
@@ -196,6 +208,12 @@ export class FocusRenderer {
      */
     const ordinal = section.ordinals?.get(dayKey(task));
     if (ordinal !== undefined) row.createSpan({ cls: "tcf-ord", text: String(ordinal) });
+
+    // Per row, not per section: "Avui" holds what arrived on its own *and* what you chose, and a
+    // task due today that you *chose* is not the one that arrived unbidden — choosing wins, so it
+    // never gets the terracotta "arrived" treatment just because its date happens to be today.
+    if (section.urgent && ordinal === undefined && isUrgent(task, today)) row.addClass("tcf-urgent");
+    if (!section.now) row.addClass("tcf-secondary");
 
     const box = row.createDiv({ cls: "tcf-lead tcf-mark" });
     box.setAttribute("role", "button");
@@ -232,14 +250,15 @@ export class FocusRenderer {
 
   /**
    * The date, the age and the context — as text, in one line, never breaking inside itself.
-   * "data d'avui" replaces the age rather than joining it: a task due today is not also late.
+   * "avui" replaces the age rather than joining it: a task due today is not also late.
    */
   private renderMeta(meta: HTMLElement, task: Task, section: Section, today: Date): void {
     const bucket = bucketOf(task, today);
-    const arrived = section.urgent && isUrgent(task, today);
+    const chosen = section.ordinals?.has(dayKey(task)) ?? false;
+    const arrived = section.urgent && !chosen && isUrgent(task, today);
 
     if (arrived && bucket === "today") {
-      meta.createSpan({ cls: "tcf-now", text: "data d'avui" });
+      meta.createSpan({ cls: "tcf-now", text: "avui" });
     } else if (arrived) {
       meta.createSpan({ cls: "tcf-now", text: "marcada com a urgent" });
     } else if (bucket === "overdue") {

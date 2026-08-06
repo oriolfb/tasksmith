@@ -67,8 +67,17 @@ recognises. Edits in `TaskLineEditor` splice `raw`, so any text the parser does 
 **Fields are read from the end of the line**, one at a time, matching the Tasks plugin.
 A marker with no valid value stays part of the description rather than becoming a null date.
 
-**No persisted cache.** ~900 notes and ~530 task lines: a full scan runs off Obsidian's own
-file cache in well under a second. `metadataCache.on("changed")` reindexes single notes.
+**No persisted cache, but the scan is concurrent.** ~900 notes and ~530 task lines. Measured:
+2,392 ms reading them one `await` at a time, 168 ms in batches of 32, 32 ms to parse all of it.
+The scan was never CPU-bound, so it reads `READ_BATCH` notes at once and there is still nothing
+to persist. The finished index replaces the old one in a single assignment rather than clearing
+it up front, so a re-scan never shows an empty vault. `metadataCache.on("changed")` reindexes
+single notes, and waits for a scan in flight so an older read cannot overwrite a newer one.
+
+**"Loading" is not "empty".** `index.ready` is false until the first full scan lands. Anything
+that reconciles saved state against the index has to check it: the day's plan did not, and was
+wiped and written back to disk on every Obsidian start, because a dock that paints before the
+scan finishes asks "do these tasks still exist?" of a vault that has not been read yet.
 
 **Config is not duplicated.** Statuses, `useFilenameAsScheduledDate`, `setDoneDate` and
 friends are read from the Tasks plugin's `data.json`; excluded folders default to Obsidian's
@@ -118,8 +127,11 @@ which an earlier version conflated into one:
 | Does a task with this key still exist? | No → forget the key. The line was deleted or reworded. |
 | Is it still open? | No → the key leaves `keys` (the slot reopens) and joins `done` (the line stays). |
 
-Three consequences worth keeping:
+Four consequences worth keeping:
 
+- **Both questions need a list to ask them of.** With no tasks in hand, the first answer is "no" for
+  every key and the plan is emptied — then persisted, which is what turned a loading index into a
+  lost day. `prune` refuses an empty list, and the dock waits for `index.ready` before calling it.
 - **Every mutation stamps `date`, not just `add`.** The first thing closed on a given day can be an
   urgent task on an otherwise untouched plan — whose `date` is still `""`. Recording it without
   stamping means `forToday` wipes the record on the very next paint.

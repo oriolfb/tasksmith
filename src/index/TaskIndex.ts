@@ -9,6 +9,15 @@ import { Logger } from "../utils/Logger";
 type Listener = () => void;
 
 /**
+ * How many notes are read at once during a full scan.
+ *
+ * Measured on this vault (895 notes, 3.6 MB): one `await` per file costs 2.4 s with the OS
+ * cache already warm, the same reads in batches of 32 cost 168 ms, and parsing the lot is 32 ms.
+ * The scan was never CPU-bound — it was 895 round-trips taken one at a time.
+ */
+const READ_BATCH = 32;
+
+/**
  * In-memory index of every task in scope. A full scan of this vault is ~900 reads served
  * from Obsidian's own cache, so there is no persisted cache to go stale.
  */
@@ -16,6 +25,8 @@ export class TaskIndex {
   private byPath = new Map<string, Task[]>();
   private mtimes = new Map<string, number>();
   private listeners = new Set<Listener>();
+  private scanning: Promise<void> | null = null;
+  private scanned = false;
 
   constructor(
     private readonly app: App,
@@ -36,18 +47,31 @@ export class TaskIndex {
     this.rules = rules;
   }
 
+  /**
+   * Whether a full scan has finished at least once.
+   *
+   * Before that the index is not empty, it is **unknown**, and the two are not the same thing:
+   * anything that reconciles saved state against the index (the day's plan) has to wait, or it
+   * reads a vault that has not been opened yet as a vault where nothing exists.
+   */
+  get ready(): boolean {
+    return this.scanned;
+  }
+
   async rebuild(): Promise<void> {
-    this.byPath.clear();
-    this.mtimes.clear();
-    const files = this.app.vault.getMarkdownFiles();
-    for (const file of files) {
-      await this.load(file, false);
+    const run = this.scan();
+    this.scanning = run;
+    try {
+      await run;
+    } finally {
+      if (this.scanning === run) this.scanning = null;
     }
-    Logger.info(`indexed ${this.all().length} tasks from ${this.byPath.size} notes`);
-    this.emit();
   }
 
   async reindex(file: TFile): Promise<void> {
+    // A scan in flight is about to read this file itself; letting both run would race, and the
+    // scan's older read could win. Waiting for it costs nothing outside the first seconds.
+    if (this.scanning) await this.scanning;
     await this.load(file, true);
   }
 
@@ -84,25 +108,48 @@ export class TaskIndex {
     return () => this.listeners.delete(listener);
   }
 
+  private async scan(): Promise<void> {
+    const files = this.app.vault.getMarkdownFiles().filter((file) => this.scope.includes(file.path));
+    const byPath = new Map<string, Task[]>();
+    const mtimes = new Map<string, number>();
+
+    for (let i = 0; i < files.length; i += READ_BATCH) {
+      await Promise.all(files.slice(i, i + READ_BATCH).map((file) => this.read(file, byPath, mtimes)));
+    }
+
+    // Swapped in whole rather than cleared up front: a re-scan (a settings change) leaves the
+    // views showing the previous index for those milliseconds instead of an empty one.
+    this.byPath = byPath;
+    this.mtimes = mtimes;
+    this.scanned = true;
+    Logger.info(`indexed ${this.all().length} tasks from ${this.byPath.size} notes`);
+    this.emit();
+  }
+
   private async load(file: TFile, notify: boolean): Promise<void> {
     if (!this.scope.includes(file.path)) {
       if (this.byPath.delete(file.path) && notify) this.emit();
       return;
     }
+    await this.read(file, this.byPath, this.mtimes);
+    if (notify) this.emit();
+  }
+
+  /** Reads and parses one note into the given maps. Callers check the scope first. */
+  private async read(file: TFile, byPath: Map<string, Task[]>, mtimes: Map<string, number>): Promise<void> {
     try {
       const content = await this.app.vault.cachedRead(file);
       const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
       const tasks = tasksFromFile({ path: file.path, content, frontmatter }, this.interop, this.rules);
       if (tasks.length > 0) {
-        this.byPath.set(file.path, tasks);
+        byPath.set(file.path, tasks);
       } else {
-        this.byPath.delete(file.path);
+        byPath.delete(file.path);
       }
-      this.mtimes.set(file.path, file.stat.mtime);
+      mtimes.set(file.path, file.stat.mtime);
     } catch (err) {
       Logger.error(`failed to index ${file.path}`, err);
     }
-    if (notify) this.emit();
   }
 
   private emit(): void {

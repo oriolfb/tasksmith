@@ -457,15 +457,31 @@
 .tcf-slot {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 7px 0;
+  gap: 11px;
+  padding: 9px 12px;
+  margin: 0 -12px;
+  border-radius: var(--radius-s);
   font-size: var(--font-ui-small);
   color: var(--text-muted);
   cursor: pointer;
 }
 
 .tcf-slot:hover {
+  background: var(--background-modifier-hover);
   color: var(--tcf-lila);
+}
+
+/* The day is already settled — this is an offer, not a walkthrough, so it stays out of the way:
+   fainter than the numbered slots above, and it does not brighten on hover like something asking
+   to be clicked, because nothing happens if you never do. */
+.tcf-slot-optional {
+  color: var(--text-faint);
+  cursor: default;
+}
+
+.tcf-slot-optional:hover {
+  background: none;
+  color: var(--text-faint);
 }
 
 .tcf-empty {

@@ -139,6 +139,13 @@ export class DaySelection {
    */
   prune(tasks: Task[]): void {
     if (this.plan.keys.length === 0 && this.plan.done.length === 0) return;
+    /*
+     * Nothing to reconcile against, so nothing is reconciled. An index that has not finished its
+     * first scan looks exactly like a vault with no tasks in it, and pruning against that wiped
+     * the day's plan on every Obsidian start — the slower the scan, the surer the loss. The
+     * caller also waits for `index.ready`; this is the guard that does not depend on remembering to.
+     */
+    if (tasks.length === 0) return;
 
     const open = new Set<string>();
     const exists = new Set<string>();

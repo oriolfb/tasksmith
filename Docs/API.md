@@ -31,6 +31,9 @@
 another day is dropped on read; `prune` frees the slot of a task that has been completed, deleted
 or reworded. Nothing is written to the vault, which is why an unfinished day creates no debt.
 
+`prune(tasks)` is a no-op on an empty list, and callers check `index.ready` first. Both say the
+same thing: an index still loading is not a vault where every chosen task has been deleted.
+
 Row actions are words, not buttons: **Avui · Data**. Discarding — "No ho faré" — lives at the bottom
 of the date menu, separated and marked as a warning: it cancels the line (status `-` plus `❌`), never
 deletes anything, and is undoable, but it costs one deliberate step more than postponing. There is

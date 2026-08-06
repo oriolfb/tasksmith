@@ -58,6 +58,21 @@
   the tab's, so the health rail's 270px are no longer counted as room the columns have — that is
   what left descriptions at "Ge…". The name keeps a real minimum width, normal colour, a little more
   weight than the columns around it, and wraps to two lines instead of ellipsing on the first.
+- **The vault is scanned in 168 ms instead of 2.4 s.** The full scan read its 895 notes one at a
+  time — an `await` per file, 895 round-trips taken in single file — and the measurement says the
+  parser was never the cost: reading is 2,392 ms sequentially and 168 ms in batches of 32, while
+  parsing all 508 tasks is 32 ms. Those are warm-cache numbers on a local disk; on a cold start,
+  over iCloud, competing with Obsidian's own indexing, it is the difference you actually noticed. The
+  scan now reads in batches and swaps the finished index in whole rather than emptying the old one
+  first, so a re-scan after a settings change shows the previous tasks rather than none.
+- **The day's three no longer vanish overnight.** Every Obsidian start wiped the plan, and this is
+  why: the dock paints before the first scan has finished, and reconciling the plan against the index
+  at that moment asked "do these tasks still exist?" of an index that had not been read yet. Nothing
+  existed, so the plan was emptied — and written back to disk, which made the loss permanent. An
+  index that is still loading is now distinguished from a vault with nothing in it: the dock waits for
+  `index.ready`, and the reconciliation itself refuses to run against an empty list. The slow scan
+  above is what made this near-certain rather than occasional; both are fixed, but either alone would
+  have left the bug reachable.
 
 ## 0.4.0 — TaskSmith, and the shape a community plugin is supposed to have
 

@@ -234,10 +234,29 @@ describe("DaySelection", () => {
   });
 
   it("drops the record of a task that no longer exists", () => {
+    const alive = task("- [ ] viva");
     const gone = task("- [x] esborrada", { open: false });
     const { day } = selection({ date: formatIsoDate(TODAY), keys: [], done: [dayKey(gone)] });
-    day.prune([]);
+    day.prune([alive]);
     expect(day.doneKeys()).toEqual([]);
+  });
+
+  /**
+   * The regression that lost a day's plan on every Obsidian start: the sidebar paints before the
+   * first scan of the vault has finished, so it pruned against an index that was not empty but
+   * unknown — and wrote the empty result back to disk.
+   */
+  it("keeps the plan when there is nothing to reconcile against yet", () => {
+    const chosen = task("- [ ] triada");
+    const done = task("- [x] tancada", { open: false });
+    const stored: DayPlan = { date: formatIsoDate(TODAY), keys: [dayKey(chosen)], done: [dayKey(done)] };
+    const { day, saved } = selection(stored);
+
+    day.prune([]);
+
+    expect(day.keys()).toEqual([dayKey(chosen)]);
+    expect(day.doneKeys()).toEqual([dayKey(done)]);
+    expect(saved).toEqual([]);
   });
 
   it("records what you tick off and stamps the day, even with nothing chosen", () => {
