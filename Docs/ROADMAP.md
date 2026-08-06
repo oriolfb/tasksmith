@@ -3,7 +3,7 @@
 Where the plugin is, what was decided and why, and what is left. Written so a new session can pick
 up the next phase without re-deriving any of it.
 
-Current version: **0.3.0**. The plugin's settings tab shows the version actually loaded —
+Current version: **0.3.1**. The plugin's settings tab shows the version actually loaded —
 Obsidian only re-reads `main.js` when the plugin is re-enabled, so "I pressed ⌘R" and "the new
 code is running" are not the same claim.
 

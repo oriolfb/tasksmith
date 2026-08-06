@@ -1,6 +1,6 @@
 {
   "name": "task-console",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Obsidian plugin: robust task console over Tasks-compatible markdown",
   "main": "main.js",
   "scripts": {
