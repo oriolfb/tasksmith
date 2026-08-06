@@ -114,6 +114,37 @@ describe("focusSections", () => {
     expect(s.chosen.map((t) => t.description)).toEqual(["segona", "primera"]);
   });
 
+  it("keeps what you ticked off today, and only that, out of the closed lines", () => {
+    const feta = task("- [x] triada i feta", { open: false });
+    const s = focusSections({
+      tasks: [...tasks, feta],
+      chosen,
+      done: [dayKey(feta)],
+      today: TODAY,
+    });
+    expect(s.done.map((t) => t.description)).toEqual(["triada i feta"]);
+    // "feta 📅 2026-07-01" is closed too, and nobody asked for it: it stays in the wide view.
+    expect(s.renegotiate.map((t) => t.description)).not.toContain("feta");
+  });
+
+  it("does not let a finished task hold one of the three slots", () => {
+    const feta = task("- [x] ja està", { open: false });
+    const s = focusSections({ tasks: [feta], chosen: [], done: [dayKey(feta)], today: TODAY });
+    expect(s.free).toBe(DAY_LIMIT);
+  });
+
+  it("keeps the finished ones in the order they fell", () => {
+    const first = task("- [x] primera", { open: false });
+    const second = task("- [x] segona", { open: false });
+    const s = focusSections({
+      tasks: [second, first],
+      chosen: [],
+      done: [dayKey(first), dayKey(second)],
+      today: TODAY,
+    });
+    expect(s.done.map((t) => t.description)).toEqual(["primera", "segona"]);
+  });
+
   it("filters on text across description, note and people", () => {
     const withPerson = task("- [ ] parlar-hi", { people: ["Carmen"] });
     const s = focusSections({ tasks: [...tasks, withPerson], chosen: [], today: TODAY, text: "carmen" });
@@ -147,32 +178,90 @@ describe("DaySelection", () => {
 
   /** The rule that makes the day cost nothing: yesterday's plan is not a backlog. */
   it("forgets a plan made for another day", () => {
-    const yesterday: DayPlan = { date: "2026-08-04", keys: ["01 Diari/nota.md|ahir"] };
+    const yesterday: DayPlan = { date: "2026-08-04", keys: ["01 Diari/nota.md|ahir"], done: [] };
     const { day } = selection(yesterday);
     expect(day.size).toBe(0);
   });
 
+  /** Including what you did: the record is today's, and midnight ends it. */
+  it("forgets yesterday's record too", () => {
+    const yesterday: DayPlan = { date: "2026-08-04", keys: [], done: ["01 Diari/nota.md|ahir"] };
+    const { day } = selection(yesterday);
+    expect(day.doneKeys()).toEqual([]);
+  });
+
   it("keeps today's plan across a reload", () => {
-    const today: DayPlan = { date: formatIsoDate(TODAY), keys: ["01 Diari/nota.md|avui"] };
+    const today: DayPlan = { date: formatIsoDate(TODAY), keys: ["01 Diari/nota.md|avui"], done: [] };
     const { day } = selection(today);
     expect(day.keys()).toEqual(["01 Diari/nota.md|avui"]);
   });
 
-  it("frees the slot of a task that has been completed or deleted", () => {
+  /** 0.2.2 wrote a plan with no `done` at all. */
+  it("reads a stored plan that predates the record", () => {
+    const old = { date: formatIsoDate(TODAY), keys: ["01 Diari/nota.md|avui"] } as DayPlan;
+    const { day } = selection(old);
+    expect(day.doneKeys()).toEqual([]);
+    expect(day.keys()).toEqual(["01 Diari/nota.md|avui"]);
+  });
+
+  it("frees the slot of a task that has been deleted", () => {
     const alive = task("- [ ] viva");
     const gone = task("- [ ] morta");
-    const { day } = selection({ date: formatIsoDate(TODAY), keys: [dayKey(alive), dayKey(gone)] });
+    const { day } = selection({
+      date: formatIsoDate(TODAY),
+      keys: [dayKey(alive), dayKey(gone)],
+      done: [],
+    });
     day.prune([alive]);
     expect(day.keys()).toEqual([dayKey(alive)]);
+    expect(day.doneKeys()).toEqual([]);
     expect(day.isFull).toBe(false);
   });
 
-  it("frees the slot when the task gets ticked off in the note", () => {
+  /**
+   * The slot opens, the line stays. Ticking a task off in the note — not in the view — has to end
+   * the same way it does here, or the record would depend on where you happened to click.
+   */
+  it("frees the slot but keeps the record when the task gets ticked off in the note", () => {
     const before = task("- [ ] la mateixa");
     const after = task("- [x] la mateixa", { open: false });
-    const { day } = selection({ date: formatIsoDate(TODAY), keys: [dayKey(before)] });
+    const { day } = selection({ date: formatIsoDate(TODAY), keys: [dayKey(before)], done: [] });
     day.prune([after]);
     expect(day.size).toBe(0);
+    expect(day.doneKeys()).toEqual([dayKey(after)]);
+  });
+
+  it("drops the record of a task that no longer exists", () => {
+    const gone = task("- [x] esborrada", { open: false });
+    const { day } = selection({ date: formatIsoDate(TODAY), keys: [], done: [dayKey(gone)] });
+    day.prune([]);
+    expect(day.doneKeys()).toEqual([]);
+  });
+
+  it("records what you tick off and stamps the day, even with nothing chosen", () => {
+    const { day, saved } = selection();
+    const urgent = task("- [x] crema #urgent", { open: false });
+    day.markDone(urgent, TODAY);
+    expect(day.doneKeys()).toEqual([dayKey(urgent)]);
+    expect(day.size).toBe(0);
+    expect(saved[0]!.date).toBe(formatIsoDate(TODAY));
+  });
+
+  it("gives a reopened task its slot back, and takes it off the record", () => {
+    const t = task("- [ ] tornem-hi");
+    const { day } = selection({ date: formatIsoDate(TODAY), keys: [], done: [dayKey(t)] });
+    day.reopened(t, TODAY);
+    expect(day.doneKeys()).toEqual([]);
+    expect(day.keys()).toEqual([dayKey(t)]);
+  });
+
+  it("reopens without a slot when the three are taken", () => {
+    const t = task("- [ ] tornem-hi");
+    const three = ["a", "b", "c"].map((n) => `01 Diari/nota.md|${n}`);
+    const { day } = selection({ date: formatIsoDate(TODAY), keys: three, done: [dayKey(t)] });
+    day.reopened(t, TODAY);
+    expect(day.doneKeys()).toEqual([]);
+    expect(day.keys()).toEqual(three);
   });
 
   it("toggles the same task off", () => {

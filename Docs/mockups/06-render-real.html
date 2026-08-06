@@ -21,10 +21,12 @@
     border:1px solid #ccc;border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
   .dock.wide{width:490px;flex:0 0 490px}
   .cap{font:600 11px/1.4 -apple-system,sans-serif;color:#6b665e;padding:0 0 7px}
-  /* This is what the theme does to plain buttons, and what broke the first attempt. */
-  button{font-family:inherit;font-size:var(--font-ui-small);background-color:var(--background-secondary);
-    border:0;border-radius:var(--radius-s);padding:5px 12px;color:var(--text-normal);
-    box-shadow:0 1px 1px rgba(0,0,0,.06);cursor:pointer}
+  /* This is what the theme does to plain buttons, and what broke the first attempt. Scoped as
+     `.dock button` on purpose: that is the specificity a theme really uses, and it beats a single
+     class of ours — which is how both lens tabs once ended up with the same grey chrome. */
+  .dock button{font-family:inherit;font-size:var(--font-ui-small);background-color:var(--background-secondary);
+    border:1px solid var(--background-modifier-border);border-radius:var(--radius-s);padding:5px 12px;
+    color:var(--text-normal);box-shadow:0 1px 1px rgba(0,0,0,.06);cursor:pointer}
   .note{max-width:420px;font:12.5px/1.6 -apple-system,sans-serif;color:#5d5951}
   .note h3{font-size:12.5px;color:#5546b8;margin:0 0 5px}
   .note p{margin:0 0 12px}
@@ -52,7 +54,7 @@
     <p><b>La barra de scroll horitzontal.</b> Sortia perquè la línia de metadades era <code>nowrap</code> sencera. Ara pot partir <i>entre</i> elements, però mai dins de «fa 5 setmanes».</p>
     <p><b>Massa atapeït.</b> Files amb 9px de padding i cap línia entre elles, seccions amb 26px d'aire, <b>una</b> peça de context per fila (la resta al tooltip), accions <b>només a la fila activa</b>, i un màxim de <b>5 files per secció</b> amb «19 més» cap al centre de control.</p>
     <p>Passa el ratolí per sobre d'una fila per veure aparèixer Avui · Data · No.</p>
-    <p>Els botons d'aquesta pàgina porten a propòsit l'estil que aplica Obsidian, per comprovar que el CSS nou ja no s'hi deixa afectar.</p>
+    <p>Els botons d'aquesta pàgina porten a propòsit l'estil que aplica Obsidian —i amb la mateixa especificitat que faria servir un tema, <code>.dock button</code>— per comprovar que el CSS nou ja no s'hi deixa afectar. La lent activa ha de sortir amb el fons i el filet lila; la inactiva, text pla sense cap caixa.</p>
   </div>
 </div>
 
@@ -95,12 +97,17 @@ function build(host){
   const head = el("div","tcf-sec tcf-sec-now",undefined,list);
   head.setAttribute("role","button");
   el("span","tcf-sec-name","Avui",head);
-  el("span","tcf-sec-why","0 de 3 triades",head);
-  for (const [n,hint] of [[1,"tria la primera…"],[2,"tria la segona…"],[3,"i la tercera"]]) {
+  el("span","tcf-sec-why","1 de 3 triada · 1 feta",head);
+  const chosen = row(list, { t:"Preparar el guió del comitè de dilluns", late:"demà", src:"Notes 4 d'agost 2026" }, false);
+  chosen.insertBefore(el("span","tcf-ord","1"), chosen.firstChild);
+  for (const [n,hint] of [[2,"tria la segona…"],[3,"i la tercera"]]) {
     const slot = el("div","tcf-slot",undefined,list);
     el("span","tcf-lead tcf-ord tcf-ord-empty",String(n),slot);
     el("span",null,hint,slot);
   }
+  // What you have already closed: it stays, struck through, with the one ticked box in the view.
+  el("div","tcf-done-head","fetes avui",list);
+  done(list, "Contestar el correu del pressupost de llicències");
 
   // one urgent row, to check the terracotta rule
   const urgentHead = el("div","tcf-sec",undefined,list);
@@ -144,6 +151,19 @@ function build(host){
     el("span","tcf-act","Avui",doers);
     el("span","tcf-act","Data",doers);
     el("span","tcf-act tcf-no","No",doers);
+    return r;
+  }
+
+  function done(parent, text){
+    const r = el("div","tcf-row tcf-done",undefined,parent);
+    const mark = el("div","tcf-lead tcf-mark tcf-mark-on",undefined,r);
+    mark.setAttribute("role","button");
+    // Obsidian injects the real icon; the glyph stands in for it here.
+    mark.textContent = "✓";
+    mark.style.fontSize = "10px";
+    const main = el("div","tcf-main",undefined,r);
+    el("div","tcf-text",text,main);
+    return r;
   }
 }
 

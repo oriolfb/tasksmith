@@ -29,6 +29,12 @@ export interface FocusSections {
   chosen: Task[];
   /** How many of the three slots are still free. */
   free: number;
+  /**
+   * Ticked off today, in the order they fell. The only closed tasks the focus view shows: they
+   * stay in "Avui", struck through, because three empty slots at six in the evening look exactly
+   * like three at nine in the morning — and that reads as a day where nothing happened.
+   */
+  done: Task[];
   /** Past their date. Not a failure — a decision you have not made yet. */
   renegotiate: Task[];
   undated: Task[];
@@ -39,6 +45,8 @@ export interface FocusInput {
   tasks: Task[];
   /** Keys of the tasks chosen for today, in order. See `DaySelection`. */
   chosen: string[];
+  /** Keys ticked off today, in the order they fell. See `DaySelection`. */
+  done?: string[];
   today: Date;
   /** Free text filter, applied to every section at once. */
   text?: string;
@@ -51,17 +59,29 @@ export interface FocusInput {
 export function focusSections(input: FocusInput): FocusSections {
   const { today } = input;
   const chosenKeys = new Set(input.chosen);
+  const doneOrder = input.done ?? [];
+  const doneKeys = new Set(doneOrder);
   const needle = (input.text ?? "").trim().toLowerCase();
 
   const urgent: Task[] = [];
   const chosen: Task[] = [];
+  const done: Task[] = [];
   const renegotiate: Task[] = [];
   const undated: Task[] = [];
   const later: Task[] = [];
 
   for (const task of input.tasks) {
-    if (!task.open || isEmptyTask(task) || task.kind !== "commitment") continue;
+    if (isEmptyTask(task) || task.kind !== "commitment") continue;
     if (needle && !matches(task, needle)) continue;
+
+    /*
+     * Closed tasks stay out of the view, with one exception: the ones you ticked off today from
+     * "Avui". They are the day's record. Everything else closed belongs to the wide view.
+     */
+    if (!task.open) {
+      if (doneKeys.has(dayKey(task))) done.push(task);
+      continue;
+    }
 
     // Urgency wins over being chosen: a task can be both, and it should only appear once.
     if (isUrgent(task, today)) {
@@ -87,13 +107,24 @@ export function focusSections(input: FocusInput): FocusSections {
 
   const order = (task: Task): number => input.chosen.indexOf(dayKey(task));
   chosen.sort((a, b) => order(a) - order(b));
+  const fell = (task: Task): number => doneOrder.indexOf(dayKey(task));
+  done.sort((a, b) => fell(a) - fell(b));
 
   // Oldest first everywhere else, so nothing rots at the bottom of a list.
   urgent.sort(byAge(today));
   renegotiate.sort(byAge(today));
   later.sort((a, b) => (a.effectiveDate?.getTime() ?? 0) - (b.effectiveDate?.getTime() ?? 0));
 
-  return { urgent, chosen, free: Math.max(0, DAY_LIMIT - chosen.length), renegotiate, undated, later };
+  return {
+    urgent,
+    chosen,
+    // A finished task no longer holds a slot: you can pick another one if you want to.
+    free: Math.max(0, DAY_LIMIT - chosen.length),
+    done,
+    renegotiate,
+    undated,
+    later,
+  };
 }
 
 /**

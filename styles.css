@@ -409,8 +409,11 @@
 }
 
 /* Soft pills, like Obsidian's own "Add property" button: a filled shape with no border. The
-   underlined-tab version read as a stray link, which is what it looked like in the dock. */
-.tcf-tab {
+   underlined-tab version read as a stray link, which is what it looked like in the dock.
+   Two classes deep (`.tcf .tcf-tab`) because themes style buttons as `<container> button`, which
+   outweighs a single class and puts the grey chrome back — that is how both tabs ended up looking
+   identical. */
+.tcf .tcf-tab {
   background-color: transparent;
   border: none;
   border-radius: var(--radius-m, 8px);
@@ -424,16 +427,32 @@
   transition: background-color 0.12s ease, color 0.12s ease;
 }
 
-.tcf-tab:hover {
+.tcf .tcf-tab:hover {
   color: var(--text-normal);
   background-color: var(--background-modifier-hover);
 }
 
-.tcf-tab-on,
-.tcf-tab-on:hover {
-  background-color: var(--background-secondary);
+/* The active lens is the one thing in the header that must never be ambiguous, so it is marked
+   three times over: a lila wash, a lila hairline and lila text. `--background-secondary` alone was
+   invisible — in the dock that *is* the pane background. The wash derives from `--tcf-lila`, so a
+   snippet that overrides the accent keeps the ring and the fill in step; the rgba line above it is
+   the fallback for engines without `color-mix`. */
+.tcf .tcf-tab-on,
+.tcf .tcf-tab-on:hover {
+  background-color: rgba(107, 91, 210, 0.13);
+  background-color: color-mix(in srgb, var(--tcf-lila) 14%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(107, 91, 210, 0.32);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tcf-lila) 34%, transparent);
   color: var(--tcf-lila);
   font-weight: 650;
+}
+
+.theme-dark .tcf .tcf-tab-on,
+.theme-dark .tcf .tcf-tab-on:hover {
+  background-color: rgba(160, 143, 245, 0.16);
+  background-color: color-mix(in srgb, var(--tcf-lila) 17%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(160, 143, 245, 0.38);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tcf-lila) 40%, transparent);
 }
 
 .tcf-lens-tools {
@@ -757,13 +776,16 @@
 
 /* ── free slots and footer ──────────────────────────────── */
 
+/* The invitation to pick another one. `--text-muted`, not `--text-faint`: after you have closed
+   one of the three this line is the offer of a fresh slot, and an offer whispered in grey reads as
+   something switched off. */
 .tcf-slot {
   display: flex;
   align-items: flex-start;
   gap: 10px;
   padding: 7px 0;
   font-size: var(--font-ui-small);
-  color: var(--text-faint);
+  color: var(--text-muted);
   cursor: pointer;
 }
 
@@ -775,6 +797,52 @@
   padding: 18px 0;
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);
+}
+
+/* ── what you have already closed today ─────────────────── */
+
+/* A finished task keeps its line at the foot of "Avui" instead of disappearing. Without this, an
+   afternoon of work looks exactly like a morning where nothing happened: the same three empty
+   slots, the same silence. The strikethrough is the point, so it stays legible — muted, not faint. */
+.tcf-done-head {
+  margin-top: 14px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.tcf-done {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.tcf-done .tcf-text {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--text-faint);
+}
+
+.tcf-done .tcf-text:hover {
+  text-decoration: line-through underline;
+}
+
+/* The one ticked box in the view. Lila fill rather than an outline: it is the only mark here that
+   reports something instead of asking for something. Click it to undo the completion. */
+.tcf-mark-on {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-color: var(--tcf-lila);
+  background-color: var(--tcf-lila);
+  color: var(--background-primary);
+}
+
+.tcf-mark-on .svg-icon {
+  width: 11px;
+  height: 11px;
+  stroke-width: 3.5px;
 }
 
 /* "18 més" — the rest of the list, handed over to the wide view. */

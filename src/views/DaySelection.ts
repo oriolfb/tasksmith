@@ -6,9 +6,16 @@ export interface DayPlan {
   /** `YYYY-MM-DD` the plan was made for. */
   date: string;
   keys: string[];
+  /**
+   * Keys ticked off today, in the order they fell. They keep their place in "Avui", struck
+   * through, and they do **not** hold a slot: finishing one of the three frees it, but the line
+   * stays. A day where you closed two and picked a third should not look like a day that never
+   * started.
+   */
+  done: string[];
 }
 
-export const EMPTY_PLAN: DayPlan = { date: "", keys: [] };
+export const EMPTY_PLAN: DayPlan = { date: "", keys: [], done: [] };
 
 /**
  * Today's chosen three.
@@ -27,7 +34,7 @@ export class DaySelection {
     private readonly persist: (plan: DayPlan) => void,
     today: Date = startOfToday()
   ) {
-    this.plan = forToday(stored, today);
+    this.plan = forToday(withDone(stored), today);
   }
 
   /** Drops the plan if it was made for another day. Call before reading on a fresh paint. */
@@ -41,6 +48,10 @@ export class DaySelection {
 
   keys(): string[] {
     return this.plan.keys;
+  }
+
+  doneKeys(): string[] {
+    return this.plan.done;
   }
 
   has(task: Task): boolean {
@@ -60,15 +71,55 @@ export class DaySelection {
     const key = dayKey(task);
     if (this.plan.keys.includes(key)) return true;
     if (this.isFull) return false;
-    this.plan = { date: formatIsoDate(today), keys: [...this.plan.keys, key] };
+    this.plan = { ...this.plan, date: formatIsoDate(today), keys: [...this.plan.keys, key] };
     this.persist(this.plan);
     return true;
   }
 
   remove(task: Task): void {
     const key = dayKey(task);
-    if (!this.plan.keys.includes(key)) return;
-    this.plan = { ...this.plan, keys: this.plan.keys.filter((k) => k !== key) };
+    if (!this.plan.keys.includes(key) && !this.plan.done.includes(key)) return;
+    this.plan = {
+      ...this.plan,
+      keys: this.plan.keys.filter((k) => k !== key),
+      done: this.plan.done.filter((k) => k !== key),
+    };
+    this.persist(this.plan);
+  }
+
+  /**
+   * Records a task as finished today. Called for every row in "Avui" — including the urgent ones,
+   * which never held a slot — so that ticking one leaves a struck line instead of a gap.
+   *
+   * Stamps the plan with today, because an urgent task can be the first thing you close on a day
+   * where you have not picked anything yet, and an undated plan is wiped on the next paint.
+   */
+  markDone(task: Task, today: Date = startOfToday()): void {
+    const key = dayKey(task);
+    const keys = this.plan.keys.filter((k) => k !== key);
+    const already = this.plan.done.includes(key);
+    if (already && keys.length === this.plan.keys.length) return;
+    this.plan = {
+      date: formatIsoDate(today),
+      keys,
+      done: already ? this.plan.done : [...this.plan.done, key],
+    };
+    this.persist(this.plan);
+  }
+
+  /**
+   * Un-ticks a task: it leaves the day's record and takes a free slot back if there is one.
+   * Reopening one of your three should hand it back, not send it to the bottom of the pool.
+   */
+  reopened(task: Task, today: Date = startOfToday()): void {
+    const key = dayKey(task);
+    if (!this.plan.done.includes(key)) return;
+    const room = !this.plan.keys.includes(key) && this.plan.keys.length < DAY_LIMIT;
+    this.plan = {
+      date: formatIsoDate(today),
+      keys: room ? [...this.plan.keys, key] : this.plan.keys,
+      done: this.plan.done.filter((k) => k !== key),
+    };
     this.persist(this.plan);
   }
 
@@ -81,20 +132,44 @@ export class DaySelection {
   }
 
   /**
-   * Forgets keys whose task no longer exists — completed, deleted, or reworded. Without this a
-   * finished task would keep one of the three slots for the rest of the day.
+   * Reconciles the plan with the index. A slot is freed the moment its task stops being open —
+   * otherwise a finished task would hold one for the rest of the day — but a task that was ticked
+   * off moves to the day's record instead of vanishing, whether you ticked it here or in the note.
+   * Keys whose task no longer exists at all (deleted, or reworded) are simply forgotten.
    */
   prune(tasks: Task[]): void {
-    if (this.plan.keys.length === 0) return;
-    const alive = new Set(tasks.filter((task) => task.open).map(dayKey));
-    const kept = this.plan.keys.filter((key) => alive.has(key));
-    if (kept.length === this.plan.keys.length) return;
-    this.plan = { ...this.plan, keys: kept };
+    if (this.plan.keys.length === 0 && this.plan.done.length === 0) return;
+
+    const open = new Set<string>();
+    const exists = new Set<string>();
+    for (const task of tasks) {
+      const key = dayKey(task);
+      exists.add(key);
+      if (task.open) open.add(key);
+    }
+
+    const keys = this.plan.keys.filter((key) => open.has(key));
+    const done = this.plan.done.filter((key) => exists.has(key));
+    for (const key of this.plan.keys) {
+      if (!open.has(key) && exists.has(key) && !done.includes(key)) done.push(key);
+    }
+
+    if (keys.length === this.plan.keys.length && same(done, this.plan.done)) return;
+    this.plan = { ...this.plan, keys, done };
     this.persist(this.plan);
   }
 }
 
+/** Data written by 0.2.2 has no record of what was done. */
+function withDone(plan: DayPlan): DayPlan {
+  return plan.done ? plan : { ...plan, done: [] };
+}
+
 function forToday(plan: DayPlan, today: Date): DayPlan {
-  if (plan.keys.length === 0) return plan;
+  if (plan.keys.length === 0 && plan.done.length === 0) return plan;
   return plan.date === formatIsoDate(today) ? plan : EMPTY_PLAN;
+}
+
+function same(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((value, i) => value === b[i]);
 }

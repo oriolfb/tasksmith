@@ -125,8 +125,18 @@ export function sortTasks(tasks: Task[], key: SortKey, ctx: QueryContext): Task[
   return sorted;
 }
 
-export function groupTasks(tasks: Task[], key: GroupKey, ctx: QueryContext): TaskGroup[] {
+export function groupTasks(
+  tasks: Task[],
+  key: GroupKey,
+  ctx: QueryContext,
+  /** When set, the "person" grouping shows only this person's group, not every co-named person. */
+  restrictPerson: string | null = null
+): TaskGroup[] {
   if (key === "none") return tasks.length ? [{ key: "all", label: "Totes", tasks }] : [];
+
+  if (key === "person" && restrictPerson !== null) {
+    return tasks.length ? [{ key: restrictPerson, label: restrictPerson, tasks }] : [];
+  }
 
   // A task can sit under several people at once, so this grouping is not a partition.
   // Ordered by size: the person you owe the most to comes first, "Sense persona" always last.
@@ -163,7 +173,7 @@ export function groupTasks(tasks: Task[], key: GroupKey, ctx: QueryContext): Tas
 }
 
 export function runQuery(tasks: Task[], state: QueryState, ctx: QueryContext): TaskGroup[] {
-  return groupTasks(sortTasks(filterTasks(tasks, state, ctx), state.sort, ctx), state.group, ctx);
+  return groupTasks(sortTasks(filterTasks(tasks, state, ctx), state.sort, ctx), state.group, ctx, state.person);
 }
 
 /**

@@ -34,6 +34,12 @@ or reworded. Nothing is written to the vault, which is why an unfinished day cre
 Row actions are words, not buttons: **Avui · Data · No**. `No` cancels the line (status `-`), so
 saying no costs exactly as much as postponing — and `⌘Z` gets it back.
 
+A section past its `SECTION_LIMIT` rows shows an "N més" link instead of the rest. Clicking it opens
+the triage view scoped to that section, not the unfiltered list: `SidebarView.filterFor(section)`
+turns the section key into a `Partial<QueryState>` (a person section becomes `{ group: "person",
+person }`; a date section becomes the matching `{ group: "bucket", buckets }`), and
+`BaseTaskView.applyFilter(patch)` merges it into the triage view's query and refreshes.
+
 ## Quick actions (`TaskActions`)
 
 All go through `TaskWriter` and return a `WriteResult`.

@@ -80,6 +80,43 @@ The setting itself is **off by default**: this is the only code path that writes
 without the user asking, and on an iCloud-synced vault that has to be opted into. When it does
 run, the whole batch is one undo step.
 
+**Grouping by person only fans out when there is no person filter.** `groupTasks`'s "person" mode
+puts a multi-person task under every name it carries — right for the unfiltered "Amb qui" lens,
+where the counts are meant to exceed the task count. But the dock's "N més" hands the wide view a
+specific person as a *filter*, not just a grouping; regrouping that already-restricted list by
+person still fanned a task shared with someone else back into their group, so "N més" under Carmen
+surfaced Mireia and Mónica too. `runQuery` now threads `state.person` into `groupTasks`, which
+collapses to a single group for that person whenever a person filter is active — filtering and
+grouping can no longer disagree about who a section is for.
+
+**The day's plan is reconciled against the index, never trusted to stay in sync.** `DaySelection`
+holds `{ date, keys, done }` in the plugin's own settings while the truth about every task lives in
+the notes, so `prune(tasks)` runs on each paint and answers two different questions about each key,
+which an earlier version conflated into one:
+
+| Question | Answer |
+|---|---|
+| Does a task with this key still exist? | No → forget the key. The line was deleted or reworded. |
+| Is it still open? | No → the key leaves `keys` (the slot reopens) and joins `done` (the line stays). |
+
+Three consequences worth keeping:
+
+- **Every mutation stamps `date`, not just `add`.** The first thing closed on a given day can be an
+  urgent task on an otherwise untouched plan — whose `date` is still `""`. Recording it without
+  stamping means `forToday` wipes the record on the very next paint.
+- **The write, the reindex and the view's own update race, and both orders converge.** Completing
+  from a row awaits the write, then calls `markDone`; the index's change event repaints on an 80 ms
+  debounce. If the repaint wins, `prune` moves the key to `done` on its own and `markDone` is a
+  no-op. This is why there is no ordering guard: the two writers were made idempotent instead.
+- **A `Task` handed to a callback is a snapshot, and right after a write it lies.** Its `open` is
+  still the pre-write value, so any predicate derived from it — `isUrgent` in particular — is
+  unreliable exactly when it would be most convenient. Reopening therefore never asks whether the
+  task is urgent; it hands the key back to a free slot, and `focusSections` ignores the key anyway
+  for a task that turns out to be urgent, because urgent tasks never consume a displayed slot.
+
+Stored settings are migrated at the constructor boundary (`withDone`), so a plan written by 0.2.2
+with no `done` array is normalised once instead of guarded at every read.
+
 ## The effective date
 
 The rule the whole product hangs on:
@@ -146,6 +183,15 @@ side effect of dodging the styling.
 `clickable-icon` and only set `--icon-size`; they then match every other icon in the app for free.
 The lens tabs are soft filled pills, deliberately copying the metadata "Add property" button —
 the underlined-tab version read as a stray link inside the dock.
+
+**A state colour must not be a background colour the pane already uses, and one class is not
+enough specificity.** The active lens was marked with `--background-secondary`, which in the left
+dock *is* the pane background, so both tabs looked identical and nothing said which lens you were
+in. Themes make it worse: they style buttons as `<container> button`, which outweighs a single
+`.tcf-tab` and puts the grey chrome back on both. The active tab now carries a wash, a hairline and
+text all derived from `--tcf-lila` — a hue no pane background uses — and the tab rules are two
+classes deep (`.tcf .tcf-tab`) so a theme cannot reach over them. State also goes into
+`aria-pressed`, since a colour is not readable by a screen reader.
 
 **`styles.css` reloads live; `main.js` does not.** Obsidian only re-reads a plugin's JavaScript
 when the plugin is re-enabled, so *new CSS on old JS* is a real and misleading state: after the

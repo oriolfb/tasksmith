@@ -7,7 +7,7 @@ import { ageInDays, bucketOf } from "../index/Buckets";
 import { isEmptyTask } from "../index/EmptyTasks";
 import { startOfToday } from "../index/dates";
 import { NO_PERSON, type QueryState, peopleOf } from "../query/Query";
-import { DAY_LIMIT, dayKey, focusSections } from "../query/Focus";
+import { DAY_LIMIT, dayKey, focusSections, isUrgent } from "../query/Focus";
 import { DaySelection } from "./DaySelection";
 import { FocusRenderer, type Section } from "./FocusRenderer";
 import { relativeLabel } from "./format";
@@ -23,6 +23,13 @@ type Lens = "date" | "person";
  * overdue rows there is pressure, not information — the whole list lives in the control centre.
  */
 const SECTION_LIMIT = 5;
+
+/** One run of text in the line above the list. */
+interface SayPart {
+  text: string;
+  strong?: boolean;
+  accent?: boolean;
+}
 
 /**
  * The focus view. One question — what will you do today — and everything else one keystroke
@@ -60,6 +67,8 @@ export class SidebarView extends ItemView {
     this.renderer = new FocusRenderer(this.app, this.actions, {
       onToday: (task) => this.putInDay(task),
       onDate: (task, event) => this.renderer.dateMenu(task, event, () => this.refresh()),
+      onComplete: (task, section) => void this.completeFrom(task, section.now === true),
+      onReopen: (task) => void this.reopen(task),
       onDrop: (task) => this.drop(task),
       onOpen: (task) => void this.renderer.openTask(task),
       onToggleSection: (key) => void this.toggleSection(key),
@@ -183,7 +192,12 @@ export class SidebarView extends ItemView {
     this.day.prune(all);
 
     const sections = this.lens === "date" ? this.dateSections(all, today) : this.personSections(all, today);
-    for (const tab of this.tabs) tab[1].toggleClass("tcf-tab-on", tab[0] === this.lens);
+    // The colour says which lens is active; `aria-pressed` says it out loud for a screen reader.
+    for (const [lens, tab] of this.tabs) {
+      const on = lens === this.lens;
+      tab.toggleClass("tcf-tab-on", on);
+      tab.setAttribute("aria-pressed", String(on));
+    }
 
     // Once the three slots are full, the rest of the list steps back: the day is decided, and
     // the pool is there for reference rather than for more deciding. It brightens on hover.
@@ -193,33 +207,45 @@ export class SidebarView extends ItemView {
   }
 
   private dateSections(all: Task[], today: Date): Section[] {
-    const focus = focusSections({ tasks: all, chosen: this.day.keys(), today, text: this.search });
+    const focus = focusSections({
+      tasks: all,
+      chosen: this.day.keys(),
+      done: this.day.doneKeys(),
+      today,
+      text: this.search,
+    });
 
+    // The 1·2·3 numbers what is still live, so it closes up when you finish one. What you finished
+    // keeps its line at the foot of the section instead, with a tick where its number was.
     const ordinals = new Map<string, number>();
     focus.chosen.forEach((task, i) => ordinals.set(dayKey(task), i + 1));
 
     this.totalEl.setText(`${this.openCount(all)} obertes`);
 
+    const said: SayPart[] = [];
     if (focus.urgent.length > 0) {
       const soles = focus.urgent.length === 1 ? "ha arribat sola a avui." : "han arribat soles a avui.";
-      this.say(
+      said.push(
         { text: `${count(focus.urgent.length, "tasca", "tasques")} ${soles}`, strong: true },
         { text: " Tries " },
         { text: `${focus.chosen.length} de ${DAY_LIMIT}`, accent: true },
         { text: `, i queden ${focus.renegotiate.length} per renegociar.` }
       );
     } else if (focus.chosen.length > 0) {
-      this.say(
+      said.push(
         { text: "Tries " },
         { text: `${focus.chosen.length} de ${DAY_LIMIT}`, accent: true },
         { text: ` per avui. Queden ${focus.renegotiate.length} per renegociar.` }
       );
     } else {
-      this.say(
+      said.push(
         { text: "Què faràs avui?", strong: true },
         { text: ` Tria'n ${DAY_LIMIT}. Hi ha ${focus.renegotiate.length} per renegociar i ${focus.undated.length} sense data.` }
       );
     }
+    // Said last and said plainly: the line that answers "he fet res, avui?".
+    if (focus.done.length > 0) said.push({ text: ` ${doneSoFar(focus.done.length)}`, strong: true });
+    this.say(...said);
 
     const emptySlots: number[] = [];
     for (let slot = focus.chosen.length + 1; slot <= DAY_LIMIT; slot++) emptySlots.push(slot);
@@ -230,8 +256,9 @@ export class SidebarView extends ItemView {
         label: "Avui",
         // No count: "2 han arribat soles · 1 de 3 triada" already says it, and a bare number
         // next to it only invites the question of which one it is counting.
-        why: whyToday(focus.urgent.length, focus.chosen.length),
+        why: whyToday(focus.urgent.length, focus.chosen.length, focus.done.length),
         tasks: [...focus.urgent, ...focus.chosen],
+        done: focus.done,
         now: true,
         emptySlots,
         ordinals,
@@ -338,7 +365,7 @@ export class SidebarView extends ItemView {
   }
 
   /** Built as DOM rather than a string: no note content ever reaches an `innerHTML`. */
-  private say(...parts: { text: string; strong?: boolean; accent?: boolean }[]): void {
+  private say(...parts: SayPart[]): void {
     this.sayHost.empty();
     for (const part of parts) {
       if (part.strong) this.sayHost.createEl("b", { text: part.text });
@@ -360,6 +387,29 @@ export class SidebarView extends ItemView {
     this.refresh();
   }
 
+  /**
+   * Ticking a row off. In "Avui" the line stays where it is, struck through, and its slot opens up
+   * for another one — the day should read as a day you worked, not as a list that emptied itself.
+   * Elsewhere the row simply goes: the pool is a pool, and the record belongs to the day's plan.
+   */
+  private async completeFrom(task: Task, inToday: boolean): Promise<void> {
+    const result = await this.actions.complete(task);
+    if (result?.ok && inToday) this.day.markDone(task);
+    this.refresh();
+  }
+
+  /** Whether a row sits in "Avui": you chose it, or it arrived on its own. */
+  private inToday(task: Task): boolean {
+    return this.lens === "date" && (this.day.has(task) || isUrgent(task, startOfToday()));
+  }
+
+  /** Un-ticking one, from the check itself. It goes back to the day when a slot is free. */
+  private async reopen(task: Task): Promise<void> {
+    const result = await this.actions.reopen(task);
+    if (result.ok) this.day.reopened(task);
+    this.refresh();
+  }
+
   /** "No ho faré": cancels the line, which the Tasks plugin reads as a cancelled task. */
   private async drop(task: Task): Promise<void> {
     this.day.remove(task);
@@ -378,7 +428,8 @@ export class SidebarView extends ItemView {
 
   /** Rows are focusable, so the whole cycle works without the mouse. */
   private onKey(event: KeyboardEvent): void {
-    const rows = Array.from(this.listHost.querySelectorAll<HTMLElement>(".tcf-row"));
+    // Finished rows are a record, not a queue: J/K walks past them.
+    const rows = Array.from(this.listHost.querySelectorAll<HTMLElement>(".tcf-row:not(.tcf-done)"));
     if (rows.length === 0) return;
     const current = rows.indexOf(document.activeElement as HTMLElement);
 
@@ -415,7 +466,7 @@ export class SidebarView extends ItemView {
         break;
       case "x":
       case "Enter":
-        void this.actions.complete(task);
+        void this.completeFrom(task, this.inToday(task));
         break;
       case "o":
         void this.renderer.openTask(task);
@@ -446,10 +497,16 @@ export class SidebarView extends ItemView {
   }
 }
 
-function whyToday(urgent: number, chosen: number): string {
-  if (urgent === 0) return `${chosen} de ${DAY_LIMIT} triades`;
-  const soles = urgent === 1 ? "ha arribat sola" : "han arribat soles";
-  return `${urgent} ${soles} · ${chosen} de ${DAY_LIMIT} triada`;
+function whyToday(urgent: number, chosen: number, done: number): string {
+  const parts: string[] = [];
+  if (urgent > 0) parts.push(`${urgent} ${urgent === 1 ? "ha arribat sola" : "han arribat soles"}`);
+  parts.push(`${chosen} de ${DAY_LIMIT} ${chosen === 1 ? "triada" : "triades"}`);
+  if (done > 0) parts.push(`${done} ${done === 1 ? "feta" : "fetes"}`);
+  return parts.join(" · ");
+}
+
+function doneSoFar(done: number): string {
+  return done === 1 ? "Ja n'has feta una." : `Ja n'has fetes ${done}.`;
 }
 
 function count(n: number, one: string, many: string): string {

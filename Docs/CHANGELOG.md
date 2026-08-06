@@ -2,8 +2,26 @@
 
 ## Unreleased
 
+### Changed
+
+- **A task you finish stays in "Avui", struck through.** It used to vanish, which left the same
+  three empty slots at six in the evening as at nine in the morning — the day read as if nothing
+  had happened. Finished tasks now sit at the foot of the section under a quiet "fetes avui", with
+  the one ticked box in the view; clicking it undoes the completion and hands the task back to a
+  free slot. The record lives in `dayPlan.done` and dies at midnight with the plan, and it also
+  picks up tasks you tick off in the note itself.
+- **Finishing one of the three frees its slot.** The 1·2·3 counts what is still live, so it closes
+  up, and the invitation to pick another one comes back — in `--text-muted` rather than
+  `--text-faint`, because an offer whispered in grey reads as something switched off. The sentence
+  above the list and the section's small print both say how many you have closed.
+
 ### Added
 
+- **"N més" hands off to the triage view, filtered to the same tasks.** Clicking the overflow link
+  under a dock section now opens the wide view already scoped to it — the same person, or the same
+  date bucket — instead of landing on the unfiltered list. `BaseTaskView.applyFilter` merges a
+  partial `QueryState` into the view and refreshes; `SidebarView.filterFor` maps each section key to
+  its equivalent filter.
 - `Docs/ARCHITECTURE.md` gains a **Rendering inside Obsidian** section: why a `<button>` cannot be
   used for something that is not a button, why `styles.css` reloading live while `main.js` does not
   produces a misleading "nothing changed" state, why the row lays out for a 300px dock, why the lens
@@ -12,6 +30,31 @@
 - Two more entries in the ROADMAP's trap list: overwriting a class that is also a query hook (a
   control that silently does nothing means the render threw halfway), and explaining away a
   screenshot instead of diagnosing it.
+- A key decision in `Docs/ARCHITECTURE.md` on **reconciling the day's plan against the index**: the
+  two questions `prune` has to keep apart (does the task still exist / is it still open), why every
+  mutation stamps the plan's date and not just `add`, why the write, the reindex and the view's own
+  update are left to race because both orders converge, and why a `Task` snapshot lies about `open`
+  immediately after a write — which is what rules out asking `isUrgent` on reopen.
+- The CSS harness `mockups/06-render-real.html` now styles its buttons as `.dock button`, with a
+  border, so it reproduces the specificity a real theme uses instead of a bare element selector.
+  Two more traps in the ROADMAP and one more rule in ARCHITECTURE's rendering section: a state
+  colour must not be a colour the pane already uses, and one class does not beat a theme.
+
+### Fixed
+
+- **A person filter no longer re-fans a shared task to co-named people.** `groupTasks`'s "person"
+  mode groups every task by all the people it names, which is correct for the unfiltered "Amb qui"
+  lens but wrong once a specific person is the filter: a task shared between Carmen and Mireia
+  surfaced a Mireia group too, even though only Carmen's tasks were asked for. `runQuery` now
+  passes the active person filter through, and `groupTasks` collapses to that one person's group
+  when it is set.
+- **You can see which lens you are in.** The active tab was marked with `--background-secondary`,
+  which in the left dock *is* the pane background, so «Per data» and «Amb qui» looked identical —
+  and a theme's `<container> button` rules outweighed our single `.tcf-tab` and put the same grey
+  chrome on both. The active tab now carries a lila wash, a lila hairline and lila text, all derived
+  from `--tcf-lila` so overriding the accent in a snippet keeps them in step, and the tab rules sit
+  two classes deep where a theme cannot reach them. The state also goes into `aria-pressed`, since a
+  colour is not readable by a screen reader.
 
 ## 0.2.2
 

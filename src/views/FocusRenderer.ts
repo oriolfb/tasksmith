@@ -14,6 +14,11 @@ export interface Section {
   /** Right-hand number. Omitted for sections whose count is already in `why`. */
   count?: number;
   tasks: Task[];
+  /**
+   * Ticked off today. Rendered at the foot of the section, struck through and un-tickable back.
+   * A section that empties as you work looks like a section where nothing happened.
+   */
+  done?: Task[];
   /** Renders the label in lila: this is the section that matters right now. */
   now?: boolean;
   /**
@@ -45,6 +50,10 @@ const SLOT_HINTS: Record<number, string> = {
 export interface RowCallbacks {
   onToday: (task: Task) => void;
   onDate: (task: Task, event: MouseEvent) => void;
+  /** The section is passed along because ticking a row in "Avui" leaves a record of it. */
+  onComplete: (task: Task, section: Section) => void;
+  /** Clicking the tick of a finished row undoes it. */
+  onReopen: (task: Task) => void;
   /** Async so the menu can wait for the write before refreshing. */
   onDrop: (task: Task) => Promise<void>;
   onOpen: (task: Task) => void;
@@ -70,18 +79,23 @@ export class FocusRenderer {
     const previous = this.positions(host);
     host.empty();
 
-    const anything = sections.some((section) => section.tasks.length > 0 || section.emptySlots?.length);
+    const anything = sections.some((section) => this.weight(section) > 0);
     if (!anything) {
       host.createDiv({ cls: "tcf-empty", text: "Res per aquí. Cap tasca compleix el filtre." });
       return;
     }
 
     for (const section of sections) {
-      if (section.tasks.length === 0 && !section.emptySlots?.length) continue;
+      if (this.weight(section) === 0) continue;
       this.renderSection(host, section, today);
     }
 
     this.animateFrom(previous, host);
+  }
+
+  /** Anything worth drawing: rows, free slots, or the day's record. */
+  private weight(section: Section): number {
+    return section.tasks.length + (section.emptySlots?.length ?? 0) + (section.done?.length ?? 0);
   }
 
   private renderSection(host: HTMLElement, section: Section, today: Date): void {
@@ -132,6 +146,37 @@ export class FocusRenderer {
       empty.createSpan({ cls: "tcf-lead tcf-ord tcf-ord-empty", text: String(slot) });
       empty.createSpan({ text: SLOT_HINTS[slot] ?? "tria'n una més…" });
     }
+
+    // Last, under its own quiet label: what you have already closed today. The invitation to pick
+    // another one stays right above it, so a freed slot never reads as a loss.
+    const done = section.done ?? [];
+    if (done.length === 0) return;
+    host.createDiv({ cls: "tcf-done-head", text: "fetes avui" });
+    for (const task of done) this.renderDone(host, task);
+  }
+
+  /**
+   * A task you finished. It keeps its place, struck through, with a ticked box you can click to
+   * undo it — no ordinal, because the 1·2·3 counts what is still live, and no actions, because
+   * the only thing left to decide about it is whether it was really done.
+   */
+  private renderDone(host: HTMLElement, task: Task): void {
+    const row = host.createDiv({ cls: "tcf-row tcf-done" });
+    row.dataset.tcfKey = `${task.location.path}:${task.location.line}`;
+
+    const box = row.createDiv({ cls: "tcf-lead tcf-mark tcf-mark-on" });
+    setIcon(box, "check");
+    box.setAttribute("role", "button");
+    box.setAttribute("aria-label", "Reobrir");
+    setTooltip(box, "Reobrir", { delay: 200 });
+    box.addEventListener("click", (event) => {
+      event.stopPropagation();
+      this.callbacks.onReopen(task);
+    });
+
+    const main = row.createDiv({ cls: "tcf-main" });
+    const text = main.createDiv({ cls: "tcf-text", text: task.description || "(sense descripció)" });
+    text.addEventListener("click", () => this.callbacks.onOpen(task));
   }
 
   private renderRow(host: HTMLElement, task: Task, section: Section, today: Date): void {
@@ -155,7 +200,7 @@ export class FocusRenderer {
     setTooltip(box, "Completar", { delay: 200 });
     box.addEventListener("click", (event) => {
       event.stopPropagation();
-      void this.actions.complete(task);
+      this.callbacks.onComplete(task, section);
     });
 
     const main = row.createDiv({ cls: "tcf-main" });

@@ -116,6 +116,12 @@ numbers shift as soon as you type a line above.
 **Urgency arrives on its own and never takes a slot.** Dated today, `🔺`, or `#urgent`: terracotta
 rule, first in the list, and the three slots stay yours.
 
+**Finishing frees the slot but keeps the line.** What you tick off in "Avui" stays at the foot of
+the section, struck through, in `dayPlan.done` — the only closed tasks the focus view shows. A view
+that empties itself as you work looks exactly like a view where nothing happened: three empty slots
+at six in the evening, three at nine in the morning. The record dies at midnight with the plan, and
+un-ticking the box hands the task back to a free slot.
+
 **Discarding costs one deliberate step more than postponing.** "No ho faré" lives at the bottom of
 the date menu with a warning style, not as a word in the row, and there is no bare keyboard
 shortcut for it. It cancels the line (`- [-]` plus `❌ date`) — it never deletes anything — and it
@@ -164,7 +170,16 @@ worse.
    nothing and the animation never ran — with no visible error anywhere. Symptom to recognise: a
    control that silently does nothing usually means the render threw halfway, leaving the previous
    DOM in place.
-6. **Explaining away a screenshot instead of diagnosing it.** Faced with "it still looks wrong", the
+6. **Marking a state with a colour the pane already uses.** The active lens carried
+   `--background-secondary`, which in the left dock *is* the pane background: the pill existed and
+   was invisible, so neither tab looked selected. A state colour has to come from a hue the
+   surroundings never use — here `--tcf-lila`, the accent that already means "you chose this".
+7. **Trusting one class to beat a theme.** Themes style buttons as `<container> button`, which
+   outweighs a plugin's single `.tcf-tab` and reinstates the grey chrome on *both* tabs, flattening
+   the very difference the state colour was meant to draw. Rules that a theme must not reach go two
+   classes deep, and `mockups/06-render-real.html` now simulates buttons at theme specificity so the
+   regression shows up outside Obsidian.
+8. **Explaining away a screenshot instead of diagnosing it.** Faced with "it still looks wrong", the
    deduction "your screenshot must be stale" was made from a single detail and was wrong. Cheap
    diagnostics that would have settled it in one step: grep the *deployed* bundle for the new
    markers, list every copy of the plugin on disk, check which vault Obsidian actually has open,
