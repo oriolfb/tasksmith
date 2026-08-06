@@ -2,9 +2,10 @@
 
 ## Purpose
 
-Task Console indexes every task in the vault and shows it in a sidebar and a wide triage
-view. Markdown stays the only source of truth; the plugin adds an index, views and quick
-actions. It coexists with the Tasks plugin and writes nothing Tasks cannot read.
+Task Console indexes every task in the vault and shows it in two views with two different jobs:
+a focus dock that asks *what will you do today*, and a control centre that asks *how is the system
+doing*. Markdown stays the only source of truth; the plugin adds an index, views and quick actions.
+It coexists with the Tasks plugin and writes nothing Tasks cannot read.
 
 ## Layers
 
@@ -16,9 +17,11 @@ actions. It coexists with the Tasks plugin and writes nothing Tasks cannot read.
     ┌───────────┴────────────┬──────────────────┬──────────────┐
     │                        │                  │              │
 ┌───▼─────────┐   ┌──────────▼───────┐  ┌───────▼──────┐ ┌─────▼───────┐
-│ TaskIndex   │   │ TaskActions      │  │ Query        │ │ Views       │
-│ in-memory   │   │ quick actions    │  │ filter/sort/ │ │ Sidebar +   │
-│ per note    │   │ over TaskWriter  │  │ group        │ │ Triage      │
+│ TaskIndex   │   │ TaskActions      │  │ query/       │ │ Views       │
+│ in-memory   │   │ quick actions    │  │ Query Focus  │ │ Sidebar +   │
+│ per note    │   │ over TaskWriter  │  │ Metrics      │ │ ControlCentre│
+│             │   │                  │  │ Health       │ │ + DateMenu  │
+│             │   │                  │  │ Filters      │ │             │
 └───┬─────────┘   └──────────┬───────┘  └──────────────┘ └─────────────┘
     │                        │
 ┌───▼──────────┐   ┌─────────▼────────┐
@@ -39,6 +42,20 @@ actions. It coexists with the Tasks plugin and writes nothing Tasks cannot read.
 **One parsing path.** `buildTasks.tasksFromFile` is used by the live index *and* by the
 vault audit test. The numbers the UI shows and the numbers CI verifies cannot come from
 different code.
+
+**Everything a view says is computed by a pure function.** `Focus.ts` (the dock's four sections),
+`Metrics.ts` (the KPI strip and the throughput bars), `Health.ts` (the findings) and `Filters.ts`
+(the filter chips and the `+ filtre` menu) take tasks and a date and return data. No DOM, no
+`App`, no settings object — which is what lets the vault audit assert them against the real vault
+and print them from `npm run audit:vault`. A figure in the panel that no test can see is a figure
+nobody can trust.
+
+**Two views, two jobs, no shared controls.** The dock (`SidebarView` + `FocusRenderer`) owns the
+day's three slots; the control centre (`ControlCentreView` + `ControlTable`) owns the numbers, the
+table and the health panel. What they do share is the one thing that must not diverge: the date
+menu, in `DateMenu.ts`, because "No ho faré" living at the bottom of it, separated and marked as a
+warning, is a rule and not a layout detail. `BaseTaskView` holds the query plumbing — query state,
+index subscription, coalesced refresh, and the `applyFilter` the dock's "N més" hands over.
 
 **Spans, not re-serialization.** `TaskParser` records the offset range of every field it
 recognises. Edits in `TaskLineEditor` splice `raw`, so any text the parser does not model
@@ -193,6 +210,15 @@ text all derived from `--tcf-lila` — a hue no pane background uses — and the
 classes deep (`.tcf .tcf-tab`) so a theme cannot reach over them. State also goes into
 `aria-pressed`, since a colour is not readable by a screen reader.
 
+**Build the control the public API actually has, not the one the app is seen using.**
+`MenuItem.setSubmenu` is not in `obsidian.d.ts` (1.13.1) even though the app itself uses submenus,
+so the obvious "Projecte ▸" nesting inside `+ filtre` would have meant calling an undocumented
+method — and by the silent-failure symptom above, a menu that throws halfway just does nothing at
+all. `FuzzySuggestModal` *is* public: `PickModal` picks a project, an area or a person, searchable
+and keyboard-first, which suits a vault with more people than a submenu wants anyway. The same
+rule settled the menu's group headings: `setIsLabel(true)` is the public way to put a heading in a
+menu, where a disabled item still reads as something that ought to be clickable.
+
 **`styles.css` reloads live; `main.js` does not.** Obsidian only re-reads a plugin's JavaScript
 when the plugin is re-enabled, so *new CSS on old JS* is a real and misleading state: after the
 markup moved off `<button>`, the CSS reset that neutralised Obsidian's button styling was removed
@@ -212,20 +238,39 @@ read every row's rect, rebuild the list, invert, play. A fixed-height absolutely
 version broke as soon as a description wrapped to a third line, which at dock width is the common
 case. `prefers-reduced-motion` skips straight to the end state.
 
-**A class used as a hook must never be overwritten by state.** `lead.className = "ord"` destroyed
-the `.lead` hook the next paint queried, so `paint()` threw before reaching
-`list.replaceChildren` — the lens button appeared to do nothing at all and no animation ran, with
-no visible error. Hook and state coexist: `"lead ord"`. `TaskListRenderer` uses the same
-class-as-hook pattern and is exposed to the same mistake.
+**Sizes that CSS cannot resolve are computed in the view.** The throughput bars set their height in
+pixels from one constant, because a percentage height inside a flex column resolves against a box
+the value and month labels also share — the busiest month would overflow the strip by exactly the
+height of its own labels. The same instinct keeps the faded bars on `opacity` instead of
+`color-mix`: `minAppVersion: 1.6.0` means the plugin's floor is the app's Chromium, not the
+machine's, and while that floor is new enough for `color-mix`, "new enough" is not a property worth
+having in a bar chart when a decades-old declaration does the job.
+
+**A class used as a hook must never be overwritten by state, or double as one.** Two versions of the
+same mistake. `lead.className = "ord"` destroyed the `.lead` hook the next paint queried, so
+`paint()` threw before reaching `list.replaceChildren` — the lens button appeared to do nothing at
+all and no animation ran, with no visible error. Then the control centre's table used one class both
+to place the actions column and to hide the action words until hover, and the `opacity: 0` hid the
+column *heading* too. Hook and state coexist: `"lead ord"`, `"tcc-cell-actions tcc-acts"`.
+
+**`container-type` costs you content-based sizing.** `container-type: inline-size` on the control
+centre's root — needed so the table can drop columns when the tab is split narrow — means the box's
+inline size can no longer come from its contents, only from its parent. Without `width: 100%` the
+entire tab renders as a 30px column. Container queries also cannot match the container itself, so
+the query lives on the root and the rules address its descendants.
 
 **Build the summary sentence as DOM, not `innerHTML`.** It only ever interpolates counts today,
 but note content is one refactor away from reaching it.
 
-**Verify without the app where possible.** The harness at
-[`mockups/06-render-real.html`](mockups/06-render-real.html) loads the real `styles.css` with the
-renderer's DOM and Obsidian's CSS variables at two dock widths, and it renders bare `<button>`s
-with Obsidian's styling on purpose so a regression to grey chrome is visible. It catches
-structure, spacing and chrome; it cannot catch a user's theme or snippets.
+**Verify without the app where possible.** The harnesses at
+[`mockups/06-render-real.html`](mockups/06-render-real.html) (the dock, at two widths) and
+[`mockups/07-centre-real.html`](mockups/07-centre-real.html) (the control centre, full width and a
+660px split) load the real `styles.css` with the renderers' DOM and Obsidian's CSS variables, and
+render bare `<button>`s with Obsidian's styling on purpose so a regression to grey chrome is
+visible. They catch structure, spacing and chrome; they cannot catch a user's theme or snippets.
+Both bugs in the control centre's first render — the collapsed root and the invisible column
+heading — were found here rather than in a screenshot. Note that a browser caches `styles.css`
+aggressively: reload the stylesheet's URL, not just the page.
 
 ## Known limitations
 

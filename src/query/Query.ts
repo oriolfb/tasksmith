@@ -3,7 +3,7 @@ import { BUCKET_ORDER, ageInDays, bucketOf } from "../index/Buckets";
 import { isEmptyTask } from "../index/EmptyTasks";
 import { startOfToday } from "../index/dates";
 
-export type SortKey = "date" | "priority" | "age" | "note";
+export type SortKey = "date" | "priority" | "age" | "note" | "text" | "person" | "area";
 export type GroupKey = "bucket" | "person" | "project" | "area" | "note" | "none";
 export type StatusScope = "open" | "closed" | "all";
 
@@ -22,6 +22,8 @@ export interface QueryState {
   /** Someday/maybe lines from `tipus: idea` notes and friends. */
   includeSomeday: boolean;
   sort: SortKey;
+  /** Clicking the active column again turns the order around. Tiebreakers stay ascending. */
+  sortReverse: boolean;
   group: GroupKey;
 }
 
@@ -37,6 +39,7 @@ export const DEFAULT_QUERY: QueryState = {
   includeReference: false,
   includeSomeday: false,
   sort: "date",
+  sortReverse: false,
   group: "bucket",
 };
 
@@ -119,9 +122,19 @@ export function filterTasks(tasks: Task[], state: QueryState, ctx: QueryContext)
   });
 }
 
-export function sortTasks(tasks: Task[], key: SortKey, ctx: QueryContext): Task[] {
+/**
+ * `reverse` flips the chosen column only: path and line stay ascending, so two rows that
+ * compare equal keep the order they have in the note whichever way the column points.
+ */
+export function sortTasks(tasks: Task[], key: SortKey, ctx: QueryContext, reverse = false): Task[] {
+  const direction = reverse ? -1 : 1;
   const sorted = [...tasks];
-  sorted.sort((a, b) => compare(a, b, key, ctx) || a.location.path.localeCompare(b.location.path) || a.location.line - b.location.line);
+  sorted.sort(
+    (a, b) =>
+      compare(a, b, key, ctx) * direction ||
+      a.location.path.localeCompare(b.location.path) ||
+      a.location.line - b.location.line
+  );
   return sorted;
 }
 
@@ -173,7 +186,8 @@ export function groupTasks(
 }
 
 export function runQuery(tasks: Task[], state: QueryState, ctx: QueryContext): TaskGroup[] {
-  return groupTasks(sortTasks(filterTasks(tasks, state, ctx), state.sort, ctx), state.group, ctx, state.person);
+  const sorted = sortTasks(filterTasks(tasks, state, ctx), state.sort, ctx, state.sortReverse);
+  return groupTasks(sorted, state.group, ctx, state.person);
 }
 
 /**
@@ -221,7 +235,20 @@ function compare(a: Task, b: Task, key: SortKey, ctx: QueryContext): number {
     }
     case "note":
       return a.location.path.localeCompare(b.location.path);
+    case "text":
+      return a.description.localeCompare(b.description);
+    // The columns the control centre's table sorts by. A row with nothing in the column goes
+    // last either way round, because "—" is not a value you asked to sort by.
+    case "person":
+      return blankLast(a.people[0] ?? "", b.people[0] ?? "");
+    case "area":
+      return blankLast(a.area ?? "", b.area ?? "");
   }
+}
+
+function blankLast(a: string, b: string): number {
+  if (!a !== !b) return a ? -1 : 1;
+  return a.localeCompare(b);
 }
 
 function groupOf(task: Task, key: GroupKey, ctx: QueryContext): { key: string; label: string } {

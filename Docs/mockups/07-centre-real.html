@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<title>Task Console — centre de control amb el CSS real</title>
+
+<!-- Obsidian's own variables, default light theme values, plus the two classes we borrow
+     from the app (`clickable-icon`, plain `button`) so the harness shows what the theme does. -->
+<style>
+  :root{
+    --background-primary:#ffffff; --background-secondary:#f2f3f5;
+    --background-modifier-hover:rgba(0,0,0,.045); --background-modifier-border:#ddd;
+    --text-normal:#222; --text-muted:#6e6e6e; --text-faint:#999; --text-error:#c0392b;
+    --text-warning:#b9860b; --text-accent:#705dcf; --text-on-accent:#fff;
+    --interactive-accent:#705dcf; --radius-s:4px; --radius-m:8px;
+    --font-ui-small:13px; --font-ui-smaller:12px; --font-ui-medium:15px;
+    --font-monospace:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  html,body{margin:0;background:#e9e7e3;font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif}
+  .frame{padding:24px;display:flex;flex-direction:column;gap:24px}
+  .cap{font:600 11px/1.4 -apple-system,sans-serif;color:#6b665e;padding:0 0 7px}
+  .pane{background:var(--background-primary);border:1px solid #ccc;border-radius:8px;overflow:hidden;
+    height:620px;display:flex}
+  .pane.split{width:660px;height:660px}
+  /* This is what the theme does to plain buttons, and what broke the first attempt at the dock. */
+  button{font-family:inherit;font-size:var(--font-ui-small);background-color:var(--background-secondary);
+    border:0;border-radius:var(--radius-s);padding:5px 12px;color:var(--text-normal);
+    box-shadow:0 1px 1px rgba(0,0,0,.06);cursor:pointer}
+  input{font-family:inherit;background:var(--background-primary);border:1px solid var(--background-modifier-border);
+    border-radius:var(--radius-s);padding:4px 8px;color:var(--text-normal)}
+  .clickable-icon{display:flex;align-items:center;justify-content:center;color:var(--text-muted);
+    border-radius:var(--radius-s);cursor:pointer}
+  .clickable-icon:hover{background:var(--background-modifier-hover)}
+  .clickable-icon svg{width:var(--icon-size,17px);height:var(--icon-size,17px);stroke:currentColor;
+    stroke-width:1.7;fill:none}
+  .note{max-width:760px;font:12.5px/1.6 -apple-system,sans-serif;color:#5d5951}
+  .note h3{font-size:12.5px;color:#5546b8;margin:0 0 5px}
+  .note p{margin:0 0 10px}
+  .note b{color:#24221e}
+</style>
+
+<!-- The real stylesheet, unmodified. -->
+<link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+<div class="frame">
+  <div>
+    <div class="cap">PESTANYA SENCERA — el que produeixen ControlCentre.ts i ControlTable.ts amb el CSS real</div>
+    <div class="pane"><div class="tcc" id="full"></div></div>
+  </div>
+  <div>
+    <div class="cap">PESTANYA PARTIDA 660px — el rail de salut passa a sota i cauen Àrea i Origen (container query)</div>
+    <div class="pane split"><div class="tcc" id="narrow"></div></div>
+  </div>
+  <div class="note">
+    <h3>Què comprova aquest banc de proves</h3>
+    <p><b>Que no hi ha targetes.</b> Ni als KPI, ni al gràfic, ni al panell de salut: xifres i text amb aire, una filada per secció. La versió del mockup 04 eren caixes amb vora i ombra i llegia com un tauler fet per algú altre.</p>
+    <p><b>Que la data segueix sent text ocre</b> i no una etiqueta plena. Catorze files la porten; com a badge la llista es llegeix com un semàfor.</p>
+    <p><b>Que els botons no s'han colat.</b> Les accions de fila, les capçaleres de columna i els xips són <code>span</code>/<code>div</code> amb <code>role="button"</code>; els botons d'aquesta pàgina porten l'estil real d'Obsidian per fer visible qualsevol regressió.</p>
+    <p><b>Que la taula sobreviu a una pestanya partida.</b> A menys de 780px el rail va a sota; a menys de 620px cauen Àrea i Origen, que ja són al tooltip de la fila.</p>
+    <p>Passa el ratolí per sobre d'una fila per veure aparèixer Fet · Avui · Data.</p>
+  </div>
+</div>
+
+<script>
+// Real figures from `npm run audit:vault` on 5 August 2026.
+const KPIS = [
+  { v:"33", l:"obertes", d:"en 23 notes" },
+  { v:"14", l:"per renegociar", d:"la més antiga fa 37 dies", late:true },
+  { v:"12", l:"sense data", d:"12 amb data a la nota" },
+  { v:"2,3", l:"tancades/dia laborable", d:"428 amb ✅ des de 8 des 2025" },
+];
+const MONTHS = [["gen",73],["febr",80],["març",51],["abr",30],["maig",34],["juny",65],["jul",33],["ag",24]];
+const CHIPS = ["obertes","per renegociar","és una tasca (no documentació)"];
+const ROWS = [
+  { t:"enviar al xat de responsables la proposta de canvi d'agrupació de mercats", due:"fa 5 setmanes", late:true, who:"—", none:true, area:"01 Diari", src:"Diari 11 de març" },
+  { t:"pedirle a dani la api de calendario", due:"fa 5 setmanes", late:true, who:"Dani Barreiro", area:"03 Projectes", src:"Estratègia IA Zara" },
+  { t:"Slaide → demanar-li a la Marina una plantilla de ppt", due:"fa 5 setmanes", late:true, who:"Mónica +1", area:"02 Reunions", src:"Seguiment BI + Carmen" },
+  { t:"gestionar l'accés al drive de search", due:"fa 4 setmanes", late:true, who:"—", none:true, area:"01 Diari", src:"Notes 29 de juny" },
+  { t:"definir l'estructura d'equip pel pla 2030", due:"sense data", undated:true, who:"Carmen", area:"02 Reunions", src:"Feedback juliol" },
+  { t:"integrar Kinetic Search amb Drive", due:"en 4 setmanes", who:"Carmen", area:"03 Projectes", src:"1:1 30 de juliol" },
+];
+const FINDINGS = [
+  { h:"Cap tasca cancel·lada en 8 mesos",
+    p:"428 tancades, 428 amb ✅ i cap amb ❌. Dir «no ho faré» és una decisió que encara no has pres mai — per això les endarrerides s'acumulen en lloc de tancar-se.",
+    a:"Renegociar-les una a una →" },
+  { h:"12 sense data que la nota sí que té",
+    p:"La nota porta una «data:» que el plugin no fa servir com a termini a propòsit — el dia d'una reunió no és el termini de les seves tasques. Però és la data que hi posaries.",
+    a:"Posar-hi la data de la nota →" },
+  { h:"22 notes amb tasques obertes i sense «Projecte»",
+    p:"Sense ell la lent «Per àrea» agrupa per carpeta i prou. S'omple al frontmatter de la nota: el plugin no escriu mai fora de la línia de la tasca.",
+    a:"Veure-les →" },
+  { h:"20 apuntades fa més de 14 dies",
+    p:"La més antiga fa 37 dies. Amb data o sense: si segueix aquí, o es fa o es descarta.",
+    a:"Veure les aturades →" },
+  { h:"3 línies de documentació fora dels comptadors", ok:true,
+    p:"Checklists de notes amb «tipus: documentacio». Es queden a la nota i no es compten mai com a tasques obertes.",
+    a:"Ensenya-me-les →" },
+  { h:"Índex", ok:true, p:"866 notes · 474 línies de tasca · 33 obertes (14 per renegociar) · 0 buides." },
+];
+const COLUMNS = [["text","Tasca"],["due","Termini ↓"],["who","Amb qui"],["area","Àrea"],["origin","Origen"],["actions","Accions"]];
+const ICON = '<svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+
+function build(host){
+  const el = (tag, cls, text, parent) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    (parent ?? host).appendChild(node);
+    return node;
+  };
+
+  const head = el("div","tcc-head");
+  ["Per data","Amb qui","Per àrea"].forEach((label, i) =>
+    el("button", i === 0 ? "tcf-tab tcf-tab-on" : "tcf-tab", label, head));
+  const tools = el("div","tcc-head-tools",undefined,head);
+  const icon = el("div","clickable-icon tcf-icon",undefined,tools);
+  icon.innerHTML = ICON;
+  el("button","tcc-plan","Planificar el dia",tools);
+
+  const kpis = el("div","tcc-kpis");
+  for (const kpi of KPIS){
+    const cell = el("div","tcc-kpi",undefined,kpis);
+    cell.setAttribute("role","button");
+    el("div", kpi.late ? "tcc-kpi-value tcc-late" : "tcc-kpi-value", kpi.v, cell);
+    el("div","tcc-kpi-label",kpi.l,cell);
+    el("div","tcc-kpi-detail",kpi.d,cell);
+  }
+
+  const chart = el("div","tcc-chart");
+  const bars = el("div","tcc-bars",undefined,chart);
+  const peak = Math.max(...MONTHS.map((m) => m[1]));
+  MONTHS.forEach(([name, total], i) => {
+    const col = el("div","tcc-bar-col",undefined,bars);
+    el("span","tcc-bar-value",String(total),col);
+    const bar = el("div", i === MONTHS.length - 1 ? "tcc-bar tcc-bar-now" : "tcc-bar", undefined, col);
+    bar.style.height = (2 + Math.round((total / peak) * 42)) + "px";
+    el("span","tcc-bar-month",name,col);
+  });
+  const caption = el("div","tcc-chart-note",undefined,chart);
+  caption.append(document.createTextNode("Tancades per mes. La mitjana real és "));
+  caption.appendChild(Object.assign(document.createElement("b"),{textContent:"2,3 al dia laborable"}));
+  caption.append(document.createTextNode(" — per això la vista d'enfocament té tres caselles i no deu."));
+
+  const filters = el("div","tcc-filters");
+  const search = el("input","tcc-search",undefined,filters);
+  search.type = "search"; search.placeholder = "Cerca…";
+  const chips = el("div","tcc-chips",undefined,filters);
+  for (const label of CHIPS){
+    const chip = el("span","tcc-chip",undefined,chips);
+    el("span",null,label,chip);
+    el("span","tcc-chip-x","×",chip);
+  }
+  el("span","tcc-chip tcc-chip-add","+ filtre",chips);
+  el("span","tcc-summary","14 de 33 obertes · ordenat per termini",filters);
+
+  const layout = el("div","tcc-layout");
+  const table = el("div","tcc-table",undefined,layout);
+
+  const th = el("div","tcc-th",undefined,table);
+  el("span","tcc-cell-select",undefined,th);
+  for (const [key, label] of COLUMNS){
+    const cell = el("span", `tcc-th-cell tcc-cell-${key}` + (key === "due" ? " tcc-th-on" : ""), label, th);
+    if (key !== "actions") cell.setAttribute("role","button");
+  }
+
+  const sec = el("div","tcc-sec",undefined,table);
+  sec.setAttribute("role","button");
+  el("span","tcc-sec-name","Endarrerides",sec);
+  el("span","tcc-sec-count","14",sec);
+
+  for (const row of ROWS){
+    const tr = el("div","tcc-tr",undefined,table);
+    tr.tabIndex = 0;
+    const box = el("input","tcc-select",undefined,tr);
+    box.type = "checkbox";
+    el("span","tcc-cell-text",row.t,tr);
+    el("span","tcc-cell-due" + (row.late ? " tcc-late" : row.undated ? " tcc-none" : ""),row.due,tr);
+    el("span","tcc-cell-who" + (row.none ? " tcc-none" : ""),row.who,tr);
+    el("span","tcc-cell-area",row.area,tr);
+    el("span","tcc-cell-origin",row.src,tr);
+    const acts = el("div","tcc-cell-actions tcc-acts",undefined,tr);
+    for (const label of ["Fet","Avui","Data"]) el("span","tcc-act",label,acts);
+  }
+
+  const health = el("div","tcc-health",undefined,layout);
+  el("div","tcc-health-title","Salut del sistema",health);
+  for (const finding of FINDINGS){
+    const item = el("div", finding.ok ? "tcc-finding tcc-finding-ok" : "tcc-finding", undefined, health);
+    el("div","tcc-finding-title",finding.h,item);
+    el("div","tcc-finding-detail",finding.p,item);
+    if (finding.a) el("span","tcc-finding-action",finding.a,item);
+  }
+
+  const footer = el("div","tcc-footer");
+  const keys = el("div","tcf-keys",undefined,footer);
+  for (const [key, what] of [["J K","moure"],["Espai","seleccionar"],["A","avui"],["D","data"],["X","fet"],["O","obrir"],["/","cerca"]]){
+    const hint = el("span",null,undefined,keys);
+    el("b",null,key,hint);
+    hint.append(document.createTextNode(" " + what));
+  }
+}
+
+build(document.getElementById("full"));
+build(document.getElementById("narrow"));
+</script>
+</body>
+</html>
