@@ -30,15 +30,24 @@ export function bucketOf(task: Task, today: Date = startOfToday()): Bucket {
 export const BUCKET_ORDER: Bucket[] = ["overdue", "today", "week", "later", "undated", "closed"];
 
 /**
- * Age used for staleness: creation date when present, else the note's own date, else
- * file mtime. Returns null when nothing usable is known.
+ * When the task came into existence, as well as the vault can say: its own `➕`, else the date
+ * its note is named after, else the note's own `data:`. Null when nothing usable is known.
  *
  * `noteDate` counts here even when it is not a deadline — that is the whole point of reading
  * it from meeting notes: "jotted down five weeks ago" is true and useful, "due five weeks ago"
- * would not be.
+ * would not be. Only 19 of 461 lines in the vault carry a `➕`, so without the two fallbacks
+ * there would be no such thing as a task's age, and no inflow to chart.
+ */
+export function originDate(task: Task): Date | null {
+  return task.fields.created?.date ?? task.filenameDate ?? task.noteDate ?? null;
+}
+
+/**
+ * Age used for staleness: the origin date when there is one, else file mtime. Returns null
+ * when nothing usable is known.
  */
 export function ageInDays(task: Task, mtime: number | null, today: Date = startOfToday()): number | null {
-  const created = task.fields.created?.date ?? task.filenameDate ?? task.noteDate;
+  const created = originDate(task);
   if (created) return daysBetween(created, today);
   if (mtime === null) return null;
   const date = new Date(mtime);

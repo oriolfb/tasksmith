@@ -7,7 +7,7 @@ export interface SavedView {
   query: QueryState;
 }
 
-export interface TaskConsoleSettings {
+export interface TaskSmithSettings {
   /** Named query presets, editable from the triage view. */
   savedViews: SavedView[];
   /** Folders excluded from indexing, on top of Obsidian's own ignore filters. */
@@ -36,9 +36,33 @@ export interface TaskConsoleSettings {
   dayPlan: DayPlan;
   /** Sections the user folded away, remembered between sessions. */
   collapsedSections: string[];
+  /**
+   * Whether the control centre's history panel is unfolded. Its own flag and not a
+   * `collapsedSections` entry, because this one is closed until asked for: a list of what the
+   * user folded cannot express "folded unless you opened it once".
+   */
+  showHistory: boolean;
+  /**
+   * Whether the control centre's health panel is unfolded.
+   *
+   * Three states and not a boolean, because the honest default depends on where the panel is:
+   * as the right-hand rail it costs nothing and stays open, stacked under the table on a narrow
+   * tab it would sit below every row and it starts folded. `auto` is that rule; the other two are
+   * the user having decided, which outranks the rule at any width.
+   */
+  healthPanel: "auto" | "open" | "closed";
+  /**
+   * Whether the week strip gives Saturday and Sunday a column of their own.
+   *
+   * Off, the strip runs over the next seven **working** days and a task dated on a weekend is
+   * counted in the Monday that follows it — folded, never dropped. The column says so in its
+   * tooltip and clicking it filters the table to all the days it stands for, so the number and
+   * the list it opens can never disagree.
+   */
+  showWeekends: boolean;
 }
 
-export const DEFAULT_SETTINGS: TaskConsoleSettings = {
+export const DEFAULT_SETTINGS: TaskSmithSettings = {
   savedViews: [],
   excludedFolders: ["96 IA Docs", "07 Arxiu", ".claude", ".agents"],
   respectObsidianIgnoreFilters: true,
@@ -50,9 +74,12 @@ export const DEFAULT_SETTINGS: TaskConsoleSettings = {
   somedayNoteTypes: [...DEFAULT_CONTEXT_RULES.somedayTypes],
   dayPlan: EMPTY_PLAN,
   collapsedSections: [],
+  showHistory: false,
+  healthPanel: "auto",
+  showWeekends: true,
 };
 
-export function contextRulesOf(settings: TaskConsoleSettings): ContextRules {
+export function contextRulesOf(settings: TaskSmithSettings): ContextRules {
   return {
     deadlineFrom: settings.deadlineFromNotes,
     referenceTypes: settings.referenceNoteTypes,

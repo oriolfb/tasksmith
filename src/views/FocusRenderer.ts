@@ -2,7 +2,7 @@ import { type App, Notice, TFile, setIcon, setTooltip } from "obsidian";
 import type { Task } from "../types/task";
 import type { TaskActions } from "../tasks/TaskActions";
 import { ageInDays, bucketOf } from "../index/Buckets";
-import { dayKey } from "../query/Focus";
+import { dayKey, isUrgent } from "../query/Focus";
 import { addDays } from "../index/dates";
 import { openDateMenu } from "./DateMenu";
 import { noteName, relativeLabel, shortDate } from "./format";
@@ -184,7 +184,9 @@ export class FocusRenderer {
     const row = host.createDiv({ cls: "tcf-row" });
     row.dataset.tcfKey = `${task.location.path}:${task.location.line}`;
     row.tabIndex = 0;
-    if (section.urgent) row.addClass("tcf-urgent");
+    // Per row, not per section: "Avui" holds what arrived on its own *and* what you chose, and a
+    // task you picked for tomorrow is not urgent just because an urgent one sits above it.
+    if (section.urgent && isUrgent(task, today)) row.addClass("tcf-urgent");
     if (!section.now) row.addClass("tcf-secondary");
 
     /*
@@ -234,10 +236,11 @@ export class FocusRenderer {
    */
   private renderMeta(meta: HTMLElement, task: Task, section: Section, today: Date): void {
     const bucket = bucketOf(task, today);
+    const arrived = section.urgent && isUrgent(task, today);
 
-    if (section.urgent && bucket === "today") {
+    if (arrived && bucket === "today") {
       meta.createSpan({ cls: "tcf-now", text: "data d'avui" });
-    } else if (section.urgent) {
+    } else if (arrived) {
       meta.createSpan({ cls: "tcf-now", text: "marcada com a urgent" });
     } else if (bucket === "overdue") {
       meta.createSpan({ cls: "tcf-late", text: relativeLabel(task.effectiveDate, today) });

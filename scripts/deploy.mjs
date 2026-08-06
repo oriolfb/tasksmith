@@ -1,7 +1,7 @@
 /**
  * One-shot deploy: build first, then copy the three files Obsidian needs into the vault.
  *
- * Override the target with TASK_CONSOLE_VAULT. For a loop that copies on every save, use
+ * Override the target with TASK_SMITH_VAULT. For a loop that copies on every save, use
  * `npm run deploy:watch` instead.
  */
 import { ARTIFACTS, copyArtifacts, resolveVault } from "./artifacts.mjs";
@@ -9,7 +9,7 @@ import { existsSync } from "fs";
 
 const vault = resolveVault();
 if (!vault) {
-  console.error(`No vault found. Set TASK_CONSOLE_VAULT to your vault's path.`);
+  console.error(`No vault found. Set TASK_SMITH_VAULT to your vault's path.`);
   process.exit(1);
 }
 

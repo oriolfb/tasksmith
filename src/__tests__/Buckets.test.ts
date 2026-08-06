@@ -6,7 +6,7 @@ import { ScopeFilter, parseObsidianIgnoreFilters } from "../index/ScopeFilter";
 
 const D = (iso: string) => {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y!, m! - 1, d!);
+  return new Date(y!, m! - 1, d);
 };
 
 const TODAY = D("2026-08-05"); // a Wednesday
@@ -19,10 +19,16 @@ function task(line: string, filenameDate: Date | null = null, open = true): Task
     location: { path: "x.md", line: 0 },
     project: null,
     area: null,
+    people: [],
+    noteTitle: null,
+    noteType: null,
+    noteDate: null,
     filenameDate,
     effectiveDate: effectiveDate(parsed, filenameDate),
+    kind: "commitment",
     open,
     priority: null,
+    hasChildren: false,
   };
 }
 

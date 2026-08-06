@@ -23,8 +23,33 @@ describe("describeFilters", () => {
     expect(labels({ buckets: ["week", "later"] })).toContain("més endavant");
   });
 
+  /** A week that starts tomorrow is not a week. */
+  it("calls «aquesta setmana» the set that includes today", () => {
+    expect(bucketsLabel(["today", "week"])).toBe("aquesta setmana");
+    expect(bucketsLabel(["week"])).toBe("d'aquí a diumenge");
+  });
+
   it("joins a combination it has no name for", () => {
     expect(bucketsLabel(["today", "undated"])).toBe("amb data d'avui o sense data");
+  });
+
+  /** The chip the week strip leaves behind, so a table filtered to Thursday says so. */
+  it("names the day filter, with today and tomorrow by name", () => {
+    const today = new Date(2026, 7, 5);
+    expect(labels({ dueOn: ["2026-08-05"] }, { ...ctx, today })).toContain("amb data avui");
+    expect(labels({ dueOn: ["2026-08-06"] }, { ...ctx, today })).toContain("amb data demà");
+    expect(labels({ dueOn: ["2026-08-07"] }, { ...ctx, today })).toContain("amb data dv. 7 ag");
+  });
+
+  /** A Monday carrying its hidden weekend is a run of days, and says so as a run. */
+  it("names several days as a span rather than listing them", () => {
+    const today = new Date(2026, 7, 5);
+    expect(labels({ dueOn: ["2026-08-08", "2026-08-09", "2026-08-10"] }, { ...ctx, today })).toContain(
+      "amb data del ds. 8 ag al dl. 10 ag"
+    );
+    expect(labels({ dueOn: ["2026-08-07", "2026-08-11"] }, { ...ctx, today })).toContain(
+      "amb data dv. 7 ag o dt. 11 ag"
+    );
   });
 
   it("shows the search text as its own chip", () => {
@@ -69,6 +94,13 @@ describe("filterMenu", () => {
 
     const status = groups.find((group) => group.label === "Estat")!;
     expect(status.options.find((option) => option.checked)?.label).toBe("Obertes");
+  });
+
+  it("offers a week that includes today, not one that starts tomorrow", () => {
+    const deadline = filterMenu(DEFAULT_QUERY, ctx).find((group) => group.label === "Termini")!;
+    const week = deadline.options.find((option) => option.label === "Aquesta setmana");
+    // The day filter comes off with it: a bucket and a single day answer the same question.
+    expect(week?.patch).toEqual({ buckets: ["today", "week"], dueOn: null });
   });
 
   it("offers the line kinds only when the vault holds such lines", () => {

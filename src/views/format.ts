@@ -33,6 +33,24 @@ export function relativeLabel(date: Date | null, today: Date = startOfToday()): 
   return past ? `fa ${years} ${unit}` : `en ${years} ${unit}`;
 }
 
+const WEEKDAYS = ["dg", "dl", "dt", "dc", "dj", "dv", "ds"];
+
+/** `dl.`, `dt.`, … — the column heads of the week strip. */
+export function weekdayLabel(date: Date): string {
+  return `${WEEKDAYS[date.getDay()] ?? ""}.`;
+}
+
+/**
+ * How a single day is named once it is a filter or a column: `avui`, `demà`, else `dj. 7 ag`.
+ * The year is left out on purpose — a day you are looking at is never a year away.
+ */
+export function dayLabel(date: Date, today: Date = startOfToday()): string {
+  const days = daysBetween(today, date);
+  if (days === 0) return "avui";
+  if (days === 1) return "demà";
+  return `${weekdayLabel(date)} ${date.getDate()} ${MONTHS[date.getMonth()] ?? ""}`;
+}
+
 /** Short absolute label used as the tooltip and in the wide view. */
 export function shortDate(date: Date | null): string {
   if (!date) return "—";

@@ -9,7 +9,7 @@ const parse = (line: string) => {
 
 const D = (iso: string) => {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y!, m! - 1, d!);
+  return new Date(y!, m! - 1, d);
 };
 
 describe("surgical edits", () => {

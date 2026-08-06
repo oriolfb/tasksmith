@@ -17,7 +17,7 @@ const DEFAULT_VAULT = join(
 
 /** Returns the vault path, or null when there is no vault there. */
 export function resolveVault() {
-  const vault = process.env.TASK_CONSOLE_VAULT ?? DEFAULT_VAULT;
+  const vault = process.env.TASK_SMITH_VAULT ?? DEFAULT_VAULT;
   return existsSync(join(vault, ".obsidian")) ? vault : null;
 }
 

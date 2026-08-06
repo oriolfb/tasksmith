@@ -16,7 +16,7 @@ const deploying = mode === "deploy-watch";
 
 const vault = deploying ? resolveVault() : null;
 if (deploying && !vault) {
-  console.error("No vault found. Set TASK_CONSOLE_VAULT to your vault's path.");
+  console.error("No vault found. Set TASK_SMITH_VAULT to your vault's path.");
   process.exit(1);
 }
 
@@ -56,7 +56,7 @@ const context = await esbuild.context({
     ...builtins,
   ],
   format: "cjs",
-  target: "es2018",
+  target: "es2021",
   logLevel: "info",
   sourcemap: prod ? false : "inline",
   treeShaking: true,

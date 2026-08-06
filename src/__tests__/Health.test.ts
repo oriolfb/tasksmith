@@ -5,7 +5,7 @@ import type { Task, TaskKind } from "../types/task";
 
 const D = (iso: string) => {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y!, m! - 1, d!);
+  return new Date(y!, m! - 1, d);
 };
 const TODAY = D("2026-08-05");
 
@@ -25,7 +25,7 @@ function task(raw: string, extra: Partial<Task> = {}): Task {
     noteDate: null,
     filenameDate,
     effectiveDate: effectiveDate(parsed, filenameDate),
-    kind: "commitment" as TaskKind,
+    kind: "commitment",
     open: extra.open ?? parsed.status === " ",
     priority: priorityOf(parsed),
     hasChildren: false,

@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { bucketOf } from "../index/Buckets";
 import { bucketCounts, countByKind } from "../query/Query";
-import { closingState, monthlyClosed, openState } from "../query/Metrics";
+import { closingState, monthlyFlow, openState, weekAhead } from "../query/Metrics";
 import { healthFindings } from "../query/Health";
 import { focusSections } from "../query/Focus";
 import { ScopeFilter, parseObsidianIgnoreFilters } from "../index/ScopeFilter";
@@ -13,7 +13,7 @@ import { formatIsoDate } from "../index/dates";
 import { removeField, setDateField } from "../index/TaskLineEditor";
 import { parseTaskLine } from "../index/TaskParser";
 import { isEmptyTask } from "../index/EmptyTasks";
-import type { Bucket, Task } from "../types/task";
+import type { Bucket, FieldKey, Task } from "../types/task";
 
 /**
  * Runs the real pipeline over the real vault. Asserts INVARIANTS, not a snapshot: the vault
@@ -24,7 +24,7 @@ import type { Bucket, Task } from "../types/task";
  * Reference date is pinned so bucket maths stays deterministic.
  */
 const VAULT =
-  process.env.TASK_CONSOLE_VAULT ??
+  process.env.TASK_SMITH_VAULT ??
   path.join(process.env.HOME ?? "", "Library/Mobile Documents/iCloud~md~obsidian/Documents/Bershka");
 
 const REFERENCE_DAY = new Date(2026, 7, 5);
@@ -40,7 +40,7 @@ const available = fs.existsSync(VAULT);
 const describeVault = available ? describe : describe.skip;
 
 if (!available) {
-  console.warn(`[TaskConsole] vault not found at ${VAULT}, skipping audit`);
+  console.warn(`[TaskSmith] vault not found at ${VAULT}, skipping audit`);
 }
 
 describeVault("real vault audit", () => {
@@ -50,7 +50,7 @@ describeVault("real vault audit", () => {
   let scanned: string[];
 
   beforeAll(() => {
-    const interop = parseTasksData(read(path.join(VAULT, TASKS_PLUGIN_DATA)) ?? "{}");
+    const interop = parseTasksData(read(path.join(VAULT, ".obsidian", TASKS_PLUGIN_DATA)) ?? "{}");
     const appJson = read(path.join(VAULT, ".obsidian/app.json")) ?? "{}";
     const scope = new ScopeFilter([...DEFAULT_SETTINGS.excludedFolders, ...parseObsidianIgnoreFilters(appJson)]);
 
@@ -92,7 +92,7 @@ describeVault("real vault audit", () => {
   });
 
   it("reads the Tasks plugin's own configuration from the vault", () => {
-    const interop = parseTasksData(read(path.join(VAULT, TASKS_PLUGIN_DATA)) ?? "{}");
+    const interop = parseTasksData(read(path.join(VAULT, ".obsidian", TASKS_PLUGIN_DATA)) ?? "{}");
     expect(interop.useFilenameAsScheduledDate).toBe(true);
     expect(interop.filenameAsScheduledDateFormat).toBe("\\D\\i\\a\\r\\i YYYY-MM-DD");
     expect(interop.statuses.get("/")?.type).toBe("IN_PROGRESS");
@@ -147,7 +147,7 @@ describeVault("real vault audit", () => {
         path: "01 Diari/2026/07/Diari setmana 29 de 2026.md",
         content: "---\ndata: 2026-07-13\ntags: [Nota_Setmanal]\n---\n\n- [ ] tasca de setmana\n",
       },
-      parseTasksData(read(path.join(VAULT, TASKS_PLUGIN_DATA)) ?? "{}")
+      parseTasksData(read(path.join(VAULT, ".obsidian", TASKS_PLUGIN_DATA)) ?? "{}")
     );
     expect(synthetic!.filenameDate).toBeNull();
     expect(formatIsoDate(synthetic!.effectiveDate!)).toBe("2026-07-13");
@@ -215,10 +215,15 @@ describeVault("real vault audit", () => {
     const closings = closingState(tasks, REFERENCE_DAY);
     expect(closings.done + closings.cancelled).toBe(closings.closed);
 
-    const months = monthlyClosed(tasks, REFERENCE_DAY);
-    const inWindow = months.reduce((sum, month) => sum + month.total, 0);
+    const months = monthlyFlow(tasks, REFERENCE_DAY);
+    const inWindow = months.reduce((sum, month) => sum + month.closed, 0);
     expect(inWindow).toBeLessThanOrEqual(closings.closed);
     expect(months.at(-1)?.current).toBe(true);
+    for (const month of months) {
+      expect(month.done + month.cancelled).toBe(month.closed);
+      // The cohort is a subset of the month's intake, whatever the two dates are.
+      expect(month.stillOpen).toBeLessThanOrEqual(month.created);
+    }
 
     console.log(
       `[audit] centre de control: ${open.open} obertes en ${open.notes} notes · ` +
@@ -228,9 +233,49 @@ describeVault("real vault audit", () => {
         `(${closings.done} amb ✅, ${closings.cancelled} amb ❌)`
     );
     console.log(
-      `[audit] tancades per mes: ${months
-        .map((month) => `${month.year}-${String(month.month + 1).padStart(2, "0")} ${month.total}`)
+      `[audit] creades/tancades per mes: ${months
+        .map(
+          (month) =>
+            `${month.year}-${String(month.month + 1).padStart(2, "0")} ${month.created}/${month.closed}`
+        )
         .join(" · ")}`
+    );
+
+    /*
+     * The week strip. Its five numbers partition the open commitments exactly once, which is the
+     * invariant worth having: a day column that quietly dropped a task, or counted it twice,
+     * would be invisible in the UI and is the only way this strip can lie.
+     */
+    const week = weekAhead(tasks, REFERENCE_DAY, { span: 7 });
+    expect(week.days).toHaveLength(7);
+    expect(week.planned + week.overdue + week.later + week.undated).toBe(open.open);
+    expect(week.overdue).toBe(open.renegotiate);
+    expect(week.undated).toBe(open.undated);
+    expect(week.peak).toBeLessThanOrEqual(week.planned || 0);
+
+    /*
+     * And the same invariant with the weekend hidden, which is the setting's whole risk: a
+     * Saturday without a column must have handed its tasks to a Monday, not dropped them. The
+     * two strips cover different windows, so `later` moves — the partition does not.
+     */
+    const working = weekAhead(tasks, REFERENCE_DAY, { span: 7, weekends: false });
+    expect(working.days).toHaveLength(7);
+    expect(working.days.some((day) => !day.today && day.weekend)).toBe(false);
+    expect(working.planned + working.overdue + working.later + working.undated).toBe(open.open);
+    for (const day of working.days) {
+      expect(day.days[day.days.length - 1]).toBe(day.iso);
+      expect(day.absorbed).toBeLessThanOrEqual(day.count);
+    }
+
+    console.log(
+      `[audit] la setmana: ${week.days
+        .map((day) => `${day.iso.slice(5)} ${day.count}`)
+        .join(" · ")} · abans d'avui ${week.overdue} · més enllà ${week.later} · sense data ${week.undated}`
+    );
+    console.log(
+      `[audit] la setmana, sense caps de setmana: ${working.days
+        .map((day) => `${day.iso.slice(5)} ${day.count}${day.absorbed > 0 ? `(+${day.absorbed})` : ""}`)
+        .join(" · ")} · més enllà ${working.later}`
     );
   });
 
@@ -312,7 +357,7 @@ describeVault("real vault audit", () => {
       expect(reparsed!.description).toBe(task.description);
       for (const [key, field] of Object.entries(task.fields)) {
         if (key === "due") continue;
-        expect(reparsed!.fields[key as keyof typeof reparsed.fields]?.value).toBe(field!.value);
+        expect(reparsed!.fields[key as FieldKey]?.value).toBe(field.value);
       }
       expect(removeField(reparsed!, "due")).toBe(
         task.fields.due ? removeField(task, "due").trimEnd() : task.raw.trimEnd()
@@ -326,8 +371,8 @@ describeVault("real vault audit", () => {
         task.raw.slice(0, task.bodySpan.end) +
         Object.values(task.fields)
           .filter((f) => f !== undefined)
-          .sort((a, b) => a!.span.start - b!.span.start)
-          .map((f) => task.raw.slice(f!.span.start, f!.span.end))
+          .sort((a, b) => a.span.start - b.span.start)
+          .map((f) => task.raw.slice(f.span.start, f.span.end))
           .join("");
       expect(rebuilt).toBe(task.raw);
     }

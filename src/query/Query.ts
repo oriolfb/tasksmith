@@ -1,7 +1,7 @@
 import type { Bucket, Priority, Task } from "../types/task";
 import { BUCKET_ORDER, ageInDays, bucketOf } from "../index/Buckets";
 import { isEmptyTask } from "../index/EmptyTasks";
-import { startOfToday } from "../index/dates";
+import { formatIsoDate, startOfToday } from "../index/dates";
 
 export type SortKey = "date" | "priority" | "age" | "note" | "text" | "person" | "area";
 export type GroupKey = "bucket" | "person" | "project" | "area" | "note" | "none";
@@ -11,6 +11,13 @@ export interface QueryState {
   text: string;
   statusScope: StatusScope;
   buckets: Bucket[] | null;
+  /**
+   * Named days, `YYYY-MM-DD`, as the week strip hands them over. Narrower than a bucket and not
+   * expressible as one: "dijous" is neither "avui" nor "aquesta setmana". A list rather than a
+   * day because one column can stand for more than one date — a Monday carrying a hidden
+   * weekend — and a count you can click has to open exactly what it counted.
+   */
+  dueOn: string[] | null;
   project: string | null;
   area: string | null;
   /** One of the note's `Persones:`, for the "who with" lens. */
@@ -31,6 +38,7 @@ export const DEFAULT_QUERY: QueryState = {
   text: "",
   statusScope: "open",
   buckets: null,
+  dueOn: null,
   project: null,
   area: null,
   person: null,
@@ -106,6 +114,9 @@ export function filterTasks(tasks: Task[], state: QueryState, ctx: QueryContext)
     if (state.statusScope === "open" && !task.open) return false;
     if (state.statusScope === "closed" && task.open) return false;
     if (state.buckets && !state.buckets.includes(bucketOf(task, ctx.today))) return false;
+    if (state.dueOn !== null && (!task.effectiveDate || !state.dueOn.includes(formatIsoDate(task.effectiveDate)))) {
+      return false;
+    }
     if (state.project !== null && (task.project ?? NO_PROJECT) !== state.project) return false;
     if (state.area !== null && (task.area ?? "") !== state.area) return false;
     if (state.person !== null && !peopleOf(task).includes(state.person)) return false;

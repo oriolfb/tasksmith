@@ -1,7 +1,7 @@
 import { Menu, Notice, TFile, setIcon, setTooltip, type WorkspaceLeaf } from "obsidian";
 import type { TaskIndex } from "../index/TaskIndex";
 import type { TaskActions } from "../tasks/TaskActions";
-import type { TaskConsoleSettings } from "../settings/Config";
+import type { TaskSmithSettings } from "../settings/Config";
 import type { Task } from "../types/task";
 import { BaseTaskView } from "./BaseTaskView";
 import { ConfirmModal } from "./ConfirmModal";
@@ -10,7 +10,7 @@ import { undoableNotice } from "./UndoNotice";
 import { ControlTable, idOf } from "./ControlTable";
 import { openDateMenu, nextFriday } from "./DateMenu";
 import { PickModal } from "./PickModal";
-import { decimal, monthLabel, shortDate } from "./format";
+import { dayLabel, decimal, monthLabel, shortDate, weekdayLabel } from "./format";
 import {
   DEFAULT_QUERY,
   NO_PROJECT,
@@ -23,17 +23,20 @@ import {
 import { describeFilters, filterMenu, type ChipContext } from "../query/Filters";
 import {
   closingState,
-  monthlyClosed,
+  monthlyFlow,
   openState,
+  weekAhead,
   type ClosingState,
-  type MonthlyClosed,
+  type DayLoad,
+  type MonthlyFlow,
   type OpenState,
+  type WeekAhead,
 } from "../query/Metrics";
 import { healthFindings, type Finding } from "../query/Health";
 import { startOfToday } from "../index/dates";
 
-/** Unchanged on purpose: an existing workspace layout keeps opening this tab. */
-export const CONTROL_CENTRE_VIEW = "task-console-triage";
+/** Still `-triage`: the tab grew into a control centre, but the stored id is API for saved layouts. */
+export const CONTROL_CENTRE_VIEW = "task-smith-triage";
 
 type Lens = { key: GroupKey; label: string };
 
@@ -53,11 +56,18 @@ const SORT_LABELS: Record<SortKey, string> = {
   priority: "prioritat",
 };
 
-/** How many months of throughput fit the strip without the bars turning into hairs. */
+/** How many months of history fit the chart without the bars turning into hairs. */
 const CHART_MONTHS = 8;
 
-/** Tallest bar, in pixels. The strip is a sparkline, not a chart you read values off. */
+/** Tallest bar, in pixels. These are sparklines, not charts you read values off. */
 const BAR_HEIGHT = 42;
+
+/** Days in the week strip. Rolling from today, so a Thursday still shows a full week. */
+const WEEK_DAYS = 7;
+
+/** Tallest day bar. Shorter than the monthly ones: this strip is read at a glance, daily. */
+const DAY_BAR_HEIGHT = 26;
+
 
 /**
  * The control centre.
@@ -76,19 +86,26 @@ export class ControlCentreView extends BaseTaskView {
 
   private tabs = new Map<GroupKey, HTMLElement>();
   private kpiHost!: HTMLElement;
-  private chartHost!: HTMLElement;
+  private weekHost!: HTMLElement;
+  private historyToggle!: HTMLElement;
+  private historyHost!: HTMLElement;
   private searchInput!: HTMLInputElement;
   private chipHost!: HTMLElement;
   private summaryEl!: HTMLElement;
   private tableHost!: HTMLElement;
+  private layoutEl!: HTMLElement;
   private healthHost!: HTMLElement;
+  private healthToggle!: HTMLElement;
+  private healthBody!: HTMLElement;
+  /** Last known layout, so a resize only repaints when it crosses the breakpoint. */
+  private stacked = false;
   private footerHost!: HTMLElement;
 
   constructor(
     leaf: WorkspaceLeaf,
     index: TaskIndex,
     actions: TaskActions,
-    settings: TaskConsoleSettings,
+    settings: TaskSmithSettings,
     private readonly openFocus: () => void,
     private readonly persist: () => Promise<void>
   ) {
@@ -139,10 +156,25 @@ export class ControlCentreView extends BaseTaskView {
     // A real button, because this one really is a button: it takes you to the dock to decide
     // the day. Obsidian's own styling is what it should look like.
     const plan = tools.createEl("button", { cls: "tcc-plan", text: "Planificar el dia" });
+    setTooltip(plan, "Obrir «Avui» i triar les tres del dia", { delay: 300 });
     plan.addEventListener("click", () => this.openFocus());
 
     this.kpiHost = root.createDiv({ cls: "tcc-kpis" });
-    this.chartHost = root.createDiv({ cls: "tcc-chart" });
+    this.weekHost = root.createDiv({ cls: "tcc-week" });
+
+    // The history is one click away and stays there: the throughput of past months is worth
+    // looking at now and then, never worth looking at while deciding what to do this afternoon.
+    const history = root.createDiv({ cls: "tcc-history" });
+    this.historyToggle = history.createDiv({ cls: "tcc-history-toggle" });
+    this.historyToggle.setAttribute("role", "button");
+    this.historyToggle.tabIndex = 0;
+    this.historyToggle.addEventListener("click", () => void this.toggleHistory());
+    this.historyToggle.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      void this.toggleHistory();
+    });
+    this.historyHost = history.createDiv({ cls: "tcc-history-body" });
 
     const filters = root.createDiv({ cls: "tcc-filters" });
     this.searchInput = filters.createEl("input", { cls: "tcc-search", type: "search" });
@@ -155,9 +187,23 @@ export class ControlCentreView extends BaseTaskView {
     this.summaryEl = filters.createSpan({ cls: "tcc-summary" });
 
     const layout = root.createDiv({ cls: "tcc-layout" });
+    this.layoutEl = layout;
     this.tableHost = layout.createDiv({ cls: "tcc-table" });
     this.tableHost.addEventListener("keydown", (event) => this.onKey(event));
+
+    // Foldable, like the history: as the right-hand rail it is a companion to the table, but
+    // stacked under it on a narrow tab it is a wall between you and nothing at all.
     this.healthHost = layout.createDiv({ cls: "tcc-health" });
+    this.healthToggle = this.healthHost.createDiv({ cls: "tcc-health-toggle" });
+    this.healthToggle.setAttribute("role", "button");
+    this.healthToggle.tabIndex = 0;
+    this.healthToggle.addEventListener("click", () => void this.toggleHealth());
+    this.healthToggle.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      void this.toggleHealth();
+    });
+    this.healthBody = this.healthHost.createDiv({ cls: "tcc-health-body" });
 
     this.footerHost = root.createDiv({ cls: "tcc-footer" });
   }
@@ -172,8 +218,13 @@ export class ControlCentreView extends BaseTaskView {
     for (const [key, tab] of this.tabs) tab.toggleClass("tcf-tab-on", this.query.group === key);
 
     this.renderKpis(open, closings);
-    this.renderChart(all, closings, today);
-    this.renderChips(all);
+    this.renderWeek(
+      weekAhead(all, today, { span: WEEK_DAYS, weekends: this.settings.showWeekends }),
+      closings,
+      today
+    );
+    this.renderHistory(all, closings, today);
+    this.renderChips(all, today);
     this.table.render(this.tableHost, groups, today, {
       sort: this.query.sort,
       sortReverse: this.query.sortReverse,
@@ -258,60 +309,290 @@ export class ControlCentreView extends BaseTaskView {
     });
   }
 
-  /**
-   * Closed per month. Bars scaled to the busiest month in the window, with the month in progress
-   * marked — otherwise August always looks like a collapse on the 5th.
-   */
-  private renderChart(all: Task[], closings: ClosingState, today: Date): void {
-    const months = monthlyClosed(all, today, CHART_MONTHS);
-    const peak = Math.max(1, ...months.map((month) => month.total));
+  /* ── the week ahead ────────────────────────────────────── */
 
-    this.chartHost.empty();
-    const bars = this.chartHost.createDiv({ cls: "tcc-bars" });
+  /**
+   * What is already promised for each of the next seven days.
+   *
+   * The one number on this page that is about the future rather than the state of things, and
+   * the reason it sits where the throughput chart used to: the question "how is Thursday looking"
+   * comes up every morning, "how did March go" comes up twice a year.
+   *
+   * Days over the measured capacity are marked, because that is the whole point — six tasks on a
+   * day that closes two and a half is not a plan, it is three tasks that will become overdue.
+   */
+  private renderWeek(week: WeekAhead, closings: ClosingState, today: Date): void {
+    this.weekHost.empty();
+
+    const capacity = closings.perWorkingDay;
+    const scale = Math.max(1, week.peak);
+
+    if (week.overdue > 0) {
+      this.weekAside({
+        value: String(week.overdue),
+        label: "abans d'avui",
+        late: true,
+        tooltip: "Endarrerides: la setmana comença amb aquest deute",
+        filter: { statusScope: "open", buckets: ["overdue"], sort: "age", sortReverse: false },
+      });
+    }
+
+    const days = this.weekHost.createDiv({ cls: "tcc-week-days" });
+    for (const day of week.days) this.renderDay(days, day, scale, capacity, today);
+
+    this.weekAside({
+      value: String(week.later),
+      label: "més enllà",
+      tooltip: "Amb data després d'aquesta setmana",
+      filter: { statusScope: "open", buckets: ["later"] },
+    });
+    this.weekAside({
+      value: String(week.undated),
+      label: "sense data",
+      tooltip: "Obertes i sense cap data: no cauran en cap dia fins que en tinguin una",
+      filter: { statusScope: "open", buckets: ["undated"] },
+    });
+
+    const caption = this.weekHost.createDiv({ cls: "tcc-chart-note" });
+    caption.appendText(this.weekSentence(week, capacity, today));
+  }
+
+  private renderDay(host: HTMLElement, day: DayLoad, scale: number, capacity: number | null, today: Date): void {
+    const column = host.createDiv({ cls: "tcc-day" });
+    if (day.today) column.addClass("tcc-day-now");
+    if (day.weekend) column.addClass("tcc-day-weekend");
+    column.setAttribute("role", "button");
+    column.tabIndex = 0;
+
+    const over = capacity !== null && day.count > Math.ceil(capacity);
+    column.createSpan({ cls: "tcc-day-count", text: day.count === 0 ? "·" : String(day.count) });
+    const height = 2 + Math.round((day.count / scale) * DAY_BAR_HEIGHT);
+    const bar = column.createDiv({ cls: "tcc-day-bar" });
+    bar.style.height = `${height}px`;
+    if (over) bar.addClass("tcc-day-over");
+    // The part of a Monday that is really the weekend, drawn as its own segment at the foot of
+    // the bar. The tooltip says it in words; without the segment the column is a Monday that
+    // looks busier than Mondays are, with nothing on screen to suggest asking why.
+    if (day.absorbed > 0) {
+      const folded = bar.createDiv({ cls: "tcc-day-bar-folded" });
+      folded.style.height = `${Math.max(2, Math.round((day.absorbed / day.count) * height))}px`;
+    }
+    column.createSpan({ cls: "tcc-day-label", text: day.today ? "avui" : weekdayLabel(day.date) });
+    column.createSpan({ cls: "tcc-day-num", text: String(day.date.getDate()) });
+
+    setTooltip(column, this.dayTooltip(day, capacity, today), { delay: 200 });
+    // `day.days`, not `day.iso`: a Monday carrying a hidden weekend opens the three days it
+    // counted, so the number on the column and the rows behind it are the same tasks.
+    const apply = (): void =>
+      this.applyFilter({ statusScope: "open", buckets: null, dueOn: day.days, sort: "date", sortReverse: false });
+    column.addEventListener("click", apply);
+    column.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      apply();
+    });
+  }
+
+  private dayTooltip(day: DayLoad, capacity: number | null, today: Date): string {
+    const name = dayLabel(day.date, today);
+    const own = day.count - day.absorbed;
+    const parts = [
+      day.count === 0
+        ? `Cap tasca ${name}`
+        : `${day.count} ${day.count === 1 ? "tasca" : "tasques"} ${name} (${shortDate(day.date)})`,
+    ];
+    // A folded weekend has to say so on the column that swallowed it, or the Monday reads as a
+    // Monday that promised more than it did.
+    if (day.absorbed > 0) {
+      parts.push(
+        `${own} ${own === 1 ? "és" : "són"} d'aquest dia i ${day.absorbed} ${
+          day.absorbed === 1 ? "ve" : "vénen"
+        } del cap de setmana`
+      );
+    } else if (day.days.length > 1) {
+      parts.push("Inclou el cap de setmana anterior");
+    }
+    if (capacity !== null && day.count > Math.ceil(capacity)) {
+      parts.push(`Per sobre del ritme real, que és ${decimal(capacity)} al dia laborable`);
+    }
+    if (day.weekend && day.count > 0) parts.push("Cap de setmana");
+    return parts.join("\n");
+  }
+
+  /** The sentence under the strip: the load, and whether the week as a whole fits. */
+  private weekSentence(week: WeekAhead, capacity: number | null, today: Date): string {
+    if (week.planned === 0) {
+      return week.undated > 0
+        ? `Cap data aquesta setmana. Les ${week.undated} sense data no apareixeran soles.`
+        : "Cap data aquesta setmana.";
+    }
+
+    const busiest = [...week.days].sort((a, b) => b.count - a.count)[0]!;
+    // Seven columns are seven calendar days or seven working ones, and the sentence has to say
+    // which: with the weekend folded away the strip reaches nine or ten days into the future.
+    const ahead = this.settings.showWeekends
+      ? `els propers ${week.days.length} dies`
+      : `els propers ${week.days.length} dies laborables`;
+    const head =
+      `${week.planned} ${week.planned === 1 ? "tasca" : "tasques"} amb data ${ahead}, ` +
+      `${busiest.count} el dia més carregat (${dayLabel(busiest.date, today)}).`;
+    if (capacity === null) return head;
+
+    // Working days only: nobody closes tasks on Sunday, and counting them would say the week
+    // fits when it does not.
+    const workload = week.days.filter((day) => !day.weekend).reduce((sum, day) => sum + day.count, 0);
+    const room = capacity * week.days.filter((day) => !day.weekend).length;
+    const verdict =
+      workload > room
+        ? ` Als dies laborables n'hi ha ${workload} i el ritme real en dona per ${Math.round(room)}: ` +
+          "alguna cosa s'haurà de moure."
+        : ` Als dies laborables n'hi ha ${workload}, dins del ritme real de ${decimal(capacity)} al dia.`;
+    return head + verdict;
+  }
+
+  private weekAside(spec: {
+    value: string;
+    label: string;
+    tooltip: string;
+    late?: boolean;
+    filter: Partial<QueryState>;
+  }): void {
+    const cell = this.weekHost.createDiv({ cls: "tcc-week-aside" });
+    cell.setAttribute("role", "button");
+    cell.tabIndex = 0;
+    setTooltip(cell, spec.tooltip, { delay: 300 });
+    const value = cell.createSpan({ cls: "tcc-week-aside-value", text: spec.value });
+    if (spec.late) value.addClass("tcc-late");
+    cell.createSpan({ cls: "tcc-week-aside-label", text: spec.label });
+
+    const apply = (): void => this.applyFilter(spec.filter);
+    cell.addEventListener("click", apply);
+    cell.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      apply();
+    });
+  }
+
+  /* ── the history, folded away ──────────────────────────── */
+
+  private async toggleHistory(): Promise<void> {
+    this.settings.showHistory = !this.settings.showHistory;
+    this.refresh();
+    await this.persist();
+  }
+
+  /**
+   * Created against closed, per month. Two series and not one because the number that explains
+   * a growing backlog is the difference: months where the first bar beats the second are months
+   * the list got longer, whatever the throughput looked like on its own.
+   *
+   * "Created" is the task's origin date — its `➕` when it has one, else the date of the note it
+   * lives in. The caption says so, because it is an approximation and a chart that hides its
+   * approximations is a chart you will over-read.
+   */
+  private renderHistory(all: Task[], closings: ClosingState, today: Date): void {
+    const open = this.settings.showHistory;
+
+    this.historyToggle.empty();
+    setIcon(this.historyToggle.createSpan({ cls: "tcc-history-chevron" }), open ? "chevron-down" : "chevron-right");
+    this.historyToggle.createSpan({ cls: "tcc-history-title", text: "Historial" });
+    this.historyToggle.createSpan({
+      cls: "tcc-history-hint",
+      text: open ? "creades i tancades per mes" : "creades i tancades per mes, els últims 8 mesos",
+    });
+    this.historyToggle.setAttribute("aria-expanded", String(open));
+
+    this.historyHost.empty();
+    this.historyHost.toggleClass("tcc-history-open", open);
+    if (!open) return;
+
+    const months = monthlyFlow(all, today, CHART_MONTHS);
+    const peak = Math.max(1, ...months.map((month) => Math.max(month.created, month.closed)));
+
+    const chart = this.historyHost.createDiv({ cls: "tcc-flow" });
+    const bars = chart.createDiv({ cls: "tcc-bars" });
     for (const month of months) {
-      const column = bars.createDiv({ cls: "tcc-bar-col" });
-      column.createSpan({ cls: "tcc-bar-value", text: month.total === 0 ? "" : String(month.total) });
-      const bar = column.createDiv({ cls: "tcc-bar" });
+      const column = bars.createDiv({ cls: "tcc-flow-col" });
+      const pair = column.createDiv({ cls: "tcc-flow-pair" });
       // Pixels, not percentages: a percentage height inside a flex column resolves against a
       // box whose height the labels also share, and the tall months would overflow the strip.
-      bar.style.height = `${2 + Math.round((month.total / peak) * BAR_HEIGHT)}px`;
-      if (month.current) bar.addClass("tcc-bar-now");
+      this.flowBar(pair, month.created, peak, "tcc-flow-created", month.current);
+      this.flowBar(pair, month.closed, peak, "tcc-flow-closed", month.current);
       column.createSpan({ cls: "tcc-bar-month", text: monthLabel(month.year, month.month, today) });
       setTooltip(column, this.monthTooltip(month, today), { delay: 200 });
     }
 
-    const caption = this.chartHost.createDiv({ cls: "tcc-chart-note" });
-    caption.appendText("Tancades per mes. ");
-    if (closings.perWorkingDay !== null) {
-      caption.appendText("La mitjana real és ");
-      caption.createEl("b", { text: `${decimal(closings.perWorkingDay)} al dia laborable` });
-      caption.appendText(" — per això la vista d'enfocament té tres caselles i no deu.");
-    } else {
-      caption.appendText("Cap tasca tancada amb data encara, així que no hi ha mitjana a mesurar.");
+    const legend = chart.createDiv({ cls: "tcc-flow-legend" });
+    for (const [cls, label] of [
+      ["tcc-flow-created", "creades"],
+      ["tcc-flow-closed", "tancades"],
+    ]) {
+      const item = legend.createSpan({ cls: "tcc-flow-key" });
+      item.createSpan({ cls: `tcc-flow-swatch ${cls}` });
+      item.appendText(label!);
     }
+
+    this.renderHistoryNote(chart, months, closings);
   }
 
-  private monthTooltip(month: MonthlyClosed, today: Date): string {
+  private flowBar(host: HTMLElement, value: number, peak: number, cls: string, current: boolean): void {
+    const bar = host.createDiv({ cls: `tcc-flow-bar ${cls}` });
+    bar.style.height = `${2 + Math.round((value / peak) * BAR_HEIGHT)}px`;
+    if (current) bar.addClass("tcc-bar-now");
+  }
+
+  private renderHistoryNote(host: HTMLElement, months: MonthlyFlow[], closings: ClosingState): void {
+    const created = months.reduce((sum, month) => sum + month.created, 0);
+    const closed = months.reduce((sum, month) => sum + month.closed, 0);
+    const stillOpen = months.reduce((sum, month) => sum + month.stillOpen, 0);
+
+    const note = host.createDiv({ cls: "tcc-chart-note tcc-history-note" });
+    note.appendText(`Els últims ${months.length} mesos: `);
+    note.createEl("b", { text: `${created} creades i ${closed} tancades` });
+    if (created > 0) {
+      const ratio = Math.round((closed / created) * 100);
+      const drift = created - closed;
+      note.appendText(
+        drift > 0
+          ? `, un ${ratio}%. El pendent ha crescut en ${drift}, i ${stillOpen} d'aquelles encara són obertes.`
+          : `, un ${ratio}%. Se n'han tancat més de les que han entrat.`
+      );
+    } else {
+      note.appendText(".");
+    }
+
+    if (closings.perWorkingDay !== null) {
+      note.appendText(` La mitjana real és ${decimal(closings.perWorkingDay)} tancades al dia laborable.`);
+    }
+    note.appendText(
+      " «Creada» és la data de la tasca (➕) o, si no en té, la de la nota on viu — la majoria de línies no porten data de creació pròpia."
+    );
+  }
+
+  private monthTooltip(month: MonthlyFlow, today: Date): string {
     const name = monthLabel(month.year, month.month, today);
-    const parts = [`${month.total} tancades el ${name}`];
+    const parts = [`${name}: ${month.created} creades · ${month.closed} tancades`];
     if (month.cancelled > 0) parts.push(`${month.done} amb ✅ · ${month.cancelled} amb ❌`);
+    if (month.stillOpen > 0) parts.push(`${month.stillOpen} de les creades encara obertes`);
     if (month.current) parts.push("mes en curs");
     return parts.join("\n");
   }
 
   /* ── the filter sentence ───────────────────────────────── */
 
-  private chipContext(all: Task[]): ChipContext {
+  private chipContext(all: Task[], today: Date): ChipContext {
     const kinds = countByKind(all);
     return {
       staleThresholdDays: this.settings.staleThresholdDays,
+      today,
       referenceLines: kinds.reference,
       somedayLines: kinds.someday,
     };
   }
 
-  private renderChips(all: Task[]): void {
-    const ctx = this.chipContext(all);
+  private renderChips(all: Task[], today: Date): void {
+    const ctx = this.chipContext(all, today);
     this.chipHost.empty();
 
     for (const chip of describeFilters(this.query, ctx)) {
@@ -443,17 +724,80 @@ export class ControlCentreView extends BaseTaskView {
       lines: all.length,
     });
 
-    this.healthHost.empty();
-    this.healthHost.createDiv({ cls: "tcc-health-title", text: "Salut del sistema" });
+    this.stacked = this.isStacked();
+    const open = this.healthOpen();
+    // Folded, the header has to carry the panel's whole message: how many things are worth
+    // fixing. A chevron next to the word "Salut" says nothing about whether to open it.
+    const worth = findings.filter((finding) => finding.tone === "warn").length;
+
+    this.healthToggle.empty();
+    setIcon(
+      this.healthToggle.createSpan({ cls: "tcc-health-chevron" }),
+      open ? "chevron-down" : "chevron-right"
+    );
+    this.healthToggle.createSpan({ cls: "tcc-health-title", text: "Salut del sistema" });
+    if (!open) {
+      this.healthToggle.createSpan({
+        cls: "tcc-health-hint",
+        text: worth === 0 ? "res a arreglar" : `${worth} ${worth === 1 ? "cosa" : "coses"} a mirar`,
+      });
+    }
+    this.healthToggle.setAttribute("aria-expanded", String(open));
+    setTooltip(this.healthToggle, open ? "Plegar la salut del sistema" : "Desplegar la salut del sistema", {
+      delay: 300,
+    });
+
+    this.healthHost.toggleClass("tcc-health-shut", !open);
+    this.healthBody.empty();
+    if (!open) return;
+
     if (findings.length === 0) {
-      this.healthHost.createDiv({ cls: "tcc-health-detail", text: "Res a arreglar." });
+      this.healthBody.createDiv({ cls: "tcc-health-detail", text: "Res a arreglar." });
       return;
     }
     for (const finding of findings) this.renderFinding(finding);
   }
 
+  /**
+   * Whether the panel is a block under the table rather than the right-hand rail.
+   *
+   * Asked of the stylesheet rather than measured against a copy of the breakpoint: the container
+   * query in `styles.css` is what actually decides, and a second 780 in here would be one edit
+   * away from disagreeing with it. Anything but `column` — including an unstyled or detached
+   * element — reads as the rail, which is the state that hides nothing.
+   */
+  private isStacked(): boolean {
+    if (!this.layoutEl) return false;
+    return window.getComputedStyle(this.layoutEl).flexDirection === "column";
+  }
+
+  private healthOpen(): boolean {
+    const setting = this.settings.healthPanel;
+    if (setting === "open") return true;
+    if (setting === "closed") return false;
+    return !this.stacked;
+  }
+
+  /**
+   * Folding it is a decision, and it outranks the width rule from then on: someone who folds the
+   * rail on a wide tab means it, and so does someone who opens it on a narrow one.
+   */
+  private async toggleHealth(): Promise<void> {
+    this.settings.healthPanel = this.healthOpen() ? "closed" : "open";
+    this.refresh();
+    await this.persist();
+  }
+
+  /** Obsidian calls this when the pane is resized; only a crossed breakpoint is worth a repaint. */
+  onResize(): void {
+    const stacked = this.isStacked();
+    if (stacked === this.stacked) return;
+    this.stacked = stacked;
+    if (this.settings.healthPanel === "auto") this.refresh();
+  }
+
   private renderFinding(finding: Finding): void {
-    const item = this.healthHost.createDiv({ cls: "tcc-finding" });
+    const item = this.healthBody.createDiv({ cls: "tcc-finding" });
     if (finding.tone === "ok") item.addClass("tcc-finding-ok");
     item.createDiv({ cls: "tcc-finding-title", text: finding.title });
     item.createDiv({ cls: "tcc-finding-detail", text: finding.detail });

@@ -2,7 +2,7 @@
 <html lang="ca">
 <head>
 <meta charset="utf-8">
-<title>Task Console — centre de control amb el CSS real</title>
+<title>TaskSmith — centre de control amb el CSS real</title>
 
 <!-- Obsidian's own variables, default light theme values, plus the two classes we borrow
      from the app (`clickable-icon`, plain `button`) so the harness shows what the theme does. -->
@@ -52,12 +52,17 @@
     <div class="cap">PESTANYA PARTIDA 660px — el rail de salut passa a sota i cauen Àrea i Origen (container query)</div>
     <div class="pane split"><div class="tcc" id="narrow"></div></div>
   </div>
+  <div>
+    <div class="cap">LA TIRA SENSE CAPS DE SETMANA — set dies laborables, i el dilluns porta el cap de setmana al peu de la barra</div>
+    <div class="pane" style="height:auto"><div class="tcc" id="weekend-off"></div></div>
+  </div>
   <div class="note">
     <h3>Què comprova aquest banc de proves</h3>
     <p><b>Que no hi ha targetes.</b> Ni als KPI, ni al gràfic, ni al panell de salut: xifres i text amb aire, una filada per secció. La versió del mockup 04 eren caixes amb vora i ombra i llegia com un tauler fet per algú altre.</p>
     <p><b>Que la data segueix sent text ocre</b> i no una etiqueta plena. Catorze files la porten; com a badge la llista es llegeix com un semàfor.</p>
     <p><b>Que els botons no s'han colat.</b> Les accions de fila, les capçaleres de columna i els xips són <code>span</code>/<code>div</code> amb <code>role="button"</code>; els botons d'aquesta pàgina porten l'estil real d'Obsidian per fer visible qualsevol regressió.</p>
     <p><b>Que la taula sobreviu a una pestanya partida.</b> A menys de 780px el rail va a sota; a menys de 620px cauen Àrea i Origen, que ja són al tooltip de la fila.</p>
+    <p><b>Que el cap de setmana plegat es veu.</b> A la tercera tira el paràmetre està desactivat: set columnes de dia laborable, i el dilluns 10 en porta tres, una de les quals ve del dissabte — el peu gris de la barra. Sense aquest segment el dilluns seria un dilluns més carregat del que els dilluns són, sense res a la pantalla que convidés a preguntar per què.</p>
     <p>Passa el ratolí per sobre d'una fila per veure aparèixer Fet · Avui · Data.</p>
   </div>
 </div>
@@ -70,7 +75,10 @@ const KPIS = [
   { v:"12", l:"sense data", d:"12 amb data a la nota" },
   { v:"2,3", l:"tancades/dia laborable", d:"428 amb ✅ des de 8 des 2025" },
 ];
-const MONTHS = [["gen",73],["febr",80],["març",51],["abr",30],["maig",34],["juny",65],["jul",33],["ag",24]];
+// [mes, creades, tancades] — `npm run audit:vault`, 5 d'agost de 2026.
+const MONTHS = [["gen",83,73],["febr",63,80],["març",45,51],["abr",59,30],["maig",34,34],["juny",58,65],["jul",58,33],["ag",3,25]];
+// [dia, número, tasques, cap de setmana]
+const DAYS = [["avui",5,0,false],["dj.",6,4,false],["dv.",7,0,false],["ds.",8,0,true],["dg.",9,0,true],["dl.",10,0,false],["dt.",11,0,false]];
 const CHIPS = ["obertes","per renegociar","és una tasca (no documentació)"];
 const ROWS = [
   { t:"enviar al xat de responsables la proposta de canvi d'agrupació de mercats", due:"fa 5 setmanes", late:true, who:"—", none:true, area:"01 Diari", src:"Diari 11 de març" },
@@ -101,6 +109,47 @@ const FINDINGS = [
 const COLUMNS = [["text","Tasca"],["due","Termini ↓"],["who","Amb qui"],["area","Àrea"],["origin","Origen"],["actions","Accions"]];
 const ICON = '<svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
 
+// [etiqueta, dia del mes, tasques, cap de setmana, del cap de setmana plegat]
+function weekStrip(spec, later, note){
+  const make = (tag, cls, text, parent) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    if (parent) parent.appendChild(node);
+    return node;
+  };
+
+  const week = make("div","tcc-week");
+  const before = make("div","tcc-week-aside",undefined,week);
+  before.setAttribute("role","button");
+  make("span","tcc-week-aside-value tcc-late","13",before);
+  make("span","tcc-week-aside-label","abans d'avui",before);
+
+  const days = make("div","tcc-week-days",undefined,week);
+  const peak = Math.max(...spec.map((d) => d[2]));
+  spec.forEach(([label, num, count, weekend, absorbed], i) => {
+    const col = make("div","tcc-day" + (i === 0 ? " tcc-day-now" : "") + (weekend ? " tcc-day-weekend" : ""), undefined, days);
+    col.setAttribute("role","button");
+    make("span","tcc-day-count", count === 0 ? "·" : String(count), col);
+    const height = 2 + Math.round((count / peak) * 26);
+    const bar = make("div","tcc-day-bar" + (count > 3 ? " tcc-day-over" : ""), undefined, col);
+    bar.style.height = height + "px";
+    if (absorbed) make("div","tcc-day-bar-folded",undefined,bar).style.height =
+      Math.max(2, Math.round((absorbed / count) * height)) + "px";
+    make("span","tcc-day-label",label,col);
+    make("span","tcc-day-num",String(num),col);
+  });
+
+  for (const [value, label] of [[later,"més enllà"],["12","sense data"]]){
+    const aside = make("div","tcc-week-aside",undefined,week);
+    aside.setAttribute("role","button");
+    make("span","tcc-week-aside-value",value,aside);
+    make("span","tcc-week-aside-label",label,aside);
+  }
+  make("div","tcc-chart-note",note,week);
+  return week;
+}
+
 function build(host){
   const el = (tag, cls, text, parent) => {
     const node = document.createElement(tag);
@@ -127,20 +176,42 @@ function build(host){
     el("div","tcc-kpi-detail",kpi.d,cell);
   }
 
-  const chart = el("div","tcc-chart");
+  // La setmana: el que es veu sempre. Les xifres surten de `[audit] la setmana`.
+  host.appendChild(weekStrip(DAYS, "5", "4 tasques amb data els propers 7 dies, 4 el dia més carregat (dj. 6 ag). Als dies laborables n'hi ha 4, dins del ritme real de 2,3 al dia."));
+
+  // L'historial: plegat per defecte, obert aquí per poder-lo mirar.
+  const history = el("div","tcc-history");
+  const toggle = el("div","tcc-history-toggle",undefined,history);
+  toggle.setAttribute("role","button");
+  const chevron = el("span","tcc-history-chevron",undefined,toggle);
+  chevron.innerHTML = '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
+  el("span","tcc-history-title","Historial",toggle);
+  el("span","tcc-history-hint","creades i tancades per mes",toggle);
+
+  const body = el("div","tcc-history-body",undefined,history);
+  const chart = el("div","tcc-flow",undefined,body);
   const bars = el("div","tcc-bars",undefined,chart);
-  const peak = Math.max(...MONTHS.map((m) => m[1]));
-  MONTHS.forEach(([name, total], i) => {
-    const col = el("div","tcc-bar-col",undefined,bars);
-    el("span","tcc-bar-value",String(total),col);
-    const bar = el("div", i === MONTHS.length - 1 ? "tcc-bar tcc-bar-now" : "tcc-bar", undefined, col);
-    bar.style.height = (2 + Math.round((total / peak) * 42)) + "px";
+  const peak = Math.max(...MONTHS.flatMap(([, created, closed]) => [created, closed]));
+  MONTHS.forEach(([name, created, closed], i) => {
+    const col = el("div","tcc-flow-col",undefined,bars);
+    const pair = el("div","tcc-flow-pair",undefined,col);
+    const now = i === MONTHS.length - 1 ? " tcc-bar-now" : "";
+    const a = el("div","tcc-flow-bar tcc-flow-created" + now,undefined,pair);
+    a.style.height = (2 + Math.round((created / peak) * 42)) + "px";
+    const b = el("div","tcc-flow-bar tcc-flow-closed" + now,undefined,pair);
+    b.style.height = (2 + Math.round((closed / peak) * 42)) + "px";
     el("span","tcc-bar-month",name,col);
   });
-  const caption = el("div","tcc-chart-note",undefined,chart);
-  caption.append(document.createTextNode("Tancades per mes. La mitjana real és "));
-  caption.appendChild(Object.assign(document.createElement("b"),{textContent:"2,3 al dia laborable"}));
-  caption.append(document.createTextNode(" — per això la vista d'enfocament té tres caselles i no deu."));
+  const legend = el("div","tcc-flow-legend",undefined,chart);
+  for (const [cls, label] of [["tcc-flow-created","creades"],["tcc-flow-closed","tancades"]]){
+    const key = el("span","tcc-flow-key",undefined,legend);
+    el("span","tcc-flow-swatch " + cls,undefined,key);
+    key.append(document.createTextNode(label));
+  }
+  const caption = el("div","tcc-chart-note tcc-history-note",undefined,chart);
+  caption.append(document.createTextNode("Els últims 8 mesos: "));
+  caption.appendChild(Object.assign(document.createElement("b"),{textContent:"403 creades i 391 tancades"}));
+  caption.append(document.createTextNode(", un 97%. El pendent ha crescut en 12, i 32 d'aquelles encara són obertes. La mitjana real és 2,3 tancades al dia laborable. «Creada» és la data de la tasca (➕) o, si no en té, la de la nota on viu — la majoria de línies no porten data de creació pròpia."));
 
   const filters = el("div","tcc-filters");
   const search = el("input","tcc-search",undefined,filters);
@@ -203,6 +274,16 @@ function build(host){
 
 build(document.getElementById("full"));
 build(document.getElementById("narrow"));
+
+// Amb el paràmetre desactivat: set dies laborables. El dilluns 10 porta dues tasques pròpies
+// i una del cap de setmana — el peu gris de la barra — i clicar-lo obre les tres dates.
+document.getElementById("weekend-off").appendChild(
+  weekStrip(
+    [["avui",5,0,false],["dj.",6,4,false],["dv.",7,0,false],["dl.",10,3,false,1],["dt.",11,0,false],["dc.",12,0,false],["dj.",13,1,false]],
+    "4",
+    "8 tasques amb data els propers 7 dies laborables, 4 el dia més carregat (dj. 6 ag). Als dies laborables n'hi ha 8 i el ritme real en dona per 16, dins del ritme real de 2,3 al dia."
+  )
+);
 </script>
 </body>
 </html>

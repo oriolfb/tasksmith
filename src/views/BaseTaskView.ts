@@ -1,7 +1,7 @@
 import { ItemView, type WorkspaceLeaf } from "obsidian";
 import type { TaskIndex } from "../index/TaskIndex";
 import type { TaskActions } from "../tasks/TaskActions";
-import type { TaskConsoleSettings } from "../settings/Config";
+import type { TaskSmithSettings } from "../settings/Config";
 import { DEFAULT_QUERY, type QueryContext, type QueryState, type TaskGroup, runQuery } from "../query/Query";
 import { startOfToday } from "../index/dates";
 
@@ -20,7 +20,7 @@ export abstract class BaseTaskView extends ItemView {
     leaf: WorkspaceLeaf,
     protected readonly index: TaskIndex,
     protected readonly actions: TaskActions,
-    protected settings: TaskConsoleSettings
+    protected settings: TaskSmithSettings
   ) {
     super(leaf);
   }
@@ -37,14 +37,21 @@ export abstract class BaseTaskView extends ItemView {
     this.unsubscribe = null;
   }
 
-  setSettings(settings: TaskConsoleSettings): void {
+  setSettings(settings: TaskSmithSettings): void {
     this.settings = settings;
     this.refresh();
   }
 
-  /** Lands the view on a specific filter, e.g. handed off from the dock's "N més". */
+  /**
+   * Lands the view on a specific filter, e.g. handed off from the dock's "N més".
+   *
+   * Choosing a bucket clears any single-day filter unless the patch names one: the two are
+   * answers to the same question, and every caller that sets `buckets` means "show me these",
+   * not "these, of the ones already narrowed to Thursday".
+   */
   applyFilter(patch: Partial<QueryState>): void {
-    this.query = { ...this.query, ...patch };
+    const supersedesDay = patch.buckets !== undefined && patch.dueOn === undefined;
+    this.query = { ...this.query, ...(supersedesDay ? { dueOn: null } : {}), ...patch };
     this.refresh();
   }
 

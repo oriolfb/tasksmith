@@ -23,7 +23,10 @@ export function isUrgent(task: Task, today: Date = startOfToday()): boolean {
 }
 
 export interface FocusSections {
-  /** Arrived on their own: today's date, highest priority, or an urgent tag. */
+  /**
+   * Arrived on their own: today's date, highest priority, or an urgent tag — and not chosen.
+   * Once you press «Avui» on one it moves to `chosen`, takes a number and holds a slot.
+   */
   urgent: Task[];
   /** The ones you picked, in the order you picked them. */
   chosen: Task[];
@@ -83,13 +86,18 @@ export function focusSections(input: FocusInput): FocusSections {
       continue;
     }
 
-    // Urgency wins over being chosen: a task can be both, and it should only appear once.
-    if (isUrgent(task, today)) {
-      urgent.push(task);
-      continue;
-    }
+    /*
+     * A task can be both urgent and chosen, and it should only appear once. Choosing wins:
+     * urgency put the task in front of you, but pressing «Avui» on it is you saying it is one of
+     * your three. When urgency won, the task kept its place in the list, never took a number, and
+     * the counter stayed at "0 de 3" — pressing «Avui» looked like it did nothing at all.
+     */
     if (chosenKeys.has(dayKey(task))) {
       chosen.push(task);
+      continue;
+    }
+    if (isUrgent(task, today)) {
+      urgent.push(task);
       continue;
     }
 

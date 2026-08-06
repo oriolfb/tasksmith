@@ -23,7 +23,8 @@ export interface TasksInterop {
   setCreatedDate: boolean;
 }
 
-export const TASKS_PLUGIN_DATA = ".obsidian/plugins/obsidian-tasks-plugin/data.json";
+/** Relative to the vault's config folder: Obsidian lets the user rename it, so `.obsidian` is a guess. */
+export const TASKS_PLUGIN_DATA = "plugins/obsidian-tasks-plugin/data.json";
 
 const CORE_STATUSES: StatusDefinition[] = [
   { symbol: " ", name: "Todo", nextStatusSymbol: "x", type: "TODO" },

@@ -1,5 +1,102 @@
 # Changelog
 
+## Unreleased — the week ahead, and five things that did not work
+
+### Added
+
+- **The control centre shows the week, not the year.** Where the throughput bars were, there is now
+  one column per day for the next seven days: how many tasks carry that date, today first. Rolling
+  and not Monday-to-Sunday, because on a Thursday a calendar week answers "what is coming at me"
+  with three days. Clicking a column filters the table to exactly that day — a new `dueOn` filter,
+  since "dijous" is neither the `today` bucket nor the `week` one. Either side of the seven columns
+  sit the three counts they leave out (before today, later, undated), so the strip cannot mislead by
+  omission, and a day loaded past the measured `tancades/dia laborable` is marked: six tasks on a day
+  that closes two and a half is not a plan, it is three tasks that will become overdue.
+- **The weekend can be switched off, and nothing goes missing with it.** A setting decides whether
+  Saturday and Sunday get a column. Off, the strip runs over seven *working* days — so it reaches
+  nine or ten days into the future — and a task dated on a weekend is counted in the Monday that
+  follows it. Folded, never dropped: the column's tooltip says how many of its tasks are really the
+  weekend's, the foot of its bar draws them in a second tone, and clicking it opens all three dates
+  rather than just the Monday. That last part is why `dueOn` holds a list of days instead of one: a
+  number you can click has to open exactly what it counted. Today keeps its column even when today
+  is a Saturday — it is the day you are standing on.
+- **Created against closed, per month — folded away.** The history the old chart told is still there
+  under **Historial**, now with both series: what came in and what went out, plus how much of each
+  month's intake is still open. Closed by default and remembered, because a backlog trend is worth
+  looking at now and then and never worth looking at while deciding what to do this afternoon.
+  "Created" is the line's own `➕` or, failing that, the date of the note it lives in — 19 of 461
+  lines carry a `➕`, so the fallback is the difference between a chart and no chart. The caption
+  says so rather than letting the bars imply a precision they do not have.
+
+- **The health panel folds.** Its title is now a toggle, like the history's, with the number of
+  things worth looking at on the line when it is folded. The default is a rule rather than a
+  boolean — `healthPanel: "auto"` — because the honest answer depends on where the panel is: as the
+  right-hand rail it costs nothing and stays open, stacked on a narrow tab it starts folded and
+  moves *above* the table, one line and one click instead of thirty rows of scrolling away. Folding
+  it by hand outranks the rule from then on, at any width. Whether the layout is stacked is asked of
+  `getComputedStyle`, not of a second copy of the 780px breakpoint that could drift from the CSS.
+
+### Fixed
+
+- **Pressing "Avui" on a task that already carries today's date does something.** Urgency used to
+  win over choosing, so a task dated today stayed in the urgent list, never took a number and never
+  moved the counter off "0 de 3" — the button looked broken. Choosing now wins: the task moves to
+  your three, takes its ordinal and holds a slot. The terracotta "arrived on its own" mark and the
+  "data d'avui" line are now decided per row rather than per section, so a task you picked for next
+  week no longer reads as urgent because an urgent one sits above it.
+- **"Planificar el dia" plans the day.** It only revealed the dock, and the dock is normally already
+  open, so the button appeared to do nothing. It now puts the view in the state planning needs —
+  date lens, search cleared, "Avui" unfolded, list scrolled to the top, keyboard already on the
+  first row — and the section flashes once so the eye lands where the decision is.
+- **"Aquesta setmana" includes today.** The `week` bucket runs from tomorrow to Sunday, and the
+  filter that carried its name hid exactly the tasks you were looking for. The menu entry now asks
+  for `today + week`; the bare bucket is called "d'aquí a diumenge", which is what it is.
+- **The health panel no longer squeezes the tasks out of the tab.** Stacked under the table on a
+  narrow tab, the table was the only box that could shrink — down to two visible rows while the
+  panel kept its full height. The table now keeps its content height and the whole column scrolls.
+- **The task name is readable.** The columns are measured against the *table's* width rather than
+  the tab's, so the health rail's 270px are no longer counted as room the columns have — that is
+  what left descriptions at "Ge…". The name keeps a real minimum width, normal colour, a little more
+  weight than the columns around it, and wraps to two lines instead of ellipsing on the first.
+
+## 0.4.0 — TaskSmith, and the shape a community plugin is supposed to have
+
+### Changed
+
+- **The plugin is called TaskSmith.** The id is `task-smith`, so it lives in a new folder inside
+  the vault; the two view ids became `task-smith-sidebar` and `task-smith-triage`. That is the one
+  moment a rename is cheap — before a first release, while the only installation is Oriol's own,
+  which `scripts/migrate-id.mjs` moves across in one go (settings, the enabled list, the saved
+  layout). After a release an id is API and this door closes. `TASK_CONSOLE_VAULT` is now
+  `TASK_SMITH_VAULT`.
+- **The Tasks plugin's `data.json` and Obsidian's `app.json` are read through `vault.configDir`.**
+  `.obsidian` is only the default name of the config folder; a vault that renamed it was getting
+  built-in defaults instead of the real status set, silently. `TASKS_PLUGIN_DATA` is now relative to
+  the config folder rather than to the vault root.
+- **`Logger.info` writes to `console.debug`.** A rebuild happens on every save, and Obsidian's
+  guidelines ask a plugin not to fill the console with routine chatter. Warnings and errors are
+  unchanged — those are worth interrupting for.
+
+### Added — the sample plugin's scaffolding, which was missing
+
+Measured against [obsidian-sample-plugin](https://github.com/obsidianmd/obsidian-sample-plugin):
+
+- **`versions.json` + `version-bump.mjs` + `npm version`**, so a release is one command and older
+  Obsidian versions can still resolve a compatible build. `.npmrc` drops the `v` from the tag, which
+  is what the community catalogue expects.
+- **Two GitHub workflows.** `lint.yml` builds, lints and runs the tests on Node 20/22/24 for every
+  push; `release.yml` fires on a tag and opens a draft release with `main.js`, `manifest.json` and
+  `styles.css` attached, with build provenance.
+- **ESLint with `eslint-plugin-obsidianmd`.** It found the config-folder bug above and the console
+  noise. Tests and the hand-written Obsidian mock get their own relaxed block: the audit's console
+  output *is* its deliverable, and a mock is allowed to be `any`.
+- **A `README.md` at the root and a `LICENSE` file.** Both are required to enter the catalogue, and
+  `package.json` had been claiming MIT with no licence text to back it.
+- **`tsconfig.json` aligned with the sample**: ES2021, `noImplicitReturns`,
+  `noFallthroughCasesInSwitch`, `forceConsistentCasingInFileNames`, and the test files no longer
+  excluded from type-checking — which immediately surfaced two of them building a `Task` that had
+  been missing four fields since the note-context work.
+
 ## 0.3.1 — the day's record
 
 ### Changed

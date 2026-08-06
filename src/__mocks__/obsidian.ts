@@ -1,7 +1,7 @@
 /** Minimal stand-ins for the Obsidian runtime, enough to unit-test logic that imports it. */
 
 export class Plugin {
-  app: any = {};
+  app: unknown = {};
   loadData() {
     return Promise.resolve({});
   }
@@ -10,7 +10,7 @@ export class Plugin {
   }
   addCommand() {}
   addRibbonIcon() {
-    return document.createElement("div");
+    return createDiv();
   }
   addSettingTab() {}
   registerView() {}
@@ -18,8 +18,8 @@ export class Plugin {
 }
 
 export class PluginSettingTab {
-  containerEl: any = { empty: () => {}, createEl: () => ({}) };
-  constructor(_app: any, _plugin: any) {}
+  containerEl: unknown = { empty: () => {}, createEl: () => ({}) };
+  constructor(_app: unknown, _plugin: unknown) {}
 }
 
 export class Setting {
@@ -44,17 +44,17 @@ export class Setting {
 }
 
 export class ItemView {
-  app: any = {};
-  containerEl: any = { children: [null, stubEl()] };
-  constructor(_leaf: any) {}
+  app: unknown = {};
+  containerEl: unknown = { children: [null, stubEl()] };
+  constructor(_leaf: unknown) {}
   addAction() {}
 }
 
 export class Modal {
-  app: any = {};
-  titleEl: any = stubEl();
-  contentEl: any = stubEl();
-  constructor(_app: any) {}
+  app: unknown = {};
+  titleEl: unknown = stubEl();
+  contentEl: unknown = stubEl();
+  constructor(_app: unknown) {}
   open() {}
   close() {}
 }
@@ -97,8 +97,8 @@ export const setTooltip = (_el: unknown, _text: string, _options?: unknown) => {
 
 export const normalizePath = (path: string) => path;
 
-function stubEl(): any {
-  const el: any = {
+function stubEl(): unknown {
+  const el: unknown = {
     empty: () => {},
     setText: () => {},
     addClass: () => {},

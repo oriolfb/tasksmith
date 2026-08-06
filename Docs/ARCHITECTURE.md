@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Task Console indexes every task in the vault and shows it in two views with two different jobs:
+TaskSmith indexes every task in the vault and shows it in two views with two different jobs:
 a focus dock that asks *what will you do today*, and a control centre that asks *how is the system
 doing*. Markdown stays the only source of truth; the plugin adds an index, views and quick actions.
 It coexists with the Tasks plugin and writes nothing Tasks cannot read.
@@ -44,11 +44,13 @@ vault audit test. The numbers the UI shows and the numbers CI verifies cannot co
 different code.
 
 **Everything a view says is computed by a pure function.** `Focus.ts` (the dock's four sections),
-`Metrics.ts` (the KPI strip and the throughput bars), `Health.ts` (the findings) and `Filters.ts`
+`Metrics.ts` (the KPI strip, the week strip and the history bars), `Health.ts` (the findings) and `Filters.ts`
 (the filter chips and the `+ filtre` menu) take tasks and a date and return data. No DOM, no
 `App`, no settings object — which is what lets the vault audit assert them against the real vault
 and print them from `npm run audit:vault`. A figure in the panel that no test can see is a figure
-nobody can trust.
+nobody can trust. The one thing `query/` borrows from `views/` is `format.ts`, which is pure text
+and nothing else: the day filter's chip says "amb data dv. 7 ag", and a second copy of the Catalan
+month names would be a worse dependency than the arrow on the diagram.
 
 **Two views, two jobs, no shared controls.** The dock (`SidebarView` + `FocusRenderer`) owns the
 day's three slots; the control centre (`ControlCentreView` + `ControlTable`) owns the numbers, the
@@ -237,6 +239,30 @@ nowrap belongs on each fragment, so the line wraps *between* items but never ins
 read every row's rect, rebuild the list, invert, play. A fixed-height absolutely-positioned
 version broke as soon as a description wrapped to a third line, which at dock width is the common
 case. `prefers-reduced-motion` skips straight to the end state.
+
+**The permanent slot goes to the question asked daily.** The control centre's top row used to hold
+eight months of throughput; it now holds the next seven days, and the months moved behind a folded
+**Historial**. Both are true and both are computed by `Metrics.ts` — what changed is which one earns
+the space you see without asking. "How is Thursday looking" comes up every morning; "how did March
+go" comes up twice a year. The folded state is `settings.showHistory` and not a `collapsedSections`
+entry, because that list means *what the user folded away* and cannot express *folded until asked
+for* — a section that must default to closed needs a flag of its own or a migration for every
+already-stored empty list.
+
+**A named day is a filter of its own, and it supersedes the buckets.** `QueryState.dueOn` exists
+because the week strip's columns are not buckets: "dijous" is neither `today` nor `week`. Two filters
+that answer one question can contradict each other, so `BaseTaskView.applyFilter` clears `dueOn`
+whenever a patch sets `buckets` without naming one — one rule in one place, rather than a `dueOn:
+null` every caller must remember, which is exactly the kind of thing the health panel's findings
+would have got wrong first.
+
+**A hidden day hands its tasks over; it does not take them with it.** Turning off `showWeekends`
+was one line away from being a lie: the vault has tasks dated on Saturdays, and a strip that stops
+drawing Saturday would have stopped counting them. So a folded day's tasks go to the column that
+follows, `DayLoad.days` keeps every date that column stands for, and the filter behind the click
+takes that list — which is why `dueOn` is `string[]` and not `string`. The rule the whole strip is
+built on: **a number you can click has to open exactly the rows it counted.** Anything else is a
+count you learn to distrust, and this file already has one section about what that costs.
 
 **Sizes that CSS cannot resolve are computed in the view.** The throughput bars set their height in
 pixels from one constant, because a percentage height inside a flex column resolves against a box

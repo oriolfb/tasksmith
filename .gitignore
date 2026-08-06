@@ -1,4 +1,19 @@
+# npm
 node_modules/
+
+# Don't include the compiled main.js file in the repo.
+# It should be uploaded to GitHub releases instead.
 main.js
 *.js.map
+*.map
+
+# obsidian
+data.json
+
+# editors
+.vscode
+.idea
+*.iml
+
+# macOS
 .DS_Store

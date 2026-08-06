@@ -5,15 +5,15 @@ import { DEFAULT_INTEROP, TASKS_PLUGIN_DATA, parseTasksData, type TasksInterop }
 import { TaskWriter } from "./tasks/TaskWriter";
 import { TaskActions } from "./tasks/TaskActions";
 import { EmptyTaskCleaner } from "./tasks/EmptyTaskCleaner";
-import { DEFAULT_SETTINGS, contextRulesOf, type TaskConsoleSettings } from "./settings/Config";
-import { TaskConsoleSettingTab } from "./settings/SettingsTab";
+import { DEFAULT_SETTINGS, contextRulesOf, type TaskSmithSettings } from "./settings/Config";
+import { TaskSmithSettingTab } from "./settings/SettingsTab";
 import { SIDEBAR_VIEW, SidebarView } from "./views/SidebarView";
 import { CONTROL_CENTRE_VIEW, ControlCentreView } from "./views/ControlCentre";
 import { bucketCounts, type QueryState } from "./query/Query";
 import { Logger } from "./utils/Logger";
 
-export default class TaskConsolePlugin extends Plugin {
-  settings: TaskConsoleSettings = { ...DEFAULT_SETTINGS };
+export default class TaskSmithPlugin extends Plugin {
+  settings: TaskSmithSettings = { ...DEFAULT_SETTINGS };
   private interop: TasksInterop = DEFAULT_INTEROP;
   private index!: TaskIndex;
   private actions!: TaskActions;
@@ -55,17 +55,19 @@ export default class TaskConsolePlugin extends Plugin {
           this.index,
           this.actions,
           this.settings,
-          () => void this.openSidebar(),
+          // "Planificar el dia" does not just reveal the dock: with the dock already open it
+          // would have looked like a button that does nothing. It starts the planning.
+          () => void this.openSidebar(true),
           () => this.saveData(this.settings)
         )
     );
 
     this.ribbon = this.addRibbonIcon("list-checks", "Tasques", () => void this.openSidebar());
     this.ribbon.addClass("tc-ribbon");
-    this.addSettingTab(new TaskConsoleSettingTab(this.app, this));
+    this.addSettingTab(new TaskSmithSettingTab(this.app, this));
 
     this.addCommand({ id: "open-sidebar", name: "Obrir la barra lateral de tasques", callback: () => void this.openSidebar() });
-    // Same command id as when this tab was the triage view, so an existing hotkey keeps working.
+    // Still `open-triage` from when this tab was the triage view: a command id is API once released.
     this.addCommand({
       id: "open-triage",
       name: "Obrir el centre de control",
@@ -129,7 +131,7 @@ export default class TaskConsolePlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    const stored = (await this.loadData()) as Partial<TaskConsoleSettings> | null;
+    const stored = (await this.loadData()) as Partial<TaskSmithSettings> | null;
     this.settings = { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
   }
 
@@ -171,19 +173,24 @@ export default class TaskConsolePlugin extends Plugin {
   private async buildScope(): Promise<ScopeFilter> {
     const excluded = [...this.settings.excludedFolders];
     if (this.settings.respectObsidianIgnoreFilters) {
-      const appJson = await this.readVaultFile(".obsidian/app.json");
+      const appJson = await this.readVaultFile(this.configPath("app.json"));
       if (appJson) excluded.push(...parseObsidianIgnoreFilters(appJson));
     }
     return new ScopeFilter(excluded);
   }
 
   private async readTasksInterop(): Promise<TasksInterop> {
-    const raw = await this.readVaultFile(TASKS_PLUGIN_DATA);
+    const raw = await this.readVaultFile(this.configPath(TASKS_PLUGIN_DATA));
     if (!raw) {
       Logger.warn("Tasks plugin data not found; falling back to built-in defaults");
       return DEFAULT_INTEROP;
     }
     return parseTasksData(raw);
+  }
+
+  /** The config folder is `.obsidian` by default but the user can rename it, so always ask. */
+  private configPath(relative: string): string {
+    return `${this.app.vault.configDir}/${relative}`;
   }
 
   private async readVaultFile(path: string): Promise<string | null> {
@@ -208,19 +215,19 @@ export default class TaskConsolePlugin extends Plugin {
     badge.setText(String(overdue));
   }
 
-  private async openSidebar(): Promise<void> {
-    const existing = this.app.workspace.getLeavesOfType(SIDEBAR_VIEW)[0];
-    if (existing) {
-      await this.app.workspace.revealLeaf(existing);
-      return;
-    }
-    const leaf = this.app.workspace.getRightLeaf(false);
+  /** `plan` asks the dock to start the day's planning once it is on screen. */
+  private async openSidebar(plan = false): Promise<void> {
+    let leaf = this.app.workspace.getLeavesOfType(SIDEBAR_VIEW)[0] ?? null;
     if (!leaf) {
-      new Notice("No he pogut obrir la barra lateral dreta");
-      return;
+      leaf = this.app.workspace.getRightLeaf(false);
+      if (!leaf) {
+        new Notice("No he pogut obrir la barra lateral dreta");
+        return;
+      }
+      await leaf.setViewState({ type: SIDEBAR_VIEW, active: true });
     }
-    await leaf.setViewState({ type: SIDEBAR_VIEW, active: true });
     await this.app.workspace.revealLeaf(leaf);
+    if (plan && leaf.view instanceof SidebarView) leaf.view.beginPlanning();
   }
 
   private async openControlCentre(filter?: Partial<QueryState>): Promise<void> {

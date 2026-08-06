@@ -6,7 +6,7 @@ import { relativeLabel } from "../views/format";
 
 const D = (iso: string) => {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y!, m! - 1, d!);
+  return new Date(y!, m! - 1, d);
 };
 const TODAY = D("2026-08-05");
 
@@ -56,6 +56,18 @@ describe("filterTasks", () => {
   it("filters by bucket", () => {
     expect(filterTasks(tasks, { ...DEFAULT_QUERY, buckets: ["overdue"] }, ctx)).toHaveLength(1);
     expect(filterTasks(tasks, { ...DEFAULT_QUERY, buckets: ["undated"] }, ctx)).toHaveLength(1);
+  });
+
+  /** What clicking a column of the week strip does. */
+  it("filters by a single day, and leaves the undated out of every day", () => {
+    expect(filterTasks(tasks, { ...DEFAULT_QUERY, dueOn: ["2026-08-05"] }, ctx)).toHaveLength(1);
+    expect(filterTasks(tasks, { ...DEFAULT_QUERY, dueOn: ["2026-07-01"] }, ctx)).toHaveLength(1);
+    expect(filterTasks(tasks, { ...DEFAULT_QUERY, dueOn: ["2026-08-06"] }, ctx)).toHaveLength(0);
+  });
+
+  it("counts a date the note lends as that task's day", () => {
+    const inherited = [task("- [ ] de la nota", { filenameDate: D("2026-08-07") })];
+    expect(filterTasks(inherited, { ...DEFAULT_QUERY, dueOn: ["2026-08-07"] }, ctx)).toHaveLength(1);
   });
 
   it("matches text against description and path", () => {

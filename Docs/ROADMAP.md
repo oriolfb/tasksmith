@@ -3,7 +3,7 @@
 Where the plugin is, what was decided and why, and what is left. Written so a new session can pick
 up the next phase without re-deriving any of it.
 
-Current version: **0.3.1**. The plugin's settings tab shows the version actually loaded —
+Current version: **0.4.0**. The plugin's settings tab shows the version actually loaded —
 Obsidian only re-reads `main.js` when the plugin is re-enabled, so "I pressed ⌘R" and "the new
 code is running" are not the same claim.
 
@@ -39,6 +39,7 @@ now a finding in the control centre's health panel rather than a line in this do
 | **Phase 2** | The focus view (`SidebarView`) | Three slots, urgency, two lenses, keyboard, FLIP transition |
 | | Priority removed from the UI | Not one open task in this vault has a priority marker |
 | **Phase 4** | The control centre (`ControlCentreView`) | KPI strip, throughput, filter chips, sortable table, health panel |
+| | The week ahead, and the history folded away | Seven day columns and a `dueOn` filter took the permanent slot; created-against-closed per month moved behind **Historial** |
 | | The old triage view and 370 lines of CSS | Deleted with the markup that used them |
 
 ## Phase 3 — dates in natural language (next, and now the only one left)

@@ -1,4 +1,8 @@
 import type { Bucket } from "../types/task";
+import { daysBetween, parseIsoDate } from "../index/dates";
+// Pure text formatting, no DOM: the one thing `views/` holds that a query module may borrow,
+// rather than keeping a second copy of the Catalan month names here.
+import { dayLabel } from "../views/format";
 import { NO_PROJECT, type QueryState } from "./Query";
 
 /**
@@ -18,6 +22,8 @@ export interface FilterChip {
 
 export interface ChipContext {
   staleThresholdDays: number;
+  /** Only used to name the day filter: `avui` and `demà` beat `dj. 7 ag`. */
+  today?: Date;
   /** Documentation lines in the vault; the exclusion chip is hidden when there are none. */
   referenceLines: number;
   somedayLines: number;
@@ -26,7 +32,9 @@ export interface ChipContext {
 const BUCKET_CHIPS: Record<Bucket, string> = {
   overdue: "per renegociar",
   today: "amb data d'avui",
-  week: "aquesta setmana",
+  // Not "aquesta setmana": the bucket runs from tomorrow to Sunday, and a filter called "this
+  // week" that hides what is due today is a filter that lies. That name belongs to `today|week`.
+  week: "d'aquí a diumenge",
   later: "més endavant",
   undated: "sense data",
   closed: "tancades",
@@ -34,6 +42,7 @@ const BUCKET_CHIPS: Record<Bucket, string> = {
 
 /** Combinations that have a name of their own, so two chips do not say one thing. Keys sorted. */
 const BUCKET_SETS: Record<string, string> = {
+  "today|week": "aquesta setmana",
   "later|week": "més endavant",
   "overdue|undated": "per decidir",
   "later|overdue|today|undated|week": "totes les obertes",
@@ -52,6 +61,10 @@ export function describeFilters(query: QueryState, ctx: ChipContext): FilterChip
 
   if (query.buckets && query.buckets.length > 0) {
     chips.push({ key: "buckets", label: bucketsLabel(query.buckets), clear: { buckets: null } });
+  }
+
+  if (query.dueOn !== null && query.dueOn.length > 0) {
+    chips.push({ key: "dueOn", label: daysLabel(query.dueOn, ctx.today), clear: { dueOn: null } });
   }
 
   if (query.text.trim()) {
@@ -101,6 +114,24 @@ export function describeFilters(query: QueryState, ctx: ChipContext): FilterChip
   return chips;
 }
 
+/**
+ * "amb data dv. 7 ag", or "amb data del ds. 8 al dl. 10 ag" for a Monday that is carrying its
+ * weekend. The run is named as a run rather than listed, because three chips' worth of dates in
+ * one chip is not a sentence anybody reads.
+ */
+export function daysLabel(days: string[], today?: Date): string {
+  const dates = days.map(parseIsoDate).filter((date): date is Date => date !== null);
+  if (dates.length === 0) return `amb data ${days.join(", ")}`;
+  if (dates.length === 1) return `amb data ${dayLabel(dates[0]!, today)}`;
+
+  const first = dates[0]!;
+  const last = dates[dates.length - 1]!;
+  const consecutive = daysBetween(first, last) === dates.length - 1;
+  return consecutive
+    ? `amb data del ${dayLabel(first, today)} al ${dayLabel(last, today)}`
+    : `amb data ${dates.map((date) => dayLabel(date, today)).join(" o ")}`;
+}
+
 export function bucketsLabel(buckets: Bucket[]): string {
   const key = [...buckets].sort().join("|");
   const named = BUCKET_SETS[key];
@@ -126,10 +157,12 @@ export interface FilterGroup {
 export function filterMenu(query: QueryState, ctx: ChipContext): FilterGroup[] {
   // Menu entries are sentences of their own, so they start with a capital; chips are fragments of
   // one sentence, so they do not.
+  // Every deadline option clears the day filter: a bucket and a single day are two answers to
+  // the same question, and a table filtered by both would show a list nothing in the bar explains.
   const bucketOption = (buckets: Bucket[]): FilterOption => ({
     label: capitalise(bucketsLabel(buckets)),
-    patch: { buckets },
-    checked: sameBuckets(query.buckets, buckets),
+    patch: { buckets, dueOn: null },
+    checked: query.dueOn === null && sameBuckets(query.buckets, buckets),
   });
 
   const groups: FilterGroup[] = [
@@ -144,10 +177,15 @@ export function filterMenu(query: QueryState, ctx: ChipContext): FilterGroup[] {
     {
       label: "Termini",
       options: [
-        { label: "Totes", patch: { buckets: null }, checked: query.buckets === null },
+        {
+          label: "Totes",
+          patch: { buckets: null, dueOn: null },
+          checked: query.buckets === null && query.dueOn === null,
+        },
         bucketOption(["overdue"]),
         bucketOption(["today"]),
-        bucketOption(["week"]),
+        // Today included, because a week you are planning starts today, not tomorrow.
+        bucketOption(["today", "week"]),
         bucketOption(["later"]),
         bucketOption(["undated"]),
         bucketOption(["week", "later"]),

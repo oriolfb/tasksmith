@@ -1,8 +1,8 @@
 import { type App, PluginSettingTab, Setting } from "obsidian";
-import type TaskConsolePlugin from "../main";
+import type TaskSmithPlugin from "../main";
 
-export class TaskConsoleSettingTab extends PluginSettingTab {
-  constructor(app: App, private readonly plugin: TaskConsolePlugin) {
+export class TaskSmithSettingTab extends PluginSettingTab {
+  constructor(app: App, private readonly plugin: TaskSmithPlugin) {
     super(app, plugin);
   }
 
@@ -105,6 +105,18 @@ export class TaskConsoleSettingTab extends PluginSettingTab {
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.autoDeleteEmptyTasks).onChange(async (value) => {
           this.plugin.settings.autoDeleteEmptyTasks = value;
+          await this.plugin.saveSettings();
+        })
+      );
+
+    new Setting(containerEl)
+      .setName("Caps de setmana a la tira de la setmana")
+      .setDesc(
+        "Activat, la tira del centre de control ensenya set dies naturals. Desactivat, ensenya set dies laborables i les tasques amb data en dissabte o diumenge es compten al dilluns següent: el tooltip de la columna ho diu i clicar-la també les obre. Cap tasca queda amagada."
+      )
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.showWeekends).onChange(async (value) => {
+          this.plugin.settings.showWeekends = value;
           await this.plugin.saveSettings();
         })
       );

@@ -7,7 +7,7 @@ import type { Task, TaskKind } from "../types/task";
 
 const D = (iso: string) => {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y!, m! - 1, d!);
+  return new Date(y!, m! - 1, d);
 };
 const TODAY = D("2026-08-05");
 
@@ -27,7 +27,7 @@ function task(raw: string, extra: Partial<Task> = {}): Task {
     noteDate: null,
     filenameDate,
     effectiveDate: effectiveDate(parsed, filenameDate),
-    kind: "commitment" as TaskKind,
+    kind: "commitment",
     open: extra.open ?? parsed.status === " ",
     priority: priorityOf(parsed),
     hasChildren: false,
@@ -100,11 +100,13 @@ describe("focusSections", () => {
     );
   });
 
-  it("shows a task once, even when it is both urgent and chosen", () => {
+  /** Pressing «Avui» on a task that already carries today's date has to do something visible. */
+  it("shows a task once, and choosing it wins over its urgency", () => {
     const both = task("- [ ] totes dues 📅 2026-08-05");
     const s = focusSections({ tasks: [both], chosen: [dayKey(both)], today: TODAY });
-    expect(s.urgent).toHaveLength(1);
-    expect(s.chosen).toHaveLength(0);
+    expect(s.urgent).toHaveLength(0);
+    expect(s.chosen).toHaveLength(1);
+    expect(s.free).toBe(DAY_LIMIT - 1);
   });
 
   it("keeps the chosen ones in the order they were chosen", () => {

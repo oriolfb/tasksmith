@@ -1,7 +1,7 @@
 import { ItemView, Notice, setIcon, setTooltip, type WorkspaceLeaf } from "obsidian";
 import type { TaskIndex } from "../index/TaskIndex";
 import type { TaskActions } from "../tasks/TaskActions";
-import type { TaskConsoleSettings } from "../settings/Config";
+import type { TaskSmithSettings } from "../settings/Config";
 import type { Bucket, Task } from "../types/task";
 import { ageInDays, bucketOf } from "../index/Buckets";
 import { isEmptyTask } from "../index/EmptyTasks";
@@ -12,7 +12,7 @@ import { DaySelection } from "./DaySelection";
 import { FocusRenderer, type Section } from "./FocusRenderer";
 import { relativeLabel } from "./format";
 
-export const SIDEBAR_VIEW = "task-console-sidebar";
+export const SIDEBAR_VIEW = "task-smith-sidebar";
 
 type Lens = "date" | "person";
 
@@ -55,7 +55,7 @@ export class SidebarView extends ItemView {
     leaf: WorkspaceLeaf,
     private readonly index: TaskIndex,
     private readonly actions: TaskActions,
-    private settings: TaskConsoleSettings,
+    private settings: TaskSmithSettings,
     private readonly openControlCentre: (filter?: Partial<QueryState>) => void,
     private readonly persist: () => Promise<void>
   ) {
@@ -100,7 +100,7 @@ export class SidebarView extends ItemView {
     this.unsubscribe = null;
   }
 
-  setSettings(settings: TaskConsoleSettings): void {
+  setSettings(settings: TaskSmithSettings): void {
     this.settings = settings;
     this.refresh();
   }
@@ -169,6 +169,39 @@ export class SidebarView extends ItemView {
       hint.createEl("b", { text: key });
       hint.appendText(` ${what}`);
     }
+  }
+
+  /**
+   * What "Planificar el dia" does. Revealing the dock was not enough: with the dock already
+   * open — which is most of the time — the button appeared to do nothing at all.
+   *
+   * So it puts the view in the state planning needs: the date lens, no search narrowing the
+   * pool, "Avui" unfolded, the list at the top, and the keyboard already in it. The section
+   * flashes once so the eye lands where the decision is.
+   */
+  beginPlanning(): void {
+    if (!this.listHost) return;
+    this.lens = "date";
+    if (this.search) {
+      this.search = "";
+      this.searchInput.value = "";
+    }
+    this.toggleSearch(false);
+    if (this.settings.collapsedSections.includes("avui")) {
+      this.settings.collapsedSections = this.settings.collapsedSections.filter((key) => key !== "avui");
+      void this.persist();
+    }
+    this.refresh();
+
+    this.listHost.scrollTop = 0;
+    const head = this.listHost.querySelector<HTMLElement>('.tcf-sec[data-tcf-key="avui"]');
+    if (head) {
+      head.addClass("tcf-flash");
+      window.setTimeout(() => head.removeClass("tcf-flash"), 1200);
+    }
+    // The first row you could still act on: an empty slot means the choosing has not started.
+    const first = this.listHost.querySelector<HTMLElement>(".tcf-row:not(.tcf-done)");
+    first?.focus();
   }
 
   private setLens(lens: Lens): void {
