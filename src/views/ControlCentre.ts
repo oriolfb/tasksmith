@@ -948,7 +948,7 @@ export class ControlCentreView extends BaseTaskView {
   }
 
   private dateMenu(task: Task, event: MouseEvent): void {
-    openDateMenu(this.actions, task, event, {
+    openDateMenu(this.app, this.actions, task, event, {
       onDrop: async (dropped) => {
         await this.actions.cancel(dropped);
       },

@@ -1,6 +1,29 @@
 import { daysBetween, formatIsoDate, startOfToday } from "../index/dates";
 
-const MONTHS = ["gen", "febr", "març", "abr", "maig", "juny", "jul", "ag", "set", "oct", "nov", "des"];
+/**
+ * Abbreviation and full name per month. One table, two readers: the views print the
+ * abbreviation, `DateInput` matches what you type against the full name. Every abbreviation is a
+ * prefix of its own full name, which is what lets `set` and `setembre` mean the same month
+ * without a second list to keep in step.
+ */
+export const MONTHS: readonly (readonly [string, string])[] = [
+  ["gen", "gener"],
+  ["febr", "febrer"],
+  ["març", "març"],
+  ["abr", "abril"],
+  ["maig", "maig"],
+  ["juny", "juny"],
+  ["jul", "juliol"],
+  ["ag", "agost"],
+  ["set", "setembre"],
+  ["oct", "octubre"],
+  ["nov", "novembre"],
+  ["des", "desembre"],
+];
+
+function monthShort(month: number): string {
+  return MONTHS[month]?.[0] ?? "";
+}
 
 /** Catalan relative label for a task date, e.g. `avui`, `demà`, `fa 7 setmanes`. */
 export function relativeLabel(date: Date | null, today: Date = startOfToday()): string {
@@ -48,19 +71,28 @@ export function dayLabel(date: Date, today: Date = startOfToday()): string {
   const days = daysBetween(today, date);
   if (days === 0) return "avui";
   if (days === 1) return "demà";
-  return `${weekdayLabel(date)} ${date.getDate()} ${MONTHS[date.getMonth()] ?? ""}`;
+  return `${weekdayLabel(date)} ${date.getDate()} ${monthShort(date.getMonth())}`;
+}
+
+/**
+ * The day a date lands on, and how long ago only when it has already gone: the date field lists
+ * readings, and a day already past is the one reading you can accept by mistake. Ahead of today
+ * the day names itself — "en 3 dies" beside "ds. 8 ag" is the same fact twice.
+ */
+export function dayWithAge(date: Date, today: Date = startOfToday()): string {
+  const day = dayLabel(date, today);
+  return daysBetween(today, date) < 0 ? `${day} · ${relativeLabel(date, today)}` : day;
 }
 
 /** Short absolute label used as the tooltip and in the wide view. */
 export function shortDate(date: Date | null): string {
   if (!date) return "—";
-  const month = MONTHS[date.getMonth()] ?? "";
-  return `${date.getDate()} ${month} ${date.getFullYear()}`;
+  return `${date.getDate()} ${monthShort(date.getMonth())} ${date.getFullYear()}`;
 }
 
 /** Axis label for the throughput chart. The year comes along only when it is not this one. */
 export function monthLabel(year: number, month: number, today: Date = startOfToday()): string {
-  const name = MONTHS[month] ?? "";
+  const name = monthShort(month);
   return year === today.getFullYear() ? name : `${name} ${String(year).slice(2)}`;
 }
 

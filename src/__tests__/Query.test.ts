@@ -2,7 +2,7 @@ import { DEFAULT_QUERY, NO_PROJECT, bucketCounts, filterTasks, groupTasks, runQu
 import { effectiveDate } from "../index/Buckets";
 import { parseTaskLine, priorityOf } from "../index/TaskParser";
 import type { Task } from "../types/task";
-import { relativeLabel } from "../views/format";
+import { dayWithAge, relativeLabel } from "../views/format";
 
 const D = (iso: string) => {
   const [y, m, d] = iso.split("-").map(Number);
@@ -165,5 +165,18 @@ describe("relativeLabel", () => {
 
   it("labels a missing date", () => {
     expect(relativeLabel(null, TODAY)).toBe("sense data");
+  });
+});
+
+describe("dayWithAge", () => {
+  it("names the day and nothing else while the day is still ahead", () => {
+    expect(dayWithAge(D("2026-08-05"), TODAY)).toBe("avui");
+    expect(dayWithAge(D("2026-08-06"), TODAY)).toBe("demà");
+    expect(dayWithAge(D("2026-09-15"), TODAY)).toBe("dt. 15 set");
+  });
+
+  it("says how long ago for a day already gone, which is the one you can accept by mistake", () => {
+    expect(dayWithAge(D("2026-03-15"), TODAY)).toBe("dg. 15 març · fa 5 mesos");
+    expect(dayWithAge(D("2026-08-04"), TODAY)).toBe("dt. 4 ag · ahir");
   });
 });

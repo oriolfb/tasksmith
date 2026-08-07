@@ -386,9 +386,9 @@ export class FocusRenderer {
     }
   }
 
-  /** The date menu: what the plugin can already write, without a new parser. */
+  /** The date menu: the day's shortcuts, and the field for everything else. */
   dateMenu(task: Task, event: MouseEvent, onDone: () => void): void {
-    openDateMenu(this.actions, task, event, {
+    openDateMenu(this.app, this.actions, task, event, {
       onDrop: (dropped) => this.callbacks.onDrop(dropped),
       onOpen: (opened) => this.callbacks.onOpen(opened),
       onDone,

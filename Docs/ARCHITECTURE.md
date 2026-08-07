@@ -21,7 +21,8 @@ It coexists with the Tasks plugin and writes nothing Tasks cannot read.
 │ in-memory   │   │ quick actions    │  │ Query Focus  │ │ Sidebar +   │
 │ per note    │   │ over TaskWriter  │  │ Metrics      │ │ ControlCentre│
 │             │   │                  │  │ Health       │ │ + DateMenu  │
-│             │   │                  │  │ Filters      │ │             │
+│             │   │                  │  │ Filters      │ │ + the field │
+│             │   │                  │  │ DateInput    │ │             │
 └───┬─────────┘   └──────────┬───────┘  └──────────────┘ └─────────────┘
     │                        │
 ┌───▼──────────┐   ┌─────────▼────────┐
@@ -48,9 +49,14 @@ different code.
 `Filters.ts` (the filter chips and the `+ filtre` menu) take tasks and a date and return data. No DOM, no
 `App`, no settings object — which is what lets the vault audit assert them against the real vault
 and print them from `npm run audit:vault`. A figure in the panel that no test can see is a figure
-nobody can trust. The one thing `query/` borrows from `views/` is `format.ts`, which is pure text
+nobody can trust. `DateInput.ts` is the same shape pointed the other way: text and a day in, the
+readings of it out, so every rule about what `15/3` means is a test rather than a screenshot.
+
+The one thing `query/` borrows from `views/` is `format.ts`, which is pure text
 and nothing else: the day filter's chip says "amb data dv. 7 ag", and a second copy of the Catalan
-month names would be a worse dependency than the arrow on the diagram.
+month names would be a worse dependency than the arrow on the diagram. That table now carries the
+full month name beside the abbreviation, because the parser has to *read* what the views *print* —
+`set` and `setembre` are one month, and two lists would have been two chances to drift.
 
 **Two views, two jobs, no shared controls.** The dock (`SidebarView` + `FocusRenderer`) owns the
 day's three slots; the control centre (`ControlCentreView` + `ControlTable`) owns the numbers, the
@@ -248,7 +254,17 @@ method — and by the silent-failure symptom above, a menu that throws halfway j
 all. `FuzzySuggestModal` *is* public: `PickModal` picks a project, an area or a person, searchable
 and keyboard-first, which suits a vault with more people than a submenu wants anyway. The same
 rule settled the menu's group headings: `setIsLabel(true)` is the public way to put a heading in a
-menu, where a disabled item still reads as something that ought to be clickable.
+menu, where a disabled item still reads as something that ought to be clickable. The date field is
+the third instance: a `SuggestModal` whose rows use Obsidian's own `suggestion-title` and
+`suggestion-note`, so "the matches listed under the field as you type, `↵` accepting the first" is a
+control the app already draws rather than a text input, a list and a keyboard handler of ours.
+
+**A modal closes before it tells you what was chosen.** `SuggestModal.selectSuggestion` runs
+`close()` — and `close()` runs `onClose()` synchronously on desktop — *then*
+`onChooseSuggestion`. So a `Promise` that resolves `null` from `onClose` "unless already settled"
+loses every choice, silently, on desktop only: the phone's close animation defers `onClose` past the
+pick. Both pickers therefore let the choice settle the promise and defer the cancellation by a
+microtask, and `src/__mocks__/obsidian.ts` encodes the order so a test can drive it.
 
 **`styles.css` reloads live; `main.js` does not.** Obsidian only re-reads a plugin's JavaScript
 when the plugin is re-enabled, so *new CSS on old JS* is a real and misleading state: after the

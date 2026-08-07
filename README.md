@@ -8,6 +8,9 @@ different places.
 - **The control centre** answers *how is the system doing*. A KPI strip, throughput, filter chips, a
   sortable table and a health panel.
 
+Both open the same date menu, and in it a date can simply be typed — `dv`, `dl que ve`, `3d`, `2s`,
+`15 set` — with what each phrase means, and the day it lands on, listed as you type.
+
 It reads the same markdown as the [Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks)
 plugin — emoji dates, priorities, recurrence — and picks up its date format and global filter from
 its settings, so both plugins see the same tasks. Nothing leaves the vault: no network calls, no

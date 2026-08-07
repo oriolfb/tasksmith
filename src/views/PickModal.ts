@@ -33,11 +33,21 @@ export class PickModal extends FuzzySuggestModal<string> {
   }
 
   onChooseItem(value: string): void {
-    this.settled = true;
-    this.resolve(value);
+    this.settle(value);
   }
 
+  /**
+   * Deferred, and for the reason spelled out in `DateInputModal`: the app closes the modal before
+   * it forwards what was picked, so answering "cancelled" from here beat every pick to it and
+   * `+ filtre` silently did nothing at all.
+   */
   onClose(): void {
-    if (!this.settled) this.resolve(null);
+    queueMicrotask(() => this.settle(null));
+  }
+
+  private settle(value: string | null): void {
+    if (this.settled) return;
+    this.settled = true;
+    this.resolve(value);
   }
 }

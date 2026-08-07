@@ -3,7 +3,7 @@
 Where the plugin is, what was decided and why, and what is left. Written so a new session can pick
 up the next phase without re-deriving any of it.
 
-Current version: **0.4.0**. The plugin's settings tab shows the version actually loaded —
+Current version: **0.5.0**. The plugin's settings tab shows the version actually loaded —
 Obsidian only re-reads `main.js` when the plugin is re-enabled, so "I pressed ⌘R" and "the new
 code is running" are not the same claim.
 
@@ -53,32 +53,60 @@ it worth keeping is that the three counts beside it say where everything went in
 | **Phase 1** | The note's frontmatter as context | `data`, `Persones`, `tipus`, `title`, `tags` |
 | **Phase 2** | The focus view (`SidebarView`) | Three slots, urgency, two lenses, keyboard, FLIP transition |
 | | Priority removed from the UI | Not one open task in this vault has a priority marker |
+| **Phase 3** | Dates in words (`DateInput` + `DateInputModal`) | One pure parser, one field inside the date menu both views share |
 | **Phase 4** | The control centre (`ControlCentreView`) | KPI strip, throughput, filter chips, sortable table, health panel |
 | | The week ahead, and the history folded away | Seven day columns and a `dueOn` filter took the permanent slot; created-against-closed per month moved behind **Historial** |
 | | The old triage view and 370 lines of CSS | Deleted with the markup that used them |
 
-## Phase 3 — dates in natural language (next, and now the only one left)
+## Phase 3 — dates in natural language (done, 0.5.0)
 
 The remaining half of "renegotiate", and the one thing the control centre could not give you: the
-table lets you sort twenty overdue tasks by age and act on each, but "15 September" still means
-opening the note. Both views open the same menu now (`DateMenu.ts`), so the input lands in one place.
+table lets you sort twenty overdue tasks by age and act on each, but "15 September" meant opening
+the note. Both views open the same menu (`DateMenu.ts`), so the field landed in one place and both
+got it at once — **Escriure una data…**, last of the postponements, above "Treure la data".
 
-The menu offers six fixed options (Demà, Divendres, Dilluns que ve, +1 setmana, +1 mes, Treure la
-data) and nothing else.
-
-A pure parser (like `Focus.ts`, so it is testable without a DOM) plus a small input:
+`DateInput.parseDateInput(text, today)` is pure like `Focus.ts` and reads:
 
 | Typed | Means |
 |---|---|
-| `dv`, `divendres` | next Friday |
-| `dl que ve` | Monday of next week |
-| `3d`, `+3` | in three days |
-| `2s` | in two weeks |
-| `15/9`, `15 set` | 15 September of the current year |
+| `avui`, `dema`, `dema passat` | today, tomorrow, the day after |
+| `dv`, `divendres` | the next Friday — never today, so `dc` on a Wednesday is next week's |
+| `dv que ve`, `divendres vinent` | Friday of next week, Monday-based |
+| `3d`, `+3`, `3 dies`, `3` | in three days |
+| `2s`, `2 setmanes` | in two weeks |
+| `1m`, `2 mesos` | calendar months, clamped: one month after 31 January is 28 February |
+| `15/9`, `15-9`, `15.9`, `15/9/27` | day, month, and a year if you give one |
+| `15 set`, `15 setembre`, `15 de març` | by name, from a prefix of it |
+| `2026-09-15` | as it stands |
 
-With the matches listed under the field as you type and `↵` accepting the first. `D` opens it.
+Every match says what it means (*Divendres que ve*, *En 3 dies*, *15 de setembre de 2026*) and the
+day it lands on, and `↵` takes the first. Case and accents are ignored — `marc` is `març`.
 
-Half a day, low risk, no new writes to the vault beyond the `📅` the plugin already writes.
+Four decisions, all of them about not guessing:
+
+- **An input it cannot read returns nothing**, and an ambiguous one returns every reading it has.
+  `15 ma` lists March and May; `15/3` in August lists this year's — as written — and next year's
+  under it, because both are real and picking one silently is wrong half the time. What makes a list
+  affordable is that each row shows its date: `dg. 15 març · fa 5 mesos` is not something you accept
+  by accident, which is why the age is printed for a day already gone and for nothing else.
+- **`set` is not a unit for weeks.** It is September's abbreviation, and `15 set` has to be the
+  fifteenth. Weeks are `s`/`setmana`/`setmanes`, and matching against the *full* month name is what
+  keeps `setmanes` from reading as `setembre`. One table in `format.ts` with two readers — the views
+  print the abbreviation, the parser matches the full name.
+- **The empty field offers what the menu offers**, in the menu's order, so opening it without a
+  phrase in mind is not a dead end. Two readings landing on the same day are one offer: on a Friday
+  *divendres* and *+1 setmana* are the same date.
+- **It only writes `📅`.** Clearing the date stays a separate item in the menu below, so dismissing
+  the field means "never mind", not "remove the date".
+
+The field is a `SuggestModal`, not a text input of our own, for the same reason `PickModal` is —
+the public API already has a keyboard-first list that looks native. Building on that API is also
+what turned up that `PickModal` had never worked: the modal closes *before* it says what was
+chosen, so a promise resolved from `onClose` answered "cancelled" every time. Fixed in both, and
+written down in [LLIÇONS.md](LLIÇONS.md#rendering-inside-obsidian).
+
+With this the plan is built. What is left is in **Not scheduled** below, and nothing there is
+committed to.
 
 ## Phase 4 — the control centre (done, 0.3.0)
 
