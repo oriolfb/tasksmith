@@ -25,11 +25,13 @@ import {
   closingState,
   monthlyFlow,
   openState,
+  todayProgress,
   weekAhead,
   type ClosingState,
   type DayLoad,
   type MonthlyFlow,
   type OpenState,
+  type TodayProgress,
   type WeekAhead,
 } from "../query/Metrics";
 import { healthFindings, type Finding } from "../query/Health";
@@ -215,10 +217,11 @@ export class ControlCentreView extends BaseTaskView {
     // describe the same vault, and computing it three times invites them to disagree.
     const open = openState(all, today);
     const closings = closingState(all, today);
+    const progress = todayProgress(all, today);
 
     for (const [key, tab] of this.tabs) tab.toggleClass("tcf-tab-on", this.query.group === key);
 
-    this.renderKpis(open, closings);
+    this.renderKpis(open, closings, progress);
     this.renderWeek(
       weekAhead(all, today, { span: WEEK_DAYS, weekends: this.settings.showWeekends }),
       closings,
@@ -239,7 +242,7 @@ export class ControlCentreView extends BaseTaskView {
 
   /* ── the strip ─────────────────────────────────────────── */
 
-  private renderKpis(open: OpenState, closings: ClosingState): void {
+  private renderKpis(open: OpenState, closings: ClosingState, progress: TodayProgress): void {
     this.kpiHost.empty();
 
     this.kpi({
@@ -281,6 +284,30 @@ export class ControlCentreView extends BaseTaskView {
         closings.first === null
           ? "cap tasca tancada amb data"
           : `${closings.done} amb ✅ des de ${shortDate(closings.first)}`,
+      filter: { statusScope: "closed", buckets: null, staleOnly: false },
+    });
+
+    /*
+     * The day's own tally, next to the vault-wide counts above: what is still left today, and
+     * what already got done today. Pending first, because that is the number worth acting on;
+     * closed is the progress reading beside it.
+     */
+    this.kpi({
+      value: String(progress.pending),
+      label: "pendents avui",
+      detail: progress.closed === 0 ? "cap tancada encara" : `${progress.closed} ${progress.closed === 1 ? "tancada" : "tancades"} ja avui`,
+      filter: { statusScope: "open", buckets: ["today"], sort: "date", sortReverse: false },
+    });
+
+    this.kpi({
+      value: String(progress.closed),
+      label: "tancades avui",
+      detail:
+        progress.pending > 0
+          ? `${progress.pending} ${progress.pending === 1 ? "pendent" : "pendents"} encara`
+          : progress.closed > 0
+            ? "cap pendent, dia fet"
+            : "cap tasca per avui",
       filter: { statusScope: "closed", buckets: null, staleOnly: false },
     });
   }

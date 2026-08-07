@@ -7,6 +7,7 @@ import {
   openState,
   datableFromNote,
   workingDaysBetween,
+  todayProgress,
 } from "../query/Metrics";
 import { effectiveDate } from "../index/Buckets";
 import { parseTaskLine, priorityOf } from "../index/TaskParser";
@@ -297,6 +298,37 @@ describe("weekAhead", () => {
     expect(week.days[0]).toMatchObject({ today: true, weekend: true, count: 1, absorbed: 0 });
     // Sunday had no column of its own, so the Monday carries it.
     expect(week.days[1]!.days).toEqual(["2026-08-09", "2026-08-10"]);
+  });
+});
+
+describe("todayProgress", () => {
+  it("counts tasks pending today and tasks closed today, separately", () => {
+    const tasks = [
+      task("- [ ] avui 📅 2026-08-05"),
+      task("- [ ] també avui 📅 2026-08-05"),
+      task("- [ ] demà 📅 2026-08-06"),
+      task("- [x] tancada avui ✅ 2026-08-05", { open: false }),
+      task("- [-] cancel·lada avui ❌ 2026-08-05", { open: false }),
+      task("- [x] tancada ahir ✅ 2026-08-04", { open: false }),
+    ];
+    const progress = todayProgress(tasks, TODAY);
+    expect(progress.pending).toBe(2);
+    expect(progress.closed).toBe(2);
+  });
+
+  it("counts a task closed today even when it was due a different day", () => {
+    const tasks = [task("- [x] endarrerida però tancada avui 📅 2026-07-20 ✅ 2026-08-05", { open: false })];
+    expect(todayProgress(tasks, TODAY).closed).toBe(1);
+  });
+
+  it("leaves documentation and someday lines out, exactly like the other counters", () => {
+    const tasks = [
+      task("- [ ] checklist 📅 2026-08-05", { kind: "reference" }),
+      task("- [x] idea tancada ✅ 2026-08-05", { open: false, kind: "someday" }),
+    ];
+    const progress = todayProgress(tasks, TODAY);
+    expect(progress.pending).toBe(0);
+    expect(progress.closed).toBe(0);
   });
 });
 
