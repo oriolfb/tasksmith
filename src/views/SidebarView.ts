@@ -311,7 +311,10 @@ export class SidebarView extends ItemView {
         // No count: "2 han arribat soles · 1 de 3 triada" already says it, and a bare number
         // next to it only invites the question of which one it is counting.
         why: whyToday(focus.urgent.length, settled, finishedToday),
-        tasks: [...focus.urgent, ...chosenAndFinished],
+        // Urgent tasks jump the queue while you are still choosing, so nothing genuinely urgent
+        // sits unseen while you deliberate. Once the day is full, that ordering would bury the
+        // three you already committed to under one you never picked — so chosen goes first.
+        tasks: goalMet ? [...chosenAndFinished, ...focus.urgent] : [...focus.urgent, ...chosenAndFinished],
         done: focus.done,
         now: true,
         emptySlots,
