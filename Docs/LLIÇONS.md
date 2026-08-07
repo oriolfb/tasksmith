@@ -58,6 +58,14 @@ when the rule needs data that may not exist.
 
 ## The dev loop
 
+**Letting Jest see the other worktrees.** `.claude/worktrees/` sits *inside* the repo, so every
+worktree is one more `src/__mocks__/obsidian.ts` in Jest's module map: `npm test` in the main tree
+found four of them, warned about the duplicates, and then resolved `obsidian` to whichever copy it
+liked — a mock from another branch. The symptom is a class that is plainly in the file failing with
+"Class extends value undefined", and the warning that explains it has scrolled off the top. Fixed
+with `modulePathIgnorePatterns`. The shape to recognise: a tool that indexes by filename, pointed at
+a tree that contains copies of the project.
+
 **Assuming a deploy is a reload.** `styles.css` is picked up live, `main.js` is not. New CSS on old
 JS produced a screenshot that looked like nothing had changed. Bump the version on every visible
 change and read it back from the settings tab.
