@@ -1,8 +1,24 @@
 # Changelog
 
-## Unreleased — the week ahead, and five things that did not work
+## 0.5.0 — the week ahead, dates in words, and five things that did not work
 
 ### Added
+
+- **A date you can type.** The date menu both views share ends its postponements with **Escriure una
+  data…**, and inside it `dv`, `dl que ve`, `3d`, `2s`, `15/9`, `15 set` and `2026-09-15` all mean
+  what they look like. Every match names its reading — *Divendres que ve*, *En 3 dies*, *15 de
+  setembre de 2026* — beside the day it lands on, and `↵` takes the first, so what is about to be
+  written to the note is on screen before you accept it. Case and accents do not matter: `marc` is
+  `març`. Until now "15 de setembre" meant opening the note, which is the whole reason twenty overdue
+  tasks could be sorted by age and still not renegotiated.
+
+  It never guesses. An input it cannot read offers nothing, and an ambiguous one offers everything it
+  could be: `15 ma` lists March and May, `15/3` in August lists this year's — as written — with next
+  year's under it, marked `fa 5 mesos` so a date already gone cannot be accepted by accident. The
+  reading itself is one pure function, `DateInput.parseDateInput`, tested the way `Focus.ts` is
+  rather than through a screenshot; the field is a `SuggestModal`, so the list, the keyboard and the
+  native look come from Obsidian. Dismissing it writes nothing — clearing a date is still the item
+  below, deliberately.
 
 - **The control centre shows the week, not the year.** Where the throughput bars were, there is now
   one column per day for the next seven days: how many tasks carry that date, today first. Rolling
@@ -38,6 +54,10 @@
 
 ### Fixed
 
+- **`+ filtre` → Projecte / Àrea / Persona picks something.** Choosing a value did nothing on
+  desktop: `SuggestModal` closes *before* it says what was chosen, so the picker's promise had
+  already answered "cancelled" and the filter was never applied. Found while building the date field
+  on the same API, and pinned by tests that drive both callbacks in the order the app does.
 - **Pressing "Avui" on a task that already carries today's date does something.** Urgency used to
   win over choosing, so a task dated today stayed in the urgent list, never took a number and never
   moved the counter off "0 de 3" — the button looked broken. Choosing now wins: the task moves to

@@ -47,6 +47,38 @@ of the date menu, separated and marked as a warning: it cancels the line (status
 deletes anything, and is undoable, but it costs one deliberate step more than postponing. There is
 no bare keyboard shortcut for it. Both views open that menu through `DateMenu.openDateMenu`.
 
+### The date field
+
+**Escriure una data…** is the last of the menu's postponements, above "Treure la data", and opens
+`DateInputModal` — a `SuggestModal` over one pure function, `DateInput.parseDateInput(text, today)`:
+
+| Typed | Read as |
+|---|---|
+| `avui` · `dema` · `dema passat` | today · tomorrow · the day after |
+| `dv` · `divendres` | the next Friday, never today: `dc` on a Wednesday is next week's |
+| `dv que ve` · `divendres vinent` | Friday of next week, Monday-based |
+| `3d` · `+3` · `3 dies` · `3` | in three days |
+| `2s` · `2 setmanes` | in two weeks (`set` is September's abbreviation, never a week) |
+| `1m` · `2 mesos` | calendar months, clamped: one month after 31 January is 28 February |
+| `15/9` · `15-9` · `15.9` · `15/9/27` | day, month, and a year if given (two digits mean 20xx) |
+| `15 set` · `15 setembre` · `15 de març` | month by any prefix of its full name |
+| `2026-09-15` | as it stands |
+
+It returns `DateMatch[]` — `{ label, date }`, ordered, never guessing:
+
+- **Nothing it cannot read**, and every reading of what it can. `15 ma` is March and May; `15/3` in
+  August is this year's as written, with next year's under it. Two readings landing on the same day
+  are one match (on a Friday, `divendres` and `+1 setmana`).
+- **The empty field returns what the menu offers**, in the menu's order.
+- `label` is the reading in words (*Divendres que ve*, *En 3 dies*, *15 de setembre de 2026*); the
+  modal draws it over `format.dayWithAge(date)`, which adds "fa 5 mesos" only for a day already
+  gone — the one match you could accept by mistake.
+- Case and accents are ignored: `marc` is `març`, `DEMÀ` is `demà`.
+- A figure above 999, or below 1, is a typo and not a date.
+
+Accepting writes `📅` through `actions.scheduleOn` like every other entry in the menu. Dismissing the
+field writes nothing: removing a date is the item below it, on purpose.
+
 ### The control centre
 
 Pure modules decide everything it shows; the view only draws them.

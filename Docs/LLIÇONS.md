@@ -67,6 +67,17 @@ change and read it back from the settings tab.
 **Styling something Obsidian already styles.** A plugin that restyles `<button>` fights the theme
 and loses in a different way in every theme. Use what the app already gives you.
 
+**Resolving a promise from `onClose`.** `SuggestModal.selectSuggestion` calls `close()` — which runs
+`onClose()` on the spot on desktop — and only *then* `onChooseSuggestion`. So the obvious
+"resolve `null` from `onClose` unless it was already settled" answers *cancelled* a beat before the
+modal is told what was picked, and the choice is lost with no error anywhere. `PickModal` shipped
+like that, which means `+ filtre → Projecte…` did nothing at all; on the phone it worked, because
+the close animation defers `onClose` past the pick — a bug present only on the platform the plugin
+is designed for. The date field copied the pattern and a test caught it, driving both callbacks in
+the app's order. Two lessons in one: read the bundle for the order instead of assuming a callback
+runs before the teardown, and when the answer can arrive from two directions, let the *decision*
+settle it and make the *default* wait a microtask.
+
 **Trusting one class to beat a theme.** Themes style buttons as `<container> button`, which
 outweighs a plugin's single `.tcf-tab` and reinstates the grey chrome on *both* tabs, flattening the
 very difference the state colour was meant to draw. Rules a theme must not reach go two classes

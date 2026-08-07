@@ -1,7 +1,8 @@
-import { Menu } from "obsidian";
+import { type App, Menu } from "obsidian";
 import type { Task } from "../types/task";
 import type { TaskActions } from "../tasks/TaskActions";
-import { addDays, startOfToday } from "../index/dates";
+import { nextWeekday, startOfToday } from "../index/dates";
+import { DateInputModal } from "./DateInputModal";
 import { shortDate } from "./format";
 
 /**
@@ -19,6 +20,7 @@ export interface DateMenuCallbacks {
 }
 
 export function openDateMenu(
+  app: App,
   actions: TaskActions,
   task: Task,
   event: MouseEvent,
@@ -44,6 +46,21 @@ export function openDateMenu(
   // Only when the note actually lends one: the health panel points here instead of dating
   // tasks itself, precisely so each one gets this offer rather than a batch write.
   if (task.noteDate) entry(`Data de la nota (${shortDate(task.noteDate)})`, () => actions.scheduleOn(task, task.noteDate!));
+  // Last of the postponements, and the one that covers everything the fixed offers above cannot:
+  // they were never the vocabulary, they were the shortcuts. "15 de setembre" meant opening the
+  // note. The reading is `DateInput.parseDateInput`; this only writes what comes back.
+  menu.addItem((item) =>
+    item
+      .setTitle("Escriure una data…")
+      .setIcon("calendar")
+      .onClick(async () => {
+        const date = await DateInputModal.ask(app, today);
+        // Dismissed with no date is not "no date": clearing it is the item below, deliberately.
+        if (!date) return;
+        await actions.scheduleOn(task, date);
+        callbacks.onDone();
+      })
+  );
   menu.addSeparator();
   entry("Treure la data", () => actions.clearDue(task));
   menu.addSeparator();
@@ -70,11 +87,9 @@ export function openDateMenu(
 }
 
 export function nextFriday(today: Date): Date {
-  const delta = (5 - today.getDay() + 7) % 7;
-  return addDays(today, delta === 0 ? 7 : delta);
+  return nextWeekday(today, 5);
 }
 
 export function nextMonday(today: Date): Date {
-  const delta = (8 - today.getDay()) % 7;
-  return addDays(today, delta === 0 ? 7 : delta);
+  return nextWeekday(today, 1);
 }

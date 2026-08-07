@@ -26,6 +26,25 @@ export function addDays(date: Date, days: number): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 }
 
+/**
+ * Calendar months, clamped: one month after 31 January is 28 February, not 3 March.
+ * `addDays(date, 30)` is a different promise and this is not it.
+ */
+export function addMonths(date: Date, months: number): Date {
+  const target = new Date(date.getFullYear(), date.getMonth() + months, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  return new Date(target.getFullYear(), target.getMonth(), Math.min(date.getDate(), lastDay));
+}
+
+/**
+ * The next given weekday (`Date.getDay()`, 0 = Sunday) strictly after `today`: asking for
+ * "dimecres" on a Wednesday means the next one, never the one you are standing on.
+ */
+export function nextWeekday(today: Date, weekday: number): Date {
+  const delta = (weekday - today.getDay() + 7) % 7;
+  return addDays(today, delta === 0 ? 7 : delta);
+}
+
 export function daysBetween(from: Date, to: Date): number {
   const MS_PER_DAY = 86_400_000;
   return Math.round((to.getTime() - from.getTime()) / MS_PER_DAY);
