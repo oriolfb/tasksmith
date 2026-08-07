@@ -244,15 +244,14 @@ function build(host){
   for (const row of ROWS){
     const tr = el("div","tcc-tr",undefined,table);
     tr.tabIndex = 0;
-    const box = el("input","tcc-select",undefined,tr);
-    box.type = "checkbox";
+    el("div","tcc-mark",undefined,tr);
     el("span","tcc-cell-text",row.t,tr);
     el("span","tcc-cell-due" + (row.late ? " tcc-late" : row.undated ? " tcc-none" : ""),row.due,tr);
     el("span","tcc-cell-who" + (row.none ? " tcc-none" : ""),row.who,tr);
     el("span","tcc-cell-area",row.area,tr);
     el("span","tcc-cell-origin",row.src,tr);
     const acts = el("div","tcc-cell-actions tcc-acts",undefined,tr);
-    for (const label of ["Fet","Avui","Data"]) el("span","tcc-act",label,acts);
+    for (const label of ["Avui","Data"]) el("span","tcc-act",label,acts);
   }
 
   const health = el("div","tcc-health",undefined,layout);
@@ -266,7 +265,7 @@ function build(host){
 
   const footer = el("div","tcc-footer");
   const keys = el("div","tcf-keys",undefined,footer);
-  for (const [key, what] of [["J K","moure"],["Espai","seleccionar"],["A","avui"],["D","data"],["X","fet"],["O","obrir"],["/","cerca"]]){
+  for (const [key, what] of [["J K","moure"],["Espai · ⌘/Ctrl+clic · Maj+clic","seleccionar"],["A","avui"],["D","data"],["X","fet"],["O","obrir"],["/","cerca"]]){
     const hint = el("span",null,undefined,keys);
     el("b",null,key,hint);
     hint.append(document.createTextNode(" " + what));

@@ -117,6 +117,7 @@ export class ControlCentreView extends BaseTaskView {
       onToday: (task) => void this.actions.today(task),
       onTomorrow: (task) => void this.actions.tomorrow(task),
       onComplete: (task) => void this.actions.complete(task),
+      onReopen: (task) => void this.actions.reopen(task),
       onDate: (task, event) => this.dateMenu(task, event),
       onOpen: (task) => void this.openTask(task),
       onSelectionChange: () => this.renderFooter(),
@@ -849,7 +850,7 @@ export class ControlCentreView extends BaseTaskView {
       const keys = this.footerHost.createDiv({ cls: "tcf-keys" });
       for (const [key, what] of [
         ["J K", "moure"],
-        ["Espai", "seleccionar"],
+        ["Espai · ⌘/Ctrl+clic · Maj+clic", "seleccionar"],
         ["A", "avui"],
         ["D", "data"],
         ["X", "fet"],
