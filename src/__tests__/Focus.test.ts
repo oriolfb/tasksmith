@@ -73,8 +73,8 @@ describe("focusSections", () => {
 
   it("puts what arrived on its own first, and never in a chosen slot", () => {
     const s = focusSections({ tasks, chosen, today: TODAY });
-    // The description keeps its tags, by design: the parser strips fields, not text.
-    expect(s.urgent.map((t) => t.description)).toEqual(["avui", "urgent sense data #urgent"]);
+    // Tags are collected separately and stripped from the description.
+    expect(s.urgent.map((t) => t.description)).toEqual(["avui", "urgent sense data"]);
     expect(s.chosen.map((t) => t.description)).toEqual(["triada"]);
     expect(s.free).toBe(DAY_LIMIT - 1);
   });
@@ -95,7 +95,7 @@ describe("focusSections", () => {
         "molt endarrerida",
         "sense data",
         "triada",
-        "urgent sense data #urgent",
+        "urgent sense data",
       ].sort()
     );
   });
@@ -144,7 +144,7 @@ describe("focusSections", () => {
       today: TODAY,
     });
     expect(s.doneChosen.map((t) => t.description)).toEqual(["triada i tancada"]);
-    expect(s.done.map((t) => t.description)).toEqual(["arribada i tancada #urgent"]);
+    expect(s.done.map((t) => t.description)).toEqual(["arribada i tancada"]);
   });
 
   it("gives every slotted key a stable ordinal, in pick order, whether open or finished", () => {

@@ -106,7 +106,8 @@ export function parseTaskLine(raw: string): ParsedTask | null {
     rest = rest.slice(0, match.index);
   }
 
-  const description = rest.trim();
+  const tags = collect(TAG, rest, 2);
+  const description = rest.replace(TAG, "").trim();
 
   return {
     raw,
@@ -117,7 +118,7 @@ export function parseTaskLine(raw: string): ParsedTask | null {
     description,
     bodySpan: { start: bodyStart, end: bodyStart + rest.length },
     fields,
-    tags: collect(TAG, description, 2),
+    tags,
     links: collect(WIKILINK, description, 1),
   };
 }
