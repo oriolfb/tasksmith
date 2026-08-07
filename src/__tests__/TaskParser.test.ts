@@ -107,6 +107,16 @@ describe("field parsing", () => {
     expect(task.tags).toEqual(["#kpi"]);
   });
 
+  it("strips tags out of the description, wherever they sit in the line", () => {
+    const leading = parse("- [ ] #task Crear la nova presentació de in your shoes 📅 2026-08-07");
+    expect(leading.tags).toEqual(["#task"]);
+    expect(leading.description).toBe("Crear la nova presentació de in your shoes");
+
+    const trailing = parse("- [x] actualitzar status a la Carmen #kpi 📅 2025-12-10");
+    expect(trailing.tags).toEqual(["#kpi"]);
+    expect(trailing.description).toBe("actualitzar status a la Carmen");
+  });
+
   it("reads every priority marker", () => {
     expect(priorityOf(parse("- [ ] a 🔺"))).toBe("highest");
     expect(priorityOf(parse("- [ ] a ⏫"))).toBe("high");
