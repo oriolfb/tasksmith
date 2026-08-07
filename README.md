@@ -45,6 +45,7 @@ npm run deploy:watch # rebuild on save and copy into the vault
 npm run build        # type-check and produce a minified main.js
 npm run lint         # ESLint with eslint-plugin-obsidianmd
 npm test             # Jest
+npm run test:watch   # Jest in watch mode, for TDD
 ```
 
 `npm run deploy` builds once and copies `main.js`, `manifest.json` and `styles.css` into

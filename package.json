@@ -10,6 +10,7 @@
     "deploy:watch": "node esbuild.config.mjs deploy-watch",
     "lint": "eslint .",
     "test": "jest",
+    "test:watch": "jest --watch",
     "audit:vault": "jest src/__tests__/vaultAudit.test.ts",
     "version": "node version-bump.mjs && git add manifest.json versions.json"
   },
