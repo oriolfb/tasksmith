@@ -129,6 +129,41 @@ describe("focusSections", () => {
     expect(s.renegotiate.map((t) => t.description)).not.toContain("feta");
   });
 
+  /**
+   * A finished pick does not read as arrived on its own: it holds its ordinal and stays out of
+   * `done`, the list reserved for tasks that were never one of the three.
+   */
+  it("keeps a finished pick apart from a task that arrived and closed on its own", () => {
+    const pick = task("- [x] triada i tancada", { open: false });
+    const arrived = task("- [x] arribada i tancada #urgent", { open: false });
+    const s = focusSections({
+      tasks: [pick, arrived],
+      chosen: [],
+      done: [dayKey(pick), dayKey(arrived)],
+      slotted: [dayKey(pick)],
+      today: TODAY,
+    });
+    expect(s.doneChosen.map((t) => t.description)).toEqual(["triada i tancada"]);
+    expect(s.done.map((t) => t.description)).toEqual(["arribada i tancada #urgent"]);
+  });
+
+  it("gives every slotted key a stable ordinal, in pick order, whether open or finished", () => {
+    const first = task("- [ ] primera");
+    const second = task("- [x] segona", { open: false });
+    const third = task("- [ ] tercera");
+    const s = focusSections({
+      tasks: [first, second, third],
+      chosen: [dayKey(first), dayKey(third)],
+      done: [dayKey(second)],
+      slotted: [dayKey(first), dayKey(second), dayKey(third)],
+      today: TODAY,
+    });
+    expect(s.ordinals.get(dayKey(first))).toBe(1);
+    expect(s.ordinals.get(dayKey(second))).toBe(2);
+    expect(s.ordinals.get(dayKey(third))).toBe(3);
+    // Finishing the second pick did not shift the third one's number down to 2.
+  });
+
   it("does not let a finished task hold one of the three slots", () => {
     const feta = task("- [x] ja està", { open: false });
     const s = focusSections({ tasks: [feta], chosen: [], done: [dayKey(feta)], today: TODAY });
@@ -171,6 +206,19 @@ describe("DaySelection", () => {
     expect(day.size).toBe(3);
   });
 
+  it("keeps a finished pick's ordinal in slottedKeys instead of freeing it like keys()", () => {
+    const { day } = selection();
+    const a = task("- [ ] a");
+    const b = task("- [ ] b");
+    day.add(a, TODAY);
+    day.add(b, TODAY);
+    day.markDone(a, TODAY);
+    // `keys()` frees `a`'s slot so a fourth pick is possible; `slottedKeys()` still remembers it
+    // held the first one, which is what keeps its row from renumbering or moving.
+    expect(day.keys()).toEqual([dayKey(b)]);
+    expect(day.slottedKeys()).toEqual([dayKey(a), dayKey(b)]);
+  });
+
   it("stamps the plan with today and persists every change", () => {
     const { day, saved } = selection();
     day.add(task("- [ ] a"), TODAY);
@@ -180,20 +228,35 @@ describe("DaySelection", () => {
 
   /** The rule that makes the day cost nothing: yesterday's plan is not a backlog. */
   it("forgets a plan made for another day", () => {
-    const yesterday: DayPlan = { date: "2026-08-04", keys: ["01 Diari/nota.md|ahir"], done: [] };
+    const yesterday: DayPlan = {
+      date: "2026-08-04",
+      keys: ["01 Diari/nota.md|ahir"],
+      done: [],
+      slotted: ["01 Diari/nota.md|ahir"],
+    };
     const { day } = selection(yesterday);
     expect(day.size).toBe(0);
   });
 
   /** Including what you did: the record is today's, and midnight ends it. */
   it("forgets yesterday's record too", () => {
-    const yesterday: DayPlan = { date: "2026-08-04", keys: [], done: ["01 Diari/nota.md|ahir"] };
+    const yesterday: DayPlan = {
+      date: "2026-08-04",
+      keys: [],
+      done: ["01 Diari/nota.md|ahir"],
+      slotted: ["01 Diari/nota.md|ahir"],
+    };
     const { day } = selection(yesterday);
     expect(day.doneKeys()).toEqual([]);
   });
 
   it("keeps today's plan across a reload", () => {
-    const today: DayPlan = { date: formatIsoDate(TODAY), keys: ["01 Diari/nota.md|avui"], done: [] };
+    const today: DayPlan = {
+      date: formatIsoDate(TODAY),
+      keys: ["01 Diari/nota.md|avui"],
+      done: [],
+      slotted: ["01 Diari/nota.md|avui"],
+    };
     const { day } = selection(today);
     expect(day.keys()).toEqual(["01 Diari/nota.md|avui"]);
   });
@@ -213,6 +276,7 @@ describe("DaySelection", () => {
       date: formatIsoDate(TODAY),
       keys: [dayKey(alive), dayKey(gone)],
       done: [],
+      slotted: [dayKey(alive), dayKey(gone)],
     });
     day.prune([alive]);
     expect(day.keys()).toEqual([dayKey(alive)]);
@@ -227,7 +291,12 @@ describe("DaySelection", () => {
   it("frees the slot but keeps the record when the task gets ticked off in the note", () => {
     const before = task("- [ ] la mateixa");
     const after = task("- [x] la mateixa", { open: false });
-    const { day } = selection({ date: formatIsoDate(TODAY), keys: [dayKey(before)], done: [] });
+    const { day } = selection({
+      date: formatIsoDate(TODAY),
+      keys: [dayKey(before)],
+      done: [],
+      slotted: [dayKey(before)],
+    });
     day.prune([after]);
     expect(day.size).toBe(0);
     expect(day.doneKeys()).toEqual([dayKey(after)]);
@@ -236,7 +305,12 @@ describe("DaySelection", () => {
   it("drops the record of a task that no longer exists", () => {
     const alive = task("- [ ] viva");
     const gone = task("- [x] esborrada", { open: false });
-    const { day } = selection({ date: formatIsoDate(TODAY), keys: [], done: [dayKey(gone)] });
+    const { day } = selection({
+      date: formatIsoDate(TODAY),
+      keys: [],
+      done: [dayKey(gone)],
+      slotted: [dayKey(gone)],
+    });
     day.prune([alive]);
     expect(day.doneKeys()).toEqual([]);
   });
@@ -249,7 +323,12 @@ describe("DaySelection", () => {
   it("keeps the plan when there is nothing to reconcile against yet", () => {
     const chosen = task("- [ ] triada");
     const done = task("- [x] tancada", { open: false });
-    const stored: DayPlan = { date: formatIsoDate(TODAY), keys: [dayKey(chosen)], done: [dayKey(done)] };
+    const stored: DayPlan = {
+      date: formatIsoDate(TODAY),
+      keys: [dayKey(chosen)],
+      done: [dayKey(done)],
+      slotted: [dayKey(chosen), dayKey(done)],
+    };
     const { day, saved } = selection(stored);
 
     day.prune([]);
@@ -270,7 +349,12 @@ describe("DaySelection", () => {
 
   it("gives a reopened task its slot back, and takes it off the record", () => {
     const t = task("- [ ] tornem-hi");
-    const { day } = selection({ date: formatIsoDate(TODAY), keys: [], done: [dayKey(t)] });
+    const { day } = selection({
+      date: formatIsoDate(TODAY),
+      keys: [],
+      done: [dayKey(t)],
+      slotted: [dayKey(t)],
+    });
     day.reopened(t, TODAY);
     expect(day.doneKeys()).toEqual([]);
     expect(day.keys()).toEqual([dayKey(t)]);
@@ -279,7 +363,12 @@ describe("DaySelection", () => {
   it("reopens without a slot when the three are taken", () => {
     const t = task("- [ ] tornem-hi");
     const three = ["a", "b", "c"].map((n) => `01 Diari/nota.md|${n}`);
-    const { day } = selection({ date: formatIsoDate(TODAY), keys: three, done: [dayKey(t)] });
+    const { day } = selection({
+      date: formatIsoDate(TODAY),
+      keys: three,
+      done: [dayKey(t)],
+      slotted: [...three, dayKey(t)],
+    });
     day.reopened(t, TODAY);
     expect(day.doneKeys()).toEqual([]);
     expect(day.keys()).toEqual(three);

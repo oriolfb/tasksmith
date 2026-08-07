@@ -34,6 +34,7 @@ export const COLUMNS: TableColumn[] = [
 export interface TableCallbacks {
   onSort: (sort: SortKey) => void;
   onToday: (task: Task) => void;
+  onTomorrow: (task: Task) => void;
   onDate: (task: Task, event: MouseEvent) => void;
   onComplete: (task: Task) => void;
   onOpen: (task: Task) => void;
@@ -176,6 +177,7 @@ export class ControlTable {
     const actions = row.createDiv({ cls: "tcc-cell-actions tcc-acts" });
     this.action(actions, "done", "Fet", "Completar", () => this.callbacks.onComplete(task));
     this.action(actions, "today", "Avui", "Posar-la al dia d'avui", () => this.callbacks.onToday(task));
+    this.action(actions, "tomorrow", "Demà", "Posar-la demà", () => this.callbacks.onTomorrow(task));
     this.action(actions, "date", "Data", "Data, o descartar-la", (event) => this.callbacks.onDate(task, event));
   }
 

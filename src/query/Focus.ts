@@ -28,20 +28,34 @@ export interface FocusSections {
    * Once you press «Avui» on one it moves to `chosen`, takes a number and holds a slot.
    */
   urgent: Task[];
-  /** The ones you picked, in the order you picked them. */
+  /** The ones you picked and have not finished yet, in the order you picked them. */
   chosen: Task[];
+  /**
+   * Chosen tasks you have since finished. Kept apart from `done`, and from `chosen`, because
+   * finishing one frees its slot for another pick (see `DaySelection`) without it losing the
+   * ordinal it was given — it stays exactly where it was, struck through, instead of jumping to
+   * the closed list at the foot.
+   */
+  doneChosen: Task[];
   /** How many of the three slots are still free. */
   free: number;
   /**
-   * Ticked off today, in the order they fell. The only closed tasks the focus view shows: they
-   * stay in "Avui", struck through, because three empty slots at six in the evening look exactly
-   * like three at nine in the morning — and that reads as a day where nothing happened.
+   * Ticked off today without ever holding a slot — i.e. arrived on their own and finished before
+   * you got to them. The only closed tasks the focus view shows outside `doneChosen`: they stay in
+   * "Avui", struck through, at the foot, because three empty slots at six in the evening look
+   * exactly like three at nine in the morning — and that reads as a day where nothing happened.
    */
   done: Task[];
   /** Past their date. Not a failure — a decision you have not made yet. */
   renegotiate: Task[];
   undated: Task[];
   later: Task[];
+  /**
+   * Ordinal for every key that has ever held a slot today, chosen or since finished, in pick
+   * order. Derived from `slotted` rather than from `chosen` so a task's number never shifts when
+   * an earlier pick is finished and its slot reopens.
+   */
+  ordinals: Map<string, number>;
 }
 
 export interface FocusInput {
@@ -50,6 +64,12 @@ export interface FocusInput {
   chosen: string[];
   /** Keys ticked off today, in the order they fell. See `DaySelection`. */
   done?: string[];
+  /**
+   * Every key that has held one of today's three slots at some point, in the order it was first
+   * picked — including keys since finished, which `chosen` alone would have already forgotten.
+   * See `DaySelection.slottedKeys`.
+   */
+  slotted?: string[];
   today: Date;
   /** Free text filter, applied to every section at once. */
   text?: string;
@@ -64,10 +84,13 @@ export function focusSections(input: FocusInput): FocusSections {
   const chosenKeys = new Set(input.chosen);
   const doneOrder = input.done ?? [];
   const doneKeys = new Set(doneOrder);
+  const slottedOrder = input.slotted ?? [];
+  const slottedKeys = new Set(slottedOrder);
   const needle = (input.text ?? "").trim().toLowerCase();
 
   const urgent: Task[] = [];
   const chosen: Task[] = [];
+  const doneChosen: Task[] = [];
   const done: Task[] = [];
   const renegotiate: Task[] = [];
   const undated: Task[] = [];
@@ -79,10 +102,15 @@ export function focusSections(input: FocusInput): FocusSections {
 
     /*
      * Closed tasks stay out of the view, with one exception: the ones you ticked off today from
-     * "Avui". They are the day's record. Everything else closed belongs to the wide view.
+     * "Avui". They are the day's record. A closed task that once held a slot (`slotted`) is kept
+     * apart from the rest: it stays with `chosen`'s ordinal instead of falling in with tasks that
+     * arrived on their own and were closed before you ever got to your three.
      */
     if (!task.open) {
-      if (doneKeys.has(dayKey(task))) done.push(task);
+      if (doneKeys.has(dayKey(task))) {
+        if (slottedKeys.has(dayKey(task))) doneChosen.push(task);
+        else done.push(task);
+      }
       continue;
     }
 
@@ -115,6 +143,8 @@ export function focusSections(input: FocusInput): FocusSections {
 
   const order = (task: Task): number => input.chosen.indexOf(dayKey(task));
   chosen.sort((a, b) => order(a) - order(b));
+  const slotOrder = (task: Task): number => slottedOrder.indexOf(dayKey(task));
+  doneChosen.sort((a, b) => slotOrder(a) - slotOrder(b));
   const fell = (task: Task): number => doneOrder.indexOf(dayKey(task));
   done.sort((a, b) => fell(a) - fell(b));
 
@@ -123,15 +153,20 @@ export function focusSections(input: FocusInput): FocusSections {
   renegotiate.sort(byAge(today));
   later.sort((a, b) => (a.effectiveDate?.getTime() ?? 0) - (b.effectiveDate?.getTime() ?? 0));
 
+  const ordinals = new Map<string, number>();
+  slottedOrder.forEach((key, i) => ordinals.set(key, i + 1));
+
   return {
     urgent,
     chosen,
+    doneChosen,
     // A finished task no longer holds a slot: you can pick another one if you want to.
     free: Math.max(0, DAY_LIMIT - chosen.length),
     done,
     renegotiate,
     undated,
     later,
+    ordinals,
   };
 }
 

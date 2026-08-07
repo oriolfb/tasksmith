@@ -214,19 +214,37 @@ export class FocusRenderer {
     // never gets the terracotta "arrived" treatment just because its date happens to be today.
     if (section.urgent && ordinal === undefined && isUrgent(task, today)) row.addClass("tcf-urgent");
     if (!section.now) row.addClass("tcf-secondary");
+    // A chosen task you have since finished: struck through, in the same row it always had —
+    // never moved to the foot list, which is reserved for tasks that arrived on their own.
+    if (!task.open) row.addClass("tcf-done");
 
     const box = row.createDiv({ cls: "tcf-lead tcf-mark" });
     box.setAttribute("role", "button");
-    box.setAttribute("aria-label", "Completar");
-    setTooltip(box, "Completar", { delay: 200 });
-    box.addEventListener("click", (event) => {
-      event.stopPropagation();
-      this.callbacks.onComplete(task, section);
-    });
+    if (task.open) {
+      box.setAttribute("aria-label", "Completar");
+      setTooltip(box, "Completar", { delay: 200 });
+      box.addEventListener("click", (event) => {
+        event.stopPropagation();
+        this.callbacks.onComplete(task, section);
+      });
+    } else {
+      box.addClass("tcf-mark-on");
+      setIcon(box, "check");
+      box.setAttribute("aria-label", "Reobrir");
+      setTooltip(box, "Reobrir", { delay: 200 });
+      box.addEventListener("click", (event) => {
+        event.stopPropagation();
+        this.callbacks.onReopen(task);
+      });
+    }
 
     const main = row.createDiv({ cls: "tcf-main" });
     const text = main.createDiv({ cls: "tcf-text", text: task.description || "(sense descripció)" });
     text.addEventListener("click", () => this.callbacks.onOpen(task));
+
+    // Finished: no metadata, no "Avui · Data" — the only thing left to decide about it is
+    // whether it was really done, and the tick above already covers that.
+    if (!task.open) return;
 
     /*
      * The second line carries the context on the left and the actions on the right.

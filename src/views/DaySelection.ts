@@ -13,9 +13,17 @@ export interface DayPlan {
    * started.
    */
   done: string[];
+  /**
+   * Every key that has held one of today's three slots at some point, in pick order — including
+   * keys since finished and removed from `keys`. `keys` alone forgets a task the moment it frees
+   * its slot, which is right for counting what is still free, but wrong for numbering: a finished
+   * task's row would lose its ordinal and read as having moved, when it should just sit there
+   * struck through.
+   */
+  slotted: string[];
 }
 
-export const EMPTY_PLAN: DayPlan = { date: "", keys: [], done: [] };
+export const EMPTY_PLAN: DayPlan = { date: "", keys: [], done: [], slotted: [] };
 
 /**
  * Today's chosen three.
@@ -34,7 +42,7 @@ export class DaySelection {
     private readonly persist: (plan: DayPlan) => void,
     today: Date = startOfToday()
   ) {
-    this.plan = forToday(withDone(stored), today);
+    this.plan = forToday(withSlotted(withDone(stored)), today);
   }
 
   /** Drops the plan if it was made for another day. Call before reading on a fresh paint. */
@@ -54,6 +62,10 @@ export class DaySelection {
     return this.plan.done;
   }
 
+  slottedKeys(): string[] {
+    return this.plan.slotted;
+  }
+
   has(task: Task): boolean {
     return this.plan.keys.includes(dayKey(task));
   }
@@ -71,11 +83,13 @@ export class DaySelection {
     const key = dayKey(task);
     if (this.plan.keys.includes(key)) return true;
     if (this.isFull) return false;
-    this.plan = { ...this.plan, date: formatIsoDate(today), keys: [...this.plan.keys, key] };
+    const slotted = this.plan.slotted.includes(key) ? this.plan.slotted : [...this.plan.slotted, key];
+    this.plan = { ...this.plan, date: formatIsoDate(today), keys: [...this.plan.keys, key], slotted };
     this.persist(this.plan);
     return true;
   }
 
+  /** Drops a task from the day entirely — unlike finishing it, this forgets it held a slot at all. */
   remove(task: Task): void {
     const key = dayKey(task);
     if (!this.plan.keys.includes(key) && !this.plan.done.includes(key)) return;
@@ -83,6 +97,7 @@ export class DaySelection {
       ...this.plan,
       keys: this.plan.keys.filter((k) => k !== key),
       done: this.plan.done.filter((k) => k !== key),
+      slotted: this.plan.slotted.filter((k) => k !== key),
     };
     this.persist(this.plan);
   }
@@ -100,6 +115,7 @@ export class DaySelection {
     const already = this.plan.done.includes(key);
     if (already && keys.length === this.plan.keys.length) return;
     this.plan = {
+      ...this.plan,
       date: formatIsoDate(today),
       keys,
       done: already ? this.plan.done : [...this.plan.done, key],
@@ -116,6 +132,7 @@ export class DaySelection {
     if (!this.plan.done.includes(key)) return;
     const room = !this.plan.keys.includes(key) && this.plan.keys.length < DAY_LIMIT;
     this.plan = {
+      ...this.plan,
       date: formatIsoDate(today),
       keys: room ? [...this.plan.keys, key] : this.plan.keys,
       done: this.plan.done.filter((k) => k !== key),
@@ -160,9 +177,16 @@ export class DaySelection {
     for (const key of this.plan.keys) {
       if (!open.has(key) && exists.has(key) && !done.includes(key)) done.push(key);
     }
+    const slotted = this.plan.slotted.filter((key) => exists.has(key));
 
-    if (keys.length === this.plan.keys.length && same(done, this.plan.done)) return;
-    this.plan = { ...this.plan, keys, done };
+    if (
+      keys.length === this.plan.keys.length &&
+      same(done, this.plan.done) &&
+      same(slotted, this.plan.slotted)
+    ) {
+      return;
+    }
+    this.plan = { ...this.plan, keys, done, slotted };
     this.persist(this.plan);
   }
 }
@@ -170,6 +194,15 @@ export class DaySelection {
 /** Data written by 0.2.2 has no record of what was done. */
 function withDone(plan: DayPlan): DayPlan {
   return plan.done ? plan : { ...plan, done: [] };
+}
+
+/**
+ * Data written before this ordinal was tracked separately has no `slotted` at all. `keys` is the
+ * best available guess — it undercounts a plan with tasks already finished when the plugin
+ * updates, so those rows fall back to the foot list for one day rather than crashing.
+ */
+function withSlotted(plan: DayPlan): DayPlan {
+  return plan.slotted ? plan : { ...plan, slotted: [...plan.keys] };
 }
 
 function forToday(plan: DayPlan, today: Date): DayPlan {

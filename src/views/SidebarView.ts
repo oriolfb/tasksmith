@@ -246,14 +246,24 @@ export class SidebarView extends ItemView {
       tasks: all,
       chosen: this.day.keys(),
       done: this.day.doneKeys(),
+      slotted: this.day.slottedKeys(),
       today,
       text: this.search,
     });
 
-    // The 1·2·3 numbers what is still live, so it closes up when you finish one. What you finished
-    // keeps its line at the foot of the section instead, with a tick where its number was.
-    const ordinals = new Map<string, number>();
-    focus.chosen.forEach((task, i) => ordinals.set(dayKey(task), i + 1));
+    // Ordinals come from `slotted` pick order, not from `chosen`'s current position, so a task's
+    // number holds even after it is finished and its slot reopens for another pick.
+    const ordinals = focus.ordinals;
+    // What "the day's three" means for the header and the empty slots below: every pick that
+    // counts against `DAY_LIMIT`, whether it is still open or already finished. A task finishing
+    // does not shrink this back down — that would be the slot's number reopening for reuse.
+    const settled = focus.chosen.length + focus.doneChosen.length;
+    const finishedToday = focus.doneChosen.length + focus.done.length;
+    // Still ordered by ordinal, so a finished pick renders exactly where it always did among the
+    // still-open ones instead of jumping to the foot with the tasks that arrived on their own.
+    const chosenAndFinished = [...focus.chosen, ...focus.doneChosen].sort(
+      (a, b) => (ordinals.get(dayKey(a)) ?? 0) - (ordinals.get(dayKey(b)) ?? 0)
+    );
 
     this.totalEl.setText(`${this.openCount(all)} obertes`);
 
@@ -263,13 +273,13 @@ export class SidebarView extends ItemView {
       said.push(
         { text: `${count(focus.urgent.length, "tasca", "tasques")} ${soles}`, strong: true },
         { text: " Tries " },
-        { text: `${focus.chosen.length} de ${DAY_LIMIT}`, accent: true },
+        { text: `${settled} de ${DAY_LIMIT}`, accent: true },
         { text: `, i queden ${focus.renegotiate.length} per renegociar.` }
       );
-    } else if (focus.chosen.length > 0) {
+    } else if (settled > 0) {
       said.push(
         { text: "Tries " },
-        { text: `${focus.chosen.length} de ${DAY_LIMIT}`, accent: true },
+        { text: `${settled} de ${DAY_LIMIT}`, accent: true },
         { text: ` per avui. Queden ${focus.renegotiate.length} per renegociar.` }
       );
     } else {
@@ -279,7 +289,7 @@ export class SidebarView extends ItemView {
       );
     }
     // Said last and said plainly: the line that answers "he fet res, avui?".
-    if (focus.done.length > 0) said.push({ text: ` ${doneSoFar(focus.done.length)}`, strong: true });
+    if (finishedToday > 0) said.push({ text: ` ${doneSoFar(finishedToday)}`, strong: true });
     this.say(...said);
 
     /*
@@ -288,11 +298,10 @@ export class SidebarView extends ItemView {
      * up (see `DaySelection`) should not read as the app asking for two more. From then on, adding
      * past three is your call alone, offered once, quietly, with no ordinal walking you through it.
      */
-    const settled = focus.chosen.length + focus.done.length;
     const goalMet = settled >= DAY_LIMIT;
     const emptySlots: number[] = [];
     if (!goalMet) {
-      for (let slot = focus.chosen.length + 1; slot <= DAY_LIMIT; slot++) emptySlots.push(slot);
+      for (let slot = settled + 1; slot <= DAY_LIMIT; slot++) emptySlots.push(slot);
     }
 
     return [
@@ -301,8 +310,8 @@ export class SidebarView extends ItemView {
         label: "Avui",
         // No count: "2 han arribat soles · 1 de 3 triada" already says it, and a bare number
         // next to it only invites the question of which one it is counting.
-        why: whyToday(focus.urgent.length, focus.chosen.length, focus.done.length),
-        tasks: [...focus.urgent, ...focus.chosen],
+        why: whyToday(focus.urgent.length, settled, finishedToday),
+        tasks: [...focus.urgent, ...chosenAndFinished],
         done: focus.done,
         now: true,
         emptySlots,

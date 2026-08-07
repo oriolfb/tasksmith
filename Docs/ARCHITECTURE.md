@@ -44,8 +44,8 @@ vault audit test. The numbers the UI shows and the numbers CI verifies cannot co
 different code.
 
 **Everything a view says is computed by a pure function.** `Focus.ts` (the dock's four sections),
-`Metrics.ts` (the KPI strip, the week strip and the history bars), `Health.ts` (the findings) and `Filters.ts`
-(the filter chips and the `+ filtre` menu) take tasks and a date and return data. No DOM, no
+`Metrics.ts` (the KPI strip, the week strip and the history bars), `Health.ts` (the findings) and
+`Filters.ts` (the filter chips and the `+ filtre` menu) take tasks and a date and return data. No DOM, no
 `App`, no settings object — which is what lets the vault audit assert them against the real vault
 and print them from `npm run audit:vault`. A figure in the panel that no test can see is a figure
 nobody can trust. The one thing `query/` borrows from `views/` is `format.ts`, which is pure text
@@ -147,6 +147,23 @@ Four consequences worth keeping:
 
 Stored settings are migrated at the constructor boundary (`withDone`), so a plan written by 0.2.2
 with no `done` array is normalised once instead of guarded at every read.
+
+**A freed slot is an offer, never a demand.** `DaySelection.isFull` counts only the still-open
+keys, so finishing one of the three deliberately reopens it — you can swap in another task on a
+slow morning. But the dock does not treat every open slot the same: below `DAY_LIMIT` it numbers
+what's left and names it (`tria la segona…`), which is onboarding for a day that has not started.
+Once `chosen.length + doneChosen.length` reaches `DAY_LIMIT` the day's goal is already met, and
+`FocusRenderer` renders exactly one unnumbered `en pots afegir una més, si vols` instead of walking
+through the countdown again — a task finishing is progress, not a summons for two more.
+
+**A finished pick keeps its row, not just its ordinal.** `keys` and `slotted` answer different
+questions on purpose: `keys` is "how many slots are still spoken for right now" (so a finished task
+must leave it, freeing room for another pick), `slotted` is "which keys have ever been one of
+today's three" (so a finished task must *not* leave it, or its row would lose the number it earned).
+`focusSections` uses `slotted` to split closed tasks in two — `doneChosen` for a finished pick,
+`done` for a task that arrived on its own and closed before you got to your three — and only the
+latter moves to the foot list under "Fetes avui" with the FLIP animation; a finished pick stays in
+its row, sorted by the same ordinal, so nothing measures a position change and nothing animates.
 
 ## The effective date
 
@@ -296,6 +313,15 @@ centre's root — needed so the table can drop columns when the tab is split nar
 inline size can no longer come from its contents, only from its parent. Without `width: 100%` the
 entire tab renders as a 30px column. Container queries also cannot match the container itself, so
 the query lives on the root and the rules address its descendants.
+
+**Under `overflow: hidden`, a row that does not fit is not scrolled to — it is gone.** The control
+centre's root hides its overflow so the table owns the scrolling, which means any fixed-width row
+above the table has to wrap instead of overflowing. The week strip's seven 30px columns plus its
+three asides measured 470px against a 448px box in a 480px split: the "sense data" count simply
+disappeared, silently, in the one layout where a hidden count matters most. `flex-wrap: wrap` on the
+strip and narrower columns inside the existing container query fix it. Worth measuring rather than
+eyeballing — `scrollWidth > clientWidth` in the harness says it in one line, and a screenshot of a
+clipped row looks exactly like a row that ends there.
 
 **Build the summary sentence as DOM, not `innerHTML`.** It only ever interpolates counts today,
 but note content is one refactor away from reaching it.

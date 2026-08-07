@@ -113,6 +113,7 @@ export class ControlCentreView extends BaseTaskView {
     this.table = new ControlTable({
       onSort: (sort) => this.sortBy(sort),
       onToday: (task) => void this.actions.today(task),
+      onTomorrow: (task) => void this.actions.tomorrow(task),
       onComplete: (task) => void this.actions.complete(task),
       onDate: (task, event) => this.dateMenu(task, event),
       onOpen: (task) => void this.openTask(task),

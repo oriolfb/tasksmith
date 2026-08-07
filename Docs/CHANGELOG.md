@@ -73,6 +73,30 @@
   `index.ready`, and the reconciliation itself refuses to run against an empty list. The slow scan
   above is what made this near-certain rather than occasional; both are fixed, but either alone would
   have left the bug reachable.
+- **Choosing a task doesn't dress it up as urgent anymore.** The terracotta rule and the "arrived"
+  mark were decided from `isUrgent(task)` alone, which only ever asks about the task's own date,
+  priority and tag — never about whether the row already holds one of today's three ordinals. A task
+  dated today that you picked yourself kept the "arrived unbidden" look meant for tasks that put
+  themselves on the list. Both checks now also exclude anything with an ordinal, and the label itself
+  dropped "data d'" — it's just "avui".
+- **The pending slot lines up with the tasks above it.** `.tcf-slot` carried no left padding and no
+  bleed, so a chosen task's checkbox and text sat 12px to the right of the very hint inviting you to
+  fill the slot below it. It now shares the row's padding, margin and hover background, with a
+  spacer standing in for the checkbox so the hint text lands under the description above it.
+- **Finishing your three doesn't ask you for two more.** A finished task frees its slot back up by
+  design — `DaySelection` counts only open keys — but the numbered "tria la segona… i la tercera" is
+  onboarding for a day that has not started, and re-showing it every time a task closed read as the
+  app asking for more when the day's three were already done. Past `chosen.length + done.length ===
+  DAY_LIMIT` the walkthrough stops; one quiet, unnumbered "en pots afegir una més, si vols" replaces
+  it, and picking a fourth from there is entirely your call.
+- **Finishing one of your three no longer flies it across the dock.** It used to drop out of its row
+  and reappear struck through under "Fetes avui", animated the whole way — motion that read as the
+  app relocating something you had already decided about. A chosen task now stays in the exact row
+  it always had, tatxada in place, ordinal and all; "Fetes avui" is reserved for tasks that arrived
+  on their own and were closed before you got to your three, which still move there with the
+  animation, because that line genuinely is a different place. `DaySelection.slotted` is what makes
+  the ordinal survive the slot freeing up: `keys` forgets a finished task on purpose (so a fourth
+  pick is possible), `slotted` does not, so the row's number never renumbers out from under it.
 
 ## 0.4.0 — TaskSmith, and the shape a community plugin is supposed to have
 

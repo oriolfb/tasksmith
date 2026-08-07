@@ -31,6 +31,14 @@
 another day is dropped on read; `prune` frees the slot of a task that has been completed, deleted
 or reworded. Nothing is written to the vault, which is why an unfinished day creates no debt.
 
+Free slots are numbered and named ("tria la segona…") only until `chosen.length + doneChosen.length`
+reaches `DAY_LIMIT`. Past that point the day's three are settled, and one unnumbered slot offers a
+fourth pick without repeating the countdown.
+
+A finished pick (`doneChosen`) stays in its row, struck through, sorted by its ordinal alongside the
+still-open ones — it never moves to the foot list. "Fetes avui" is only for `done`: tasks that
+arrived on their own (`isUrgent`) and were closed before ever holding a slot.
+
 `prune(tasks)` is a no-op on an empty list, and callers check `index.ready` first. Both say the
 same thing: an index still loading is not a vault where every chosen task has been deleted.
 
@@ -41,7 +49,7 @@ no bare keyboard shortcut for it. Both views open that menu through `DateMenu.op
 
 ### The control centre
 
-Four pure modules decide everything it shows; the view only draws them.
+Pure modules decide everything it shows; the view only draws them.
 
 | Module | Answers |
 |---|---|

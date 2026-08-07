@@ -10,16 +10,19 @@ code is running" are not the same claim.
 ## Where the numbers come from
 
 Every claim below is measured by `npm run audit:vault`, which runs the real pipeline over the
-real vault and prints two lines: the raw counts and *what the views actually show* (they differ —
-documentation checklists are excluded).
+real vault and prints the raw counts, *what the views actually show* (they differ — documentation
+checklists are excluded), and the two strips the control centre draws.
 
 ```
-866 notes · 474 task lines · 36 open · overdue 14 · today 0 · week 2 · later 5 · undated 15
+867 notes · 474 task lines · 35 open · overdue 13 · today 0 · week 2 · later 5 · undated 15
 reference 3 · someday 0 · people Armando, Carmen, Dani Barreiro, Mireia, Mónica, Oscar Fafián, Xoel
-shown to the user: overdue 14 · today 0 · week 2 · later 5 · undated 12
-centre de control: 33 obertes en 23 notes · 14 per renegociar (la més antiga fa 37 dies) ·
-12 sense data (12 amb data a la nota) · 2,3 tancades/dia laborable (428 amb ✅, 0 amb ❌)
-tancades per mes: gen 73 · febr 80 · març 51 · abr 30 · maig 34 · juny 65 · jul 33 · ag 24
+shown to the user: overdue 13 · today 0 · week 2 · later 5 · undated 12
+centre de control: 32 obertes en 22 notes · 13 per renegociar (la més antiga fa 37 dies) ·
+12 sense data (12 amb data a la nota) · 2,3 tancades/dia laborable (429 amb ✅, 0 amb ❌)
+creades/tancades per mes: 01 83/73 · 02 63/80 · 03 45/51 · 04 59/30 · 05 34/34 · 06 58/65 ·
+07 58/33 · 08 3/25
+la setmana: 08-05 0 · 08-06 2 · 08-07 0 · 08-08 0 · 08-09 0 · 08-10 0 · 08-11 0 ·
+abans d'avui 13 · més enllà 5 · sense data 12
 ```
 
 Two of those numbers shaped the whole design: **today was 0 and this week was 0** for weeks, while
@@ -28,6 +31,18 @@ structurally empty, and the overdue list was not a list of failures — it was a
 never made. Meanwhile **428 tasks have been closed since December and not one has ever been
 cancelled**: at 428 with `✅` and 0 with `❌`, saying "no" effectively did not exist. That number is
 now a finding in the control centre's health panel rather than a line in this document.
+
+**The backlog is not a throughput problem.** Over eight months the vault took in 403 tasks and
+closed 391 — near enough balanced that "close more" was never the fix. The pile comes from two
+months where intake nearly doubled output, April (59 in, 30 out) and July (58/33), and it has never
+been paid back since. This is the reading the old chart could not give: closings per month alone
+made July look like a slow month rather than a month that took on 58 new commitments.
+
+**Two of 32 open tasks fall in the next seven days.** The week strip is mostly zeros, and the
+zeros are the finding: work in this vault becomes visible when it is already late, not when it is
+scheduled. Thirteen sit before today, twelve carry no date at all, five are further out than the
+strip reaches. A strip that stayed empty every morning would be a strip worth deleting — what makes
+it worth keeping is that the three counts beside it say where everything went instead.
 
 ## Done
 
@@ -78,8 +93,9 @@ the numbers, the table and the health panel and no day plan.
    (and how many have a date in their note) · **closings per working day**, the measured capacity
    the three slots come from. Each figure filters the table in one click, and the strip always
    describes the vault, never the current filter.
-2. **Throughput strip** — closed per month over eight months, `✅` and `❌` split in the tooltip,
-   the month in progress marked so the 5th of August does not read as a collapse.
+2. **Week strip** — one column per day from today, what each day already carries, and beside them
+   the three counts the seven days leave out. Clicking a column filters the table to it. The
+   history it replaced — created against closed per month — is one click below, folded.
 3. **Filter chips** — the bar reads as a sentence, each chip clears itself, `+ filtre` opens the
    rest. The two filters that are on by default are chips too, so they can be seen and switched off.
 4. **Sortable table** — Tasca · Termini · Amb qui · Àrea · Origen · Accions; click a column again to
@@ -145,6 +161,19 @@ that empties itself as you work looks exactly like a view where nothing happened
 at six in the evening, three at nine in the morning. The record dies at midnight with the plan, and
 un-ticking the box hands the task back to a free slot.
 
+**The scan reads concurrently and still persists nothing.** Measured on the real vault: 2,392 ms
+reading 895 notes one `await` at a time, 168 ms in batches of 32, 32 ms to parse all 508 tasks.
+The scan was never CPU-bound and it was never a caching problem — it was 895 round-trips taken in
+single file. Batching removed the whole cost, so there is still no index on disk to go stale.
+
+**Rejected: skipping notes that `metadataCache` says hold no list items.** Only 196 of the 895
+notes contain a task line, so the filter would drop 78% of the reads — and it is not worth it.
+Batching already put the scan at 168 ms, so the prefilter buys ~100 ms, and it buys them by making
+the index trust Obsidian's list parser to register exactly the lines `TaskParser` goes out of its
+way to accept: tasks inside blockquotes, EM SPACE indents, `1. [ ]`. Whether it does was never
+verified, and the failure mode is a task that silently stops existing. In the one plugin whose
+purpose is not to lose tasks, 100 ms does not buy that risk.
+
 **Discarding costs one deliberate step more than postponing.** "No ho faré" lives at the bottom of
 the date menu with a warning style, not as a word in the row, and there is no bare keyboard
 shortcut for it. It cancels the line (`- [-]` plus `❌ date`) — it never deletes anything — and it
@@ -181,42 +210,5 @@ worse.
 
 ## The traps this project has already fallen into
 
-1. **Pinning a count from a live vault in a test.** It happened twice: once with the bucket counts,
-   once with `expect(weekly.length).toBeGreaterThan(0)` — which passed the day it was written and
-   failed the moment the weekly notes were emptied for real. Assert invariants; add a synthetic
-   case when the rule needs data that may not exist.
-2. **Styling something Obsidian already styles.** See `<button>` above.
-3. **Assuming a deploy is a reload.** `styles.css` is picked up live, `main.js` is not. New CSS on
-   old JS produced a screenshot that looked like nothing had changed. Bump the version on every
-   visible change and read it back from the settings tab.
-4. **Counting emoji with a character class.** `/[🔺⏫🔼🔽⏬]/` without the `u` flag matches the
-   *surrogate halves*, so it also matches `📅`. It reported 28 tasks with a priority when the real
-   answer is zero, and that wrong number was used to justify keeping the priority UI.
-5. **Overwriting a class that is also a query hook.** `lead.className = "ord"` erased the `.lead`
-   the next paint looked for; `paint()` threw before it swapped the list, so the lens button did
-   nothing and the animation never ran — with no visible error anywhere. Symptom to recognise: a
-   control that silently does nothing usually means the render threw halfway, leaving the previous
-   DOM in place.
-6. **Marking a state with a colour the pane already uses.** The active lens carried
-   `--background-secondary`, which in the left dock *is* the pane background: the pill existed and
-   was invisible, so neither tab looked selected. A state colour has to come from a hue the
-   surroundings never use — here `--tcf-lila`, the accent that already means "you chose this".
-7. **Trusting one class to beat a theme.** Themes style buttons as `<container> button`, which
-   outweighs a plugin's single `.tcf-tab` and reinstates the grey chrome on *both* tabs, flattening
-   the very difference the state colour was meant to draw. Rules that a theme must not reach go two
-   classes deep, and `mockups/06-render-real.html` now simulates buttons at theme specificity so the
-   regression shows up outside Obsidian.
-8. **Explaining away a screenshot instead of diagnosing it.** Faced with "it still looks wrong", the
-   deduction "your screenshot must be stale" was made from a single detail and was wrong. Cheap
-   diagnostics that would have settled it in one step: grep the *deployed* bundle for the new
-   markers, list every copy of the plugin on disk, check which vault Obsidian actually has open,
-   and put the loaded version in the settings tab.
-7. **One class placing a column *and* hiding it.** Trap 5 in a second costume: the control centre's
-   table gave the header cell and the row's action container one class, so the `opacity: 0` that
-   keeps the action words hidden until hover also made the "Accions" *heading* invisible. Hook and
-   state coexist — `"tcc-cell-actions tcc-acts"` — and the harness caught it, not a screenshot.
-8. **`container-type` means the width can no longer come from the contents.** `container-type:
-   inline-size`, added to the control centre's root so the table could drop columns in a split tab,
-   collapsed the whole tab to a 30px column: an inline-size container cannot be sized by what is
-   inside it, so it needs `width: 100%` from its parent. One computed-style read settles it;
-   the screenshot just looks broken.
+Moved to [LLIÇONS.md](LLIÇONS.md). The list outgrew this file — it is read while writing code, not
+while planning a phase, and by eleven entries the numbering had already broken twice.
