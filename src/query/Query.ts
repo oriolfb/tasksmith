@@ -72,6 +72,8 @@ const BUCKET_LABELS: Record<Bucket, string> = {
   overdue: "Endarrerides",
   today: "Avui",
   week: "Aquesta setmana",
+  nextWeek: "La setmana que ve",
+  month: "Aquest mes",
   later: "Més endavant",
   undated: "Sense data",
   closed: "Tancades",
@@ -210,7 +212,16 @@ export function runQuery(tasks: Task[], state: QueryState, ctx: QueryContext): T
  * are excluded: a count you have learnt to distrust is worse than no count.
  */
 export function bucketCounts(tasks: Task[], today = startOfToday()): Record<Bucket, number> {
-  const counts: Record<Bucket, number> = { overdue: 0, today: 0, week: 0, later: 0, undated: 0, closed: 0 };
+  const counts: Record<Bucket, number> = {
+    overdue: 0,
+    today: 0,
+    week: 0,
+    nextWeek: 0,
+    month: 0,
+    later: 0,
+    undated: 0,
+    closed: 0,
+  };
   for (const task of tasks) {
     if (isEmptyTask(task) || task.kind !== "commitment") continue;
     counts[bucketOf(task, today)]++;

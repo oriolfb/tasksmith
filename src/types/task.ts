@@ -61,7 +61,7 @@ export interface TaskLocation {
   line: number;
 }
 
-export type Bucket = "overdue" | "today" | "week" | "later" | "undated" | "closed";
+export type Bucket = "overdue" | "today" | "week" | "nextWeek" | "month" | "later" | "undated" | "closed";
 
 /**
  * What a task line actually is, decided by the host note's `tipus`. A checklist inside a

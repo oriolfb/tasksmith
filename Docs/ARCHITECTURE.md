@@ -214,8 +214,8 @@ Frontmatter comes from Obsidian's `metadataCache` in the plugin. `Frontmatter.ts
 stand-in used only when no parsed frontmatter is supplied — the vault audit test reads files with
 `fs`, and an audit that could not see frontmatter could not verify any of the rules above.
 
-Every open task then falls in exactly one bucket: `overdue`, `today`, `week`, `later`,
-`undated`. Closed tasks go to `closed`.
+Every open task then falls in exactly one bucket: `overdue`, `today`, `week` (this week),
+`nextWeek`, `month` (rest of this month), `later`, `undated`. Closed tasks go to `closed`.
 
 ## Rendering inside Obsidian
 

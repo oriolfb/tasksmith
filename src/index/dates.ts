@@ -59,3 +59,13 @@ export function endOfWeek(today: Date): Date {
   const daysToSunday = dow === 0 ? 0 : 7 - dow;
   return addDays(today, daysToSunday);
 }
+
+/** Sunday of the week after this one — the upper bound of the "next week" bucket. */
+export function endOfNextWeek(today: Date): Date {
+  return addDays(endOfWeek(today), 7);
+}
+
+/** The last calendar day of `today`'s month — the upper bound of the "this month" bucket. */
+export function endOfMonth(today: Date): Date {
+  return new Date(today.getFullYear(), today.getMonth() + 1, 0);
+}
