@@ -70,6 +70,7 @@ export class SidebarView extends ItemView {
       onComplete: (task, section) => void this.completeFrom(task, section.now === true),
       onReopen: (task) => void this.reopen(task),
       onDrop: (task) => this.drop(task),
+      onReschedule: (task) => this.day.remove(task),
       onOpen: (task) => void this.renderer.openTask(task),
       onToggleSection: (key) => void this.toggleSection(key),
       isCollapsed: (key) => this.settings.collapsedSections.includes(key),

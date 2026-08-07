@@ -17,6 +17,16 @@ export interface DateMenuCallbacks {
   onDrop: (task: Task) => Promise<void>;
   onOpen: (task: Task) => void;
   onDone: () => void;
+  /**
+   * Any entry here that writes a new date, or clears one, fires this before `onDone`. Choosing a
+   * task for today and then postponing it is you deciding, right now, that it is not today's
+   * after all — the caller uses this to give up whatever slot it held (chosen, or arrived on its
+   * own) instead of leaving it stuck on a day it no longer belongs to.
+   *
+   * Not fired for "Obrir la nota" (no date changes) or "No ho faré" (the caller already forgets
+   * the slot through `onDrop`; firing both would be the same decision announced twice).
+   */
+  onReschedule: (task: Task) => void;
 }
 
 export function openDateMenu(
@@ -33,6 +43,7 @@ export function openDateMenu(
     menu.addItem((item) =>
       item.setTitle(title).onClick(async () => {
         await run();
+        callbacks.onReschedule(task);
         callbacks.onDone();
       })
     );
@@ -58,6 +69,7 @@ export function openDateMenu(
         // Dismissed with no date is not "no date": clearing it is the item below, deliberately.
         if (!date) return;
         await actions.scheduleOn(task, date);
+        callbacks.onReschedule(task);
         callbacks.onDone();
       })
   );
