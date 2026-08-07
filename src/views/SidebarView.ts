@@ -412,7 +412,7 @@ export class SidebarView extends ItemView {
     const buckets: Partial<Record<string, Bucket[]>> = {
       renegociar: ["overdue"],
       "sense-data": ["undated"],
-      "mes-endavant": ["week", "later"],
+      "mes-endavant": ["week", "nextWeek", "month", "later"],
     };
     const wanted = buckets[section.key];
     return wanted ? { group: "bucket", buckets: wanted, statusScope: "open" } : {};

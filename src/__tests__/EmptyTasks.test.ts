@@ -85,6 +85,8 @@ describe("views never show empty tasks", () => {
 
   it("keeps them out of the bucket counts", () => {
     const counts = bucketCounts(tasks, TODAY);
-    expect(counts.overdue + counts.today + counts.week + counts.later + counts.undated).toBe(1);
+    expect(
+      counts.overdue + counts.today + counts.week + counts.nextWeek + counts.month + counts.later + counts.undated
+    ).toBe(1);
   });
 });

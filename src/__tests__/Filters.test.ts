@@ -19,8 +19,8 @@ describe("describeFilters", () => {
   it("names the deadline filter the way the dock's sections do", () => {
     expect(labels({ buckets: ["overdue"] })).toContain("per renegociar");
     expect(labels({ buckets: ["undated"] })).toContain("sense data");
-    // The dock's "N més" hands over both at once, and it is one idea, so it gets one chip.
-    expect(labels({ buckets: ["week", "later"] })).toContain("més endavant");
+    // The dock's "N més" hands over all four at once, and it is one idea, so it gets one chip.
+    expect(labels({ buckets: ["week", "nextWeek", "month", "later"] })).toContain("més endavant");
   });
 
   /** A week that starts tomorrow is not a week. */
@@ -101,6 +101,16 @@ describe("filterMenu", () => {
     const week = deadline.options.find((option) => option.label === "Aquesta setmana");
     // The day filter comes off with it: a bucket and a single day answer the same question.
     expect(week?.patch).toEqual({ buckets: ["today", "week"], dueOn: null });
+  });
+
+  // The table groups this finely, so the filter menu offers the same two extra buckets on their
+  // own, not only bundled inside "Més endavant".
+  it("offers next week and this month as their own deadline options", () => {
+    const deadline = filterMenu(DEFAULT_QUERY, ctx).find((group) => group.label === "Termini")!;
+    const nextWeek = deadline.options.find((option) => option.label === "La setmana que ve");
+    expect(nextWeek?.patch).toEqual({ buckets: ["nextWeek"], dueOn: null });
+    const month = deadline.options.find((option) => option.label === "Aquest mes");
+    expect(month?.patch).toEqual({ buckets: ["month"], dueOn: null });
   });
 
   it("offers the line kinds only when the vault holds such lines", () => {

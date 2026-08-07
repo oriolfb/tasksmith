@@ -1,5 +1,5 @@
 import type { Bucket, ParsedTask, Task } from "../types/task";
-import { addDays, daysBetween, endOfWeek, startOfToday } from "./dates";
+import { addDays, daysBetween, endOfMonth, endOfNextWeek, endOfWeek, startOfToday } from "./dates";
 
 /**
  * The rule the whole plugin hangs on. A task with no explicit date still has one when
@@ -24,10 +24,21 @@ export function bucketOf(task: Task, today: Date = startOfToday()): Bucket {
   if (time < today.getTime()) return "overdue";
   if (time === today.getTime()) return "today";
   if (time <= endOfWeek(today).getTime()) return "week";
+  if (time <= endOfNextWeek(today).getTime()) return "nextWeek";
+  if (time <= endOfMonth(today).getTime()) return "month";
   return "later";
 }
 
-export const BUCKET_ORDER: Bucket[] = ["overdue", "today", "week", "later", "undated", "closed"];
+export const BUCKET_ORDER: Bucket[] = [
+  "overdue",
+  "today",
+  "week",
+  "nextWeek",
+  "month",
+  "later",
+  "undated",
+  "closed",
+];
 
 /**
  * When the task came into existence, as well as the vault can say: its own `➕`, else the date

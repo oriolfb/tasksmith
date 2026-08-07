@@ -183,6 +183,31 @@ export function weekAhead(tasks: Task[], today: Date = startOfToday(), options: 
   };
 }
 
+export interface TodayProgress {
+  /** Open commitments whose effective date is today. */
+  pending: number;
+  /** Commitments closed today, whatever date they were due — a task finished ahead of or behind
+   *  its own schedule is still today's work. */
+  closed: number;
+}
+
+/** The day's own tally, next to `weekAhead`'s forward-looking one: what is left today, and what
+ *  already got done today. */
+export function todayProgress(tasks: Task[], today: Date = startOfToday()): TodayProgress {
+  const todayIso = formatIsoDate(today);
+  let pending = 0;
+  let closed = 0;
+  for (const task of commitments(tasks)) {
+    if (task.open) {
+      if (bucketOf(task, today) === "today") pending++;
+      continue;
+    }
+    const when = closingDate(task);
+    if (when && formatIsoDate(when) === todayIso) closed++;
+  }
+  return { pending, closed };
+}
+
 export interface ClosingState {
   /** Every closed commitment line, dated or not. */
   closed: number;
