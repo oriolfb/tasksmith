@@ -655,13 +655,12 @@
 
 /* ── the KPI strip ──────────────────────────────────────── */
 
-/* Six figures and no boxes, three per row. The dividers the mockup had between them turned out
+/* Five figures and no boxes, one row. The dividers the mockup had between them turned out
    to be the thing that made it look like a dashboard rather than a page: air separates them
-   fine. Three columns rather than four so the two "avui" figures added later fill their row
-   instead of trailing off into empty cells. */
+   fine. */
 .tcc-kpis {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 20px;
   padding: 10px 0 14px;
   border-bottom: 1px solid var(--background-modifier-border);

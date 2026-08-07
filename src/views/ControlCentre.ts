@@ -221,7 +221,7 @@ export class ControlCentreView extends BaseTaskView {
 
     for (const [key, tab] of this.tabs) tab.toggleClass("tcf-tab-on", this.query.group === key);
 
-    this.renderKpis(open, closings, progress);
+    this.renderKpis(open, progress);
     this.renderWeek(
       weekAhead(all, today, { span: WEEK_DAYS, weekends: this.settings.showWeekends }),
       closings,
@@ -242,7 +242,7 @@ export class ControlCentreView extends BaseTaskView {
 
   /* ── the strip ─────────────────────────────────────────── */
 
-  private renderKpis(open: OpenState, closings: ClosingState, progress: TodayProgress): void {
+  private renderKpis(open: OpenState, progress: TodayProgress): void {
     this.kpiHost.empty();
 
     this.kpi({
@@ -271,20 +271,6 @@ export class ControlCentreView extends BaseTaskView {
           ? `${open.datableFromNote} amb data a la nota`
           : "cap classificable pel frontmatter",
       filter: { statusScope: "open", buckets: ["undated"] },
-    });
-
-    /*
-     * Measured capacity, and the reason the focus view has three slots and not ten. It is the
-     * only KPI that is not a count of what is pending: it is what actually gets closed.
-     */
-    this.kpi({
-      value: closings.perWorkingDay === null ? "—" : decimal(closings.perWorkingDay),
-      label: "tancades/dia laborable",
-      detail:
-        closings.first === null
-          ? "cap tasca tancada amb data"
-          : `${closings.done} amb ✅ des de ${shortDate(closings.first)}`,
-      filter: { statusScope: "closed", buckets: null, staleOnly: false },
     });
 
     /*
