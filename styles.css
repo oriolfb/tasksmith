@@ -1284,16 +1284,25 @@
   border-left: 1px solid var(--background-modifier-border);
 }
 
-/* Folded, it stays exactly where the rail was — moving it would mean the toggle you just
-   clicked jumps somewhere else on screen. What it gives back is width, not position: no left
-   border, no left padding, and a label short enough (see `renderHealth`, no hint sentence while
-   shut) that shrink-to-fit no longer costs the table almost the whole 250px it's meant to return. */
+/* Folded, it is no longer the table's neighbour (see `renderHealth`) — the row it used to
+   share with the table belongs to the table alone now. Pushed flush right, its own row lands
+   almost exactly above where the rail's top would be, so opening it reads as dropping down in
+   place rather than leaping across the tab. */
 .tcc-health-shut {
+  display: flex;
+  justify-content: flex-end;
   flex: 0 0 auto;
   width: auto;
   overflow: visible;
-  padding-left: 0;
+  padding: 0 0 8px;
+  margin-bottom: 12px;
   border-left: none;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.tcc-health-shut .tcc-health-toggle {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .tcc-health-toggle {
@@ -1421,8 +1430,10 @@
 
   /* Above the table, not below it — and folded by default (see `healthPanel: "auto"`). Below,
      it was thirty rows of scrolling away, which is a panel you will never open again; above and
-     folded it is one line and one click, and it only takes the screen when you ask it to. */
-  .tcc-health {
+     folded it is one line and one click, and it only takes the screen when you ask it to.
+     Scoped to a child of the layout row: a *folded* panel already lives above that row (see
+     `renderHealth`), and `order: -1` on it here would instead yank it above the KPI strip. */
+  .tcc-layout > .tcc-health {
     order: -1;
     flex: 0 0 auto;
     width: auto;

@@ -773,6 +773,17 @@ export class ControlCentreView extends BaseTaskView {
     });
 
     this.healthHost.toggleClass("tcc-health-shut", !open);
+    // Open, it belongs beside the table — a child of the layout row, taking its 250px.
+    // Folded, it has no business in that row at all: staying there is what kept costing the
+    // table width no matter how short the label got. Moved above the row instead (like the
+    // history toggle) it costs one row of height, not a column — and styled flush right (see
+    // `.tcc-health-shut` in styles.css) it lands almost exactly above where the rail would
+    // start, so opening it feels like it drops down in place rather than jumping across the tab.
+    if (open) {
+      this.layoutEl.appendChild(this.healthHost);
+    } else {
+      this.layoutEl.parentElement?.insertBefore(this.healthHost, this.layoutEl);
+    }
     this.healthBody.empty();
     if (!open) return;
 
@@ -1081,7 +1092,7 @@ export class ControlCentreView extends BaseTaskView {
         break;
       case "d":
         // Discarding lives inside this menu, on purpose: there is no bare key for it.
-        rows[current]!.querySelector<HTMLElement>('[data-act="date"]')?.click();
+        rows[current]!.querySelector<HTMLElement>('[data-act="more"]')?.click();
         break;
       case "x":
       case "Enter":
