@@ -24,6 +24,8 @@ export interface QueryState {
   person: string | null;
   priority: Priority | null;
   staleOnly: boolean;
+  /** Undated tasks whose host note carries a `data:` — the health panel's "sense data" link. */
+  noteDatableOnly: boolean;
   /** Documentation checklists. Off by default, never hidden without saying so. */
   includeReference: boolean;
   /** Someday/maybe lines from `tipus: idea` notes and friends. */
@@ -44,6 +46,7 @@ export const DEFAULT_QUERY: QueryState = {
   person: null,
   priority: null,
   staleOnly: false,
+  noteDatableOnly: false,
   includeReference: false,
   includeSomeday: false,
   sort: "date",
@@ -125,6 +128,7 @@ export function filterTasks(tasks: Task[], state: QueryState, ctx: QueryContext)
       const age = ageInDays(task, ctx.mtimeOf(task.location.path), ctx.today);
       if (age === null || age < ctx.staleThresholdDays) return false;
     }
+    if (state.noteDatableOnly && task.noteDate === null) return false;
     if (needle) {
       const haystack = `${task.description} ${task.location.path}`.toLowerCase();
       if (!haystack.includes(needle)) return false;

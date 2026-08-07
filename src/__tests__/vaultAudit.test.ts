@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { bucketOf } from "../index/Buckets";
-import { bucketCounts, countByKind } from "../query/Query";
+import { DEFAULT_QUERY, bucketCounts, countByKind, filterTasks } from "../query/Query";
 import { closingState, monthlyFlow, openState, weekAhead } from "../query/Metrics";
 import { healthFindings } from "../query/Health";
 import { focusSections } from "../query/Focus";
@@ -292,16 +292,25 @@ describeVault("real vault audit", () => {
       expect(finding.title.trim()).not.toBe("");
       expect(finding.detail.trim()).not.toBe("");
       // An action with nowhere to go is a dead link dressed as help.
-      if (finding.action) expect(finding.filter !== undefined || finding.fix !== undefined).toBe(true);
-      if (finding.fix) expect(finding.tasks?.length ?? 0).toBeGreaterThan(0);
+      if (finding.action) expect(finding.filter).toBeDefined();
+      // And where it goes must not be empty: a finding worth surfacing is one worth acting on.
+      if (finding.filter) {
+        const ctx = { today: REFERENCE_DAY, mtimeOf: () => null, staleThresholdDays: DEFAULT_SETTINGS.staleThresholdDays };
+        const matched = filterTasks(tasks, { ...DEFAULT_QUERY, ...finding.filter }, ctx);
+        expect(matched.length).toBeGreaterThan(0);
+      }
     }
 
-    // The only finding that writes must never touch a task that already has a date of its own.
-    const dating = findings.find((finding) => finding.fix === "apply-note-date");
-    for (const task of dating?.tasks ?? []) {
-      expect(task.open).toBe(true);
-      expect(task.effectiveDate).toBeNull();
-      expect(task.noteDate).not.toBeNull();
+    // The "date from the note" link must only ever point at tasks with no date of their own.
+    const dating = findings.find((finding) => finding.key === "undated-with-note-date");
+    if (dating?.filter) {
+      const ctx = { today: REFERENCE_DAY, mtimeOf: () => null, staleThresholdDays: DEFAULT_SETTINGS.staleThresholdDays };
+      const matched = filterTasks(tasks, { ...DEFAULT_QUERY, ...dating.filter }, ctx);
+      for (const task of matched) {
+        expect(task.open).toBe(true);
+        expect(task.effectiveDate).toBeNull();
+        expect(task.noteDate).not.toBeNull();
+      }
     }
 
     console.log(`[audit] salut: ${findings.map((finding) => finding.title).join(" · ")}`);

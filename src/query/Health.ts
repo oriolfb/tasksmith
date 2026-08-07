@@ -9,8 +9,9 @@ import { closingState, commitments, datableFromNote, monthsBetween } from "./Met
  * The health panel: not statistics, but a short list of concrete things to fix, each with the
  * one action that fixes it. Pure, so the audit can assert the rules on the real vault.
  *
- * A finding either points the table at the offending tasks (`filter`) or names a fix the view
- * knows how to run (`fix`). Nothing here writes anything.
+ * The one action a finding offers always points the table at the offending tasks (`filter`).
+ * Nothing here writes anything, and nothing here decides on the user's behalf what to do with
+ * what it finds — that stays a task-by-task call, made at the table.
  */
 export interface Finding {
   key: string;
@@ -22,10 +23,6 @@ export interface Finding {
   action?: string;
   /** Where the action sends the table. */
   filter?: Partial<QueryState>;
-  /** A fix that writes, run by the view: it owns the actions and the undo notice. */
-  fix?: "apply-note-date";
-  /** The exact tasks the fix operates on. */
-  tasks?: Task[];
 }
 
 export interface HealthContext {
@@ -46,13 +43,17 @@ export function healthFindings(tasks: Task[], ctx: HealthContext): Finding[] {
 
   const closings = closingState(tasks, today);
   const open = commitments(tasks).filter((task) => task.open);
+  const renegotiable = open.filter((task) => bucketOf(task, today) === "overdue");
 
   /*
    * The most uncomfortable finding of the whole exercise, and the reason the overdue list grew
    * for five weeks: closing a task has only ever meant finishing it. "No ho faré" is a decision
    * too, and it had never once been used.
+   *
+   * Gated on there being overdue tasks right now: the action is "renegotiate them", and a finding
+   * whose one action opens an empty table is noise, not a thing to fix.
    */
-  if (closings.done > 0 && closings.cancelled === 0) {
+  if (renegotiable.length > 0 && closings.done > 0 && closings.cancelled === 0) {
     const span = closings.first ? monthsBetween(closings.first, today) : 0;
     findings.push({
       key: "no-cancellations",
@@ -64,7 +65,11 @@ export function healthFindings(tasks: Task[], ctx: HealthContext): Finding[] {
       action: "Renegociar-les una a una →",
       filter: { statusScope: "open", buckets: ["overdue"], sort: "age", sortReverse: false },
     });
-  } else if (closings.cancelled > 0 && closings.cancelled / Math.max(1, closings.closed) < 0.03) {
+  } else if (
+    renegotiable.length > 0 &&
+    closings.cancelled > 0 &&
+    closings.cancelled / Math.max(1, closings.closed) < 0.03
+  ) {
     const percent = ((closings.cancelled / closings.closed) * 100).toFixed(1).replace(".", ",");
     findings.push({
       key: "few-cancellations",
@@ -77,9 +82,10 @@ export function healthFindings(tasks: Task[], ctx: HealthContext): Finding[] {
   }
 
   /*
-   * Tasks the plugin could date with a single guarded write: their note records a `data:` that
-   * is deliberately not a deadline (a meeting's date is not its tasks' deadline), but it is the
-   * date the user would have typed anyway.
+   * Tasks whose note records a `data:` that is deliberately not a deadline (a meeting's date is
+   * not its tasks' deadline) — but each one is a candidate for a date the user would type anyway.
+   * The panel only points at them; which get that date, and which don't, is a per-task call made
+   * at the table, not a batch write from here.
    */
   const datable = datableFromNote(tasks, today);
   if (datable.length > 0) {
@@ -90,9 +96,8 @@ export function healthFindings(tasks: Task[], ctx: HealthContext): Finding[] {
       detail:
         "La nota porta una «data:» que el plugin no fa servir com a termini a propòsit — el dia " +
         "d'una reunió no és el termini de les seves tasques. Però és la data que hi posaries.",
-      action: `Posar-hi la data de la nota →`,
-      fix: "apply-note-date",
-      tasks: datable,
+      action: "Veure-les →",
+      filter: { statusScope: "open", buckets: ["undated"], noteDatableOnly: true, sort: "age", sortReverse: false },
     });
   }
 
@@ -162,7 +167,6 @@ export function healthFindings(tasks: Task[], ctx: HealthContext): Finding[] {
     });
   }
 
-  const overdueUnpicked = open.filter((task) => bucketOf(task, today) === "overdue").length;
   if (ctx.notes !== undefined && ctx.lines !== undefined) {
     findings.push({
       key: "index",
@@ -170,7 +174,7 @@ export function healthFindings(tasks: Task[], ctx: HealthContext): Finding[] {
       title: "Índex",
       detail:
         `${ctx.notes} notes · ${ctx.lines} línies de tasca · ${open.length} obertes ` +
-        `(${overdueUnpicked} per renegociar) · ${empty.length} buides.`,
+        `(${renegotiable.length} per renegociar) · ${empty.length} buides.`,
     });
   }
 

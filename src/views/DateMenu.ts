@@ -2,6 +2,7 @@ import { Menu } from "obsidian";
 import type { Task } from "../types/task";
 import type { TaskActions } from "../tasks/TaskActions";
 import { addDays, startOfToday } from "../index/dates";
+import { shortDate } from "./format";
 
 /**
  * The date menu, shared by the dock and the control centre.
@@ -40,6 +41,9 @@ export function openDateMenu(
   entry("Dilluns que ve", () => actions.scheduleOn(task, nextMonday(today)));
   entry("+1 setmana", () => actions.nextWeek(task));
   entry("+1 mes", () => actions.postpone(task, 30));
+  // Only when the note actually lends one: the health panel points here instead of dating
+  // tasks itself, precisely so each one gets this offer rather than a batch write.
+  if (task.noteDate) entry(`Data de la nota (${shortDate(task.noteDate)})`, () => actions.scheduleOn(task, task.noteDate!));
   menu.addSeparator();
   entry("Treure la data", () => actions.clearDue(task));
   menu.addSeparator();

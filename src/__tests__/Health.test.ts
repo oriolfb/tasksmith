@@ -48,6 +48,7 @@ describe("healthFindings", () => {
     const tasks = [
       task("- [x] una ✅ 2025-12-01", { open: false }),
       task("- [x] dues ✅ 2026-08-01", { open: false }),
+      task("- [ ] endarrerida 📅 2026-01-01"),
     ];
     const finding = find(healthFindings(tasks, ctx), "no-cancellations")!;
     expect(finding.title).toBe("Cap tasca cancel·lada en 8 mesos");
@@ -60,6 +61,7 @@ describe("healthFindings", () => {
     const tasks = [
       task("- [x] una ✅ 2026-01-05", { open: false }),
       task("- [-] dues ❌ 2026-02-05", { open: false }),
+      task("- [ ] endarrerida 📅 2026-01-01"),
     ];
     const findings = healthFindings(tasks, ctx);
     expect(find(findings, "no-cancellations")).toBeUndefined();
@@ -71,13 +73,26 @@ describe("healthFindings", () => {
     const tasks = [
       ...Array.from({ length: 99 }, (_, i) => task(`- [x] feta ${i} ✅ 2026-03-02`, { open: false })),
       task("- [-] l'única ❌ 2026-03-03", { open: false }),
+      task("- [ ] endarrerida 📅 2026-01-01"),
     ];
     expect(find(healthFindings(tasks, ctx), "few-cancellations")?.title).toBe(
       "Només 1 de 100 tancades s'han cancel·lat"
     );
   });
 
-  it("offers the note's own date for undated tasks, and hands over exactly those tasks", () => {
+  it("stays quiet about the cancellation rate when there is nothing open to renegotiate", () => {
+    // Same shape as the "rounds to nothing" case above, minus the open overdue task: the
+    // action would open an empty table, so the finding is noise rather than something to fix.
+    const tasks = [
+      ...Array.from({ length: 99 }, (_, i) => task(`- [x] feta ${i} ✅ 2026-03-02`, { open: false })),
+      task("- [-] l'única ❌ 2026-03-03", { open: false }),
+    ];
+    const findings = healthFindings(tasks, ctx);
+    expect(find(findings, "few-cancellations")).toBeUndefined();
+    expect(find(findings, "no-cancellations")).toBeUndefined();
+  });
+
+  it("points at undated tasks whose note has a date, rather than dating them itself", () => {
     const tasks = [
       task("- [ ] de la reunió", { noteDate: D("2026-07-27") }),
       task("- [ ] sense res enlloc"),
@@ -85,8 +100,8 @@ describe("healthFindings", () => {
     ];
     const finding = find(healthFindings(tasks, ctx), "undated-with-note-date")!;
     expect(finding.title).toBe("1 sense data que la nota sí que té");
-    expect(finding.fix).toBe("apply-note-date");
-    expect(finding.tasks?.map((t) => t.description)).toEqual(["de la reunió"]);
+    // The action is a filter the user reviews task by task, never a batch write.
+    expect(finding.filter).toMatchObject({ buckets: ["undated"], noteDatableOnly: true });
   });
 
   it("counts notes without a project, not tasks", () => {

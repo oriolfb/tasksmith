@@ -809,7 +809,6 @@ export class ControlCentreView extends BaseTaskView {
     action.tabIndex = 0;
     const run = (): void => {
       if (finding.filter) this.applyFilter(finding.filter);
-      else if (finding.fix === "apply-note-date") void this.applyNoteDates(finding.tasks ?? []);
     };
     action.addEventListener("click", run);
     action.addEventListener("keydown", (event) => {
@@ -817,27 +816,6 @@ export class ControlCentreView extends BaseTaskView {
       event.preventDefault();
       run();
     });
-  }
-
-  /**
-   * The one fix in the panel that writes: it copies each note's own `data:` onto its undated
-   * tasks. Guarded, single-line, one undo step for the batch — and it asks first, because it
-   * touches several notes at once.
-   */
-  private async applyNoteDates(tasks: Task[]): Promise<void> {
-    const datable = tasks.filter((task) => task.noteDate !== null);
-    if (datable.length === 0) return;
-
-    const confirmed = await ConfirmModal.ask(
-      this.app,
-      "Posar-hi la data de la nota",
-      `S'afegirà 📅 a ${datable.length} ${datable.length === 1 ? "tasca" : "tasques"}, cada una amb la data ` +
-        `de la seva nota. Es pot desfer amb «Desfés».`,
-      `Datar ${datable.length}`
-    );
-    if (!confirmed) return;
-
-    await this.bulk(datable, (task) => this.actions.scheduleOn(task, task.noteDate!), "Data de la nota");
   }
 
   /* ── the footer: selection, or the keys ────────────────── */

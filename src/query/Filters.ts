@@ -95,6 +95,10 @@ export function describeFilters(query: QueryState, ctx: ChipContext): FilterChip
     });
   }
 
+  if (query.noteDatableOnly) {
+    chips.push({ key: "noteDatable", label: "amb data a la nota", clear: { noteDatableOnly: false } });
+  }
+
   // Only worth saying when the vault actually holds such lines.
   if (ctx.referenceLines > 0) {
     chips.push(
@@ -189,6 +193,11 @@ export function filterMenu(query: QueryState, ctx: ChipContext): FilterGroup[] {
         bucketOption(["later"]),
         bucketOption(["undated"]),
         bucketOption(["week", "later"]),
+        {
+          label: "Sense data pròpia però amb data a la nota",
+          patch: { noteDatableOnly: !query.noteDatableOnly },
+          checked: query.noteDatableOnly,
+        },
       ],
     },
     {
