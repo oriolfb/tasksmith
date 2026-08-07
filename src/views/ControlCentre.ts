@@ -754,9 +754,8 @@ export class ControlCentreView extends BaseTaskView {
 
     this.stacked = this.isStacked();
     const open = this.healthOpen();
-    // Folded, the header has to carry the panel's whole message: how many things are worth
-    // fixing. A chevron next to the word "Salut" says nothing about whether to open it.
     const worth = findings.filter((finding) => finding.tone === "warn").length;
+    const worthPhrase = worth === 0 ? "res a arreglar" : `${worth} ${worth === 1 ? "cosa" : "coses"} a mirar`;
 
     this.healthToggle.empty();
     setIcon(
@@ -764,27 +763,16 @@ export class ControlCentreView extends BaseTaskView {
       open ? "chevron-down" : "chevron-right"
     );
     this.healthToggle.createSpan({ cls: "tcc-health-title", text: "Salut del sistema" });
-    if (!open) {
-      this.healthToggle.createSpan({
-        cls: "tcc-health-hint",
-        text: worth === 0 ? "res a arreglar" : `${worth} ${worth === 1 ? "cosa" : "coses"} a mirar`,
-      });
-    }
     this.healthToggle.setAttribute("aria-expanded", String(open));
-    setTooltip(this.healthToggle, open ? "Plegar la salut del sistema" : "Desplegar la salut del sistema", {
+    // The sentence used to live on the toggle itself while folded, but that's what made a
+    // folded panel almost as wide as an open one. The tooltip can afford to spell it out; the
+    // toggle — which has to stay put, not grow, so the table keeps the width it gives back —
+    // can't.
+    setTooltip(this.healthToggle, open ? "Plegar la salut del sistema" : `Desplegar la salut del sistema — ${worthPhrase}`, {
       delay: 300,
     });
 
     this.healthHost.toggleClass("tcc-health-shut", !open);
-    // Open, it belongs beside the table (or above it, stacked) — a child of the layout row.
-    // Folded, it has no business in that row at all: it moves up to sit like the history toggle,
-    // one line in the column above, so the layout row is left with the table as its only child
-    // and gives the table the width that would otherwise sit empty next to a folded label.
-    if (open) {
-      this.layoutEl.appendChild(this.healthHost);
-    } else {
-      this.layoutEl.parentElement?.insertBefore(this.healthHost, this.layoutEl);
-    }
     this.healthBody.empty();
     if (!open) return;
 

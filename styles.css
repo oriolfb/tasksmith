@@ -1284,24 +1284,16 @@
   border-left: 1px solid var(--background-modifier-border);
 }
 
-/* Folded, it is no longer the table's neighbour — the view moves it out of the layout row
-   entirely (see `renderHealth`), so here it just has to stop looking like a rail: no left
-   border, no left padding, full width via the same stretch that sizes every other row above
-   the table. Shrink-to-fit content sizing was the old approach and the bug: the label alone
-   ran to 200+px, so "folded" still cost the table almost the whole 250px it was meant to give back. */
+/* Folded, it stays exactly where the rail was — moving it would mean the toggle you just
+   clicked jumps somewhere else on screen. What it gives back is width, not position: no left
+   border, no left padding, and a label short enough (see `renderHealth`, no hint sentence while
+   shut) that shrink-to-fit no longer costs the table almost the whole 250px it's meant to return. */
 .tcc-health-shut {
   flex: 0 0 auto;
   width: auto;
   overflow: visible;
-  padding: 0 0 8px;
-  margin-bottom: 12px;
+  padding-left: 0;
   border-left: none;
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.tcc-health-shut .tcc-health-toggle {
-  border-bottom: none;
-  padding-bottom: 0;
 }
 
 .tcc-health-toggle {
@@ -1339,12 +1331,6 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-weight: 750;
-  color: var(--text-faint);
-}
-
-/* What the panel would have told you, in five words. Only drawn while it is folded. */
-.tcc-health-hint {
-  font-size: 10.5px;
   color: var(--text-faint);
 }
 
@@ -1435,11 +1421,8 @@
 
   /* Above the table, not below it — and folded by default (see `healthPanel: "auto"`). Below,
      it was thirty rows of scrolling away, which is a panel you will never open again; above and
-     folded it is one line and one click, and it only takes the screen when you ask it to.
-     Scoped to a direct child of the layout row: a *folded* panel is not in that row at all
-     (`renderHealth` moves it above the row entirely), and `order: -1` on it here would instead
-     yank it to the very top of the view, ahead of the KPI strip. */
-  .tcc-layout > .tcc-health {
+     folded it is one line and one click, and it only takes the screen when you ask it to. */
+  .tcc-health {
     order: -1;
     flex: 0 0 auto;
     width: auto;
