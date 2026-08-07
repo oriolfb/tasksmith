@@ -749,6 +749,15 @@ export class ControlCentreView extends BaseTaskView {
     });
 
     this.healthHost.toggleClass("tcc-health-shut", !open);
+    // Open, it belongs beside the table (or above it, stacked) — a child of the layout row.
+    // Folded, it has no business in that row at all: it moves up to sit like the history toggle,
+    // one line in the column above, so the layout row is left with the table as its only child
+    // and gives the table the width that would otherwise sit empty next to a folded label.
+    if (open) {
+      this.layoutEl.appendChild(this.healthHost);
+    } else {
+      this.layoutEl.parentElement?.insertBefore(this.healthHost, this.layoutEl);
+    }
     this.healthBody.empty();
     if (!open) return;
 

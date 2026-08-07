@@ -1282,11 +1282,24 @@
   border-left: 1px solid var(--background-modifier-border);
 }
 
-/* Folded, it gives its 250px back to the table instead of standing there as an empty column. */
+/* Folded, it is no longer the table's neighbour — the view moves it out of the layout row
+   entirely (see `renderHealth`), so here it just has to stop looking like a rail: no left
+   border, no left padding, full width via the same stretch that sizes every other row above
+   the table. Shrink-to-fit content sizing was the old approach and the bug: the label alone
+   ran to 200+px, so "folded" still cost the table almost the whole 250px it was meant to give back. */
 .tcc-health-shut {
   flex: 0 0 auto;
   width: auto;
   overflow: visible;
+  padding: 0 0 8px;
+  margin-bottom: 12px;
+  border-left: none;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.tcc-health-shut .tcc-health-toggle {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .tcc-health-toggle {
@@ -1420,8 +1433,11 @@
 
   /* Above the table, not below it — and folded by default (see `healthPanel: "auto"`). Below,
      it was thirty rows of scrolling away, which is a panel you will never open again; above and
-     folded it is one line and one click, and it only takes the screen when you ask it to. */
-  .tcc-health {
+     folded it is one line and one click, and it only takes the screen when you ask it to.
+     Scoped to a direct child of the layout row: a *folded* panel is not in that row at all
+     (`renderHealth` moves it above the row entirely), and `order: -1` on it here would instead
+     yank it to the very top of the view, ahead of the KPI strip. */
+  .tcc-layout > .tcc-health {
     order: -1;
     flex: 0 0 auto;
     width: auto;
