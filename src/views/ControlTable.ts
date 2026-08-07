@@ -1,4 +1,4 @@
-import { setTooltip } from "obsidian";
+import { setIcon, setTooltip } from "obsidian";
 import type { Task } from "../types/task";
 import { bucketOf } from "../index/Buckets";
 import type { SortKey, TaskGroup } from "../query/Query";
@@ -12,8 +12,12 @@ import { noteName, relativeLabel, shortDate } from "./format";
  * borders would otherwise do. The date is still ochre **text** and never a filled badge: twenty
  * rows carry it, and as badges the list reads as a traffic light.
  *
- * One checkbox per row, for the bulk actions, and the row's own actions are words. The version
- * this replaces had a select checkbox *and* a status button *and* four icons per row.
+ * The leading mark is the same tick the dock uses: click it, the task closes; click a closed
+ * one, it reopens. It used to be a checkbox for the bulk actions below, and that is exactly the
+ * problem it caused — it looked like "done" and did "selected", so ticking a task never closed
+ * it and nobody could tell why. Selecting several rows for the bulk bar is now a row gesture
+ * instead, ⌘/Ctrl-click to add one, Shift-click for the range in between, the same as a file
+ * manager — so the one mark on the row means one thing.
  */
 export interface TableColumn {
   key: string;
@@ -37,6 +41,8 @@ export interface TableCallbacks {
   onTomorrow: (task: Task) => void;
   onDate: (task: Task, event: MouseEvent) => void;
   onComplete: (task: Task) => void;
+  /** The tick of an already-closed task undoes it, same as the dock. */
+  onReopen: (task: Task) => void;
   onOpen: (task: Task) => void;
   onSelectionChange: () => void;
   onToggleGroup: (key: string) => void;
@@ -50,11 +56,16 @@ export interface TableState {
 
 export class ControlTable {
   private readonly selection = new Set<string>();
+  /** Rendered order, top to bottom, so Shift-click knows what "the range" means. Reset per render. */
+  private order: Task[] = [];
+  /** The last row a plain ⌘/Ctrl-click landed on — the anchor a Shift-click ranges from. */
+  private anchor: number | null = null;
 
   constructor(private readonly callbacks: TableCallbacks) {}
 
   clearSelection(): void {
     this.selection.clear();
+    this.anchor = null;
     this.callbacks.onSelectionChange();
   }
 
@@ -64,6 +75,7 @@ export class ControlTable {
 
   render(host: HTMLElement, groups: TaskGroup[], today: Date, state: TableState): void {
     host.empty();
+    this.order = [];
 
     if (groups.length === 0) {
       host.createDiv({ cls: "tcc-empty", text: "Cap tasca compleix aquest filtre." });
@@ -122,17 +134,34 @@ export class ControlTable {
   }
 
   private renderRow(host: HTMLElement, task: Task, today: Date): void {
+    const index = this.order.length;
+    this.order.push(task);
+
     const row = host.createDiv({ cls: "tcc-tr" });
     row.dataset.tccKey = idOf(task);
     row.tabIndex = 0;
+    if (this.selection.has(idOf(task))) row.addClass("tcc-selected");
+    this.wireSelectionGesture(row, task, index);
 
-    const box = row.createEl("input", { cls: "tcc-select", type: "checkbox" });
-    box.checked = this.selection.has(idOf(task));
-    box.setAttribute("aria-label", "Seleccionar");
-    box.addEventListener("click", (event) => {
-      event.stopPropagation();
-      this.toggleSelected(task, box.checked);
-    });
+    const mark = row.createDiv({ cls: "tcc-mark" });
+    mark.setAttribute("role", "button");
+    if (task.open) {
+      mark.setAttribute("aria-label", "Completar");
+      setTooltip(mark, "Completar", { delay: 300 });
+      mark.addEventListener("click", (event) => {
+        event.stopPropagation();
+        this.callbacks.onComplete(task);
+      });
+    } else {
+      mark.addClass("tcc-mark-on");
+      setIcon(mark, "check");
+      mark.setAttribute("aria-label", "Reobrir");
+      setTooltip(mark, "Reobrir", { delay: 300 });
+      mark.addEventListener("click", (event) => {
+        event.stopPropagation();
+        this.callbacks.onReopen(task);
+      });
+    }
 
     const text = row.createSpan({
       cls: "tcc-cell-text",
@@ -175,7 +204,6 @@ export class ControlTable {
      * and "Accions" was invisible — same shape of mistake as `lead.className = "ord"`.
      */
     const actions = row.createDiv({ cls: "tcc-cell-actions tcc-acts" });
-    this.action(actions, "done", "Fet", "Completar", () => this.callbacks.onComplete(task));
     this.action(actions, "today", "Avui", "Posar-la al dia d'avui", () => this.callbacks.onToday(task));
     this.action(actions, "tomorrow", "Demà", "Posar-la demà", () => this.callbacks.onTomorrow(task));
     this.action(actions, "more", "⋮", "Més: data, obrir la nota, no ho faré", (event) => this.callbacks.onDate(task, event));
@@ -237,6 +265,44 @@ export class ControlTable {
   toggleSelected(task: Task, selected = !this.selection.has(idOf(task))): void {
     if (selected) this.selection.add(idOf(task));
     else this.selection.delete(idOf(task));
+    this.callbacks.onSelectionChange();
+  }
+
+  /**
+   * ⌘/Ctrl-click adds the row and moves the anchor; Shift-click selects everything between the
+   * anchor and here, Finder-style. Captured on the row itself, not bound to a single cell, so it
+   * fires *before* the text or origin cell's own click would open the task — a modifier held down
+   * means "I am selecting", never "open this".
+   */
+  private wireSelectionGesture(row: HTMLElement, task: Task, index: number): void {
+    row.addEventListener(
+      "click",
+      (event) => {
+        if (event.metaKey || event.ctrlKey) {
+          event.preventDefault();
+          event.stopPropagation();
+          this.toggleSelected(task);
+          this.anchor = index;
+          return;
+        }
+        if (event.shiftKey) {
+          event.preventDefault();
+          event.stopPropagation();
+          this.selectRange(index);
+        }
+      },
+      true
+    );
+  }
+
+  private selectRange(index: number): void {
+    const anchor = this.anchor ?? index;
+    const [start, end] = anchor <= index ? [anchor, index] : [index, anchor];
+    for (let i = start; i <= end; i++) {
+      const task = this.order[i];
+      if (task) this.selection.add(idOf(task));
+    }
+    this.anchor = index;
     this.callbacks.onSelectionChange();
   }
 }

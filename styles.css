@@ -1129,9 +1129,59 @@
   outline-offset: -2px;
 }
 
-.tcc-select {
-  margin: 0;
+/* ⌘/Ctrl-click or Shift-click marks a row for the bulk bar. The wash persists through hover —
+   selection is a state, not a hover effect — the same pattern as the active lens tab. */
+.tcc-tr.tcc-selected {
+  background-color: rgba(107, 91, 210, 0.1);
+  background-color: color-mix(in srgb, var(--tcf-lila) 10%, transparent);
+}
+
+.theme-dark .tcc-tr.tcc-selected {
+  background-color: rgba(160, 143, 245, 0.13);
+  background-color: color-mix(in srgb, var(--tcf-lila) 13%, transparent);
+}
+
+.tcc-tr.tcc-selected:hover {
+  background-color: rgba(107, 91, 210, 0.16);
+  background-color: color-mix(in srgb, var(--tcf-lila) 16%, transparent);
+}
+
+.theme-dark .tcc-tr.tcc-selected:hover {
+  background-color: rgba(160, 143, 245, 0.2);
+  background-color: color-mix(in srgb, var(--tcf-lila) 20%, transparent);
+}
+
+/* The tick: click it, the task closes; click a closed one, it reopens. Same shape as the dock's
+   `.tcf-mark`, so the one mark in the vault that means "done" looks the same everywhere. It used
+   to be a checkbox that only selected rows for the bulk bar below, never closed anything — this
+   is what actually closes the task now, and selection moved to the row itself. */
+.tcc-mark {
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--text-faint);
+  border-radius: 3px;
+  background-color: transparent;
+  cursor: pointer;
   align-self: center;
+}
+
+.tcc-tr:hover .tcc-mark {
+  border-color: var(--tcf-lila);
+}
+
+.tcc-mark-on {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-color: var(--tcf-lila);
+  background-color: var(--tcf-lila);
+  color: var(--background-primary);
+}
+
+.tcc-mark-on .svg-icon {
+  width: 11px;
+  height: 11px;
+  stroke-width: 3.5px;
 }
 
 /* The row's subject. Normal colour and a little more weight than the columns around it, and two

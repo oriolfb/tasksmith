@@ -117,6 +117,13 @@
   animation, because that line genuinely is a different place. `DaySelection.slotted` is what makes
   the ordinal survive the slot freeing up: `keys` forgets a finished task on purpose (so a fourth
   pick is possible), `slotted` does not, so the row's number never renumbers out from under it.
+- **The control centre's checkbox now actually closes the task.** It looked like every other
+  checkbox ever tickled by a mouse and did something else entirely — mark the row for the bulk bar
+  below — so ticking it never closed anything, and the one action a checkbox is supposed to mean was
+  hidden behind hovering the row for the "Fet" word. It is now the same tick the dock uses: click it
+  closed, click a closed one open. Selecting several rows for the bulk actions moved to the row
+  itself — ⌘/Ctrl-click adds one, Shift-click selects the range in between, the same as a file
+  manager — so the mark on the row means exactly one thing again.
 
 ## 0.4.0 — TaskSmith, and the shape a community plugin is supposed to have
 
