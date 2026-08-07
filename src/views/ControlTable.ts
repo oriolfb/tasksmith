@@ -16,8 +16,9 @@ import { noteName, relativeLabel, shortDate } from "./format";
  * one, it reopens. It used to be a checkbox for the bulk actions below, and that is exactly the
  * problem it caused — it looked like "done" and did "selected", so ticking a task never closed
  * it and nobody could tell why. Selecting several rows for the bulk bar is now a row gesture
- * instead, ⌘/Ctrl-click to add one, Shift-click for the range in between, the same as a file
- * manager — so the one mark on the row means one thing.
+ * instead, the same as a file manager: a plain click picks exactly that row, ⌘/Ctrl-click adds
+ * one, Shift-click takes the range in between — so the one mark on the row means one thing, and
+ * the wash under a selected row is the only thing that says "selected".
  */
 export interface TableColumn {
   key: string;
@@ -58,6 +59,14 @@ export class ControlTable {
   private readonly selection = new Set<string>();
   /** Rendered order, top to bottom, so Shift-click knows what "the range" means. Reset per render. */
   private order: Task[] = [];
+  /**
+   * The row element for every task currently on screen, keyed the same way as `selection`. A
+   * click only ever changes a handful of rows, but without this map the only way to reflect that
+   * change was `render()` — a full repaint of the KPIs, the week strip and every row, which only
+   * happens on the next unrelated data refresh. So selecting felt like it "didn't work": the tick
+   * mark and the Set were right away, the paint just wasn't. Reset per render, same as `order`.
+   */
+  private readonly rows = new Map<string, HTMLElement>();
   /** The last row a plain ⌘/Ctrl-click landed on — the anchor a Shift-click ranges from. */
   private anchor: number | null = null;
 
@@ -66,6 +75,7 @@ export class ControlTable {
   clearSelection(): void {
     this.selection.clear();
     this.anchor = null;
+    this.syncSelectionClasses();
     this.callbacks.onSelectionChange();
   }
 
@@ -73,9 +83,15 @@ export class ControlTable {
     return tasks.filter((task) => this.selection.has(idOf(task)));
   }
 
+  /** Paints `.tcc-selected` on exactly the rows the Set says are selected — right now, not at the next unrelated repaint. */
+  private syncSelectionClasses(): void {
+    for (const [id, row] of this.rows) row.toggleClass("tcc-selected", this.selection.has(id));
+  }
+
   render(host: HTMLElement, groups: TaskGroup[], today: Date, state: TableState): void {
     host.empty();
     this.order = [];
+    this.rows.clear();
 
     if (groups.length === 0) {
       host.createDiv({ cls: "tcc-empty", text: "Cap tasca compleix aquest filtre." });
@@ -141,6 +157,7 @@ export class ControlTable {
     row.dataset.tccKey = idOf(task);
     row.tabIndex = 0;
     if (this.selection.has(idOf(task))) row.addClass("tcc-selected");
+    this.rows.set(idOf(task), row);
     this.wireSelectionGesture(row, task, index);
 
     const mark = row.createDiv({ cls: "tcc-mark" });
@@ -265,14 +282,19 @@ export class ControlTable {
   toggleSelected(task: Task, selected = !this.selection.has(idOf(task))): void {
     if (selected) this.selection.add(idOf(task));
     else this.selection.delete(idOf(task));
+    this.syncSelectionClasses();
     this.callbacks.onSelectionChange();
   }
 
   /**
    * ⌘/Ctrl-click adds the row and moves the anchor; Shift-click selects everything between the
-   * anchor and here, Finder-style. Captured on the row itself, not bound to a single cell, so it
-   * fires *before* the text or origin cell's own click would open the task — a modifier held down
-   * means "I am selecting", never "open this".
+   * anchor and here, Finder-style. A plain click does the same as Finder too: it picks exactly
+   * this row and drops whatever else was selected — everywhere on the row, that is, except the
+   * parts that already have their own job and say so with an underline on hover: the task name
+   * and the origin note open the task, the tick completes it, the action words run themselves.
+   * Captured on the row itself, not bound to a single cell, so it fires *before* those children's
+   * own click handlers — a modifier, or a click outside them, means "I am selecting", never "open
+   * this" or "complete this".
    */
   private wireSelectionGesture(row: HTMLElement, task: Task, index: number): void {
     row.addEventListener(
@@ -289,7 +311,15 @@ export class ControlTable {
           event.preventDefault();
           event.stopPropagation();
           this.selectRange(index);
+          return;
         }
+        const target = event.target as HTMLElement;
+        if (target.closest(".tcc-mark, .tcc-cell-text, .tcc-cell-origin, .tcc-cell-actions")) return;
+        this.selection.clear();
+        this.selection.add(idOf(task));
+        this.anchor = index;
+        this.syncSelectionClasses();
+        this.callbacks.onSelectionChange();
       },
       true
     );
@@ -303,6 +333,7 @@ export class ControlTable {
       if (task) this.selection.add(idOf(task));
     }
     this.anchor = index;
+    this.syncSelectionClasses();
     this.callbacks.onSelectionChange();
   }
 }

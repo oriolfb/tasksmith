@@ -122,8 +122,17 @@
   below — so ticking it never closed anything, and the one action a checkbox is supposed to mean was
   hidden behind hovering the row for the "Fet" word. It is now the same tick the dock uses: click it
   closed, click a closed one open. Selecting several rows for the bulk actions moved to the row
-  itself — ⌘/Ctrl-click adds one, Shift-click selects the range in between, the same as a file
-  manager — so the mark on the row means exactly one thing again.
+  itself — a plain click picks exactly that row, ⌘/Ctrl-click adds one, Shift-click selects the
+  range in between, the same as a file manager — so the mark on the row means exactly one thing
+  again.
+
+  Selecting a row updated the `Set` right away but only *painted* it at the control centre's next
+  unrelated repaint — the KPIs refreshing, a vault change, anything else that happened to call
+  `render()` — so a click looked like it had done nothing, "Desmarcar" looked like it had not
+  cleared anything, and rows sometimes still carried the wash from a Shift-click range picked
+  earlier. `ControlTable` now keeps the row element for every task on screen and toggles
+  `.tcc-selected` on exactly the ones the `Set` says are selected the moment the `Set` changes, so
+  the highlight and the bulk bar are never a repaint behind the click that caused them.
 
 ## 0.4.0 — TaskSmith, and the shape a community plugin is supposed to have
 
