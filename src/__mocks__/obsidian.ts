@@ -93,14 +93,66 @@ export class FuzzySuggestModal<T> extends SuggestModal<{ item: T }> {
   onChooseItem(_item: T, _event: MouseEvent | KeyboardEvent): void {}
 }
 
+/**
+ * Enough of the real `MenuItem` builder to exercise what a test cares about: which title got
+ * which handler. `onClick`'s handler is kept, not run — the test decides when to fire it, the
+ * same way `SuggestModal.latest` hands the test the modal instead of driving it itself.
+ */
+export class MenuItem {
+  private title = "";
+  private handler: (() => unknown) | null = null;
+
+  setTitle(title: string) {
+    this.title = title;
+    return this;
+  }
+  setIcon(_icon: string) {
+    return this;
+  }
+  setWarning(_warning: boolean) {
+    return this;
+  }
+  setDisabled(_disabled: boolean) {
+    return this;
+  }
+  onClick(handler: () => unknown) {
+    this.handler = handler;
+    return this;
+  }
+  getTitle(): string {
+    return this.title;
+  }
+  /** Fires the handler a real click would, for a test driving the menu from the outside. */
+  click(): unknown {
+    return this.handler?.();
+  }
+}
+
+/** `latest`, like `SuggestModal.latest`: the instance the code under test just built. */
 export class Menu {
-  addItem() {
+  static latest: Menu | null = null;
+  items: MenuItem[] = [];
+
+  constructor() {
+    Menu.latest = this;
+  }
+
+  addItem(cb: (item: MenuItem) => unknown) {
+    const item = new MenuItem();
+    cb(item);
+    this.items.push(item);
     return this;
   }
   addSeparator() {
     return this;
   }
   showAtMouseEvent() {}
+
+  itemTitled(title: string): MenuItem {
+    const found = this.items.find((item) => item.getTitle() === title);
+    if (!found) throw new Error(`no menu item titled "${title}"`);
+    return found;
+  }
 }
 
 export class Notice {

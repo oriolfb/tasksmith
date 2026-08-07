@@ -63,6 +63,11 @@ export interface RowCallbacks {
   onReopen: (task: Task) => void;
   /** Async so the menu can wait for the write before refreshing. */
   onDrop: (task: Task) => Promise<void>;
+  /**
+   * A date was postponed, rewritten or cleared from the date menu. The row gives up whatever
+   * slot it held for today — deciding a new date is deciding this one is not today's after all.
+   */
+  onReschedule: (task: Task) => void;
   onOpen: (task: Task) => void;
   onToggleSection: (key: string) => void;
   isCollapsed: (key: string) => boolean;
@@ -391,6 +396,7 @@ export class FocusRenderer {
     openDateMenu(this.app, this.actions, task, event, {
       onDrop: (dropped) => this.callbacks.onDrop(dropped),
       onOpen: (opened) => this.callbacks.onOpen(opened),
+      onReschedule: (rescheduled) => this.callbacks.onReschedule(rescheduled),
       onDone,
     });
   }

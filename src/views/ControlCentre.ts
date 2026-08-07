@@ -975,6 +975,9 @@ export class ControlCentreView extends BaseTaskView {
         await this.actions.cancel(dropped);
       },
       onOpen: (opened) => void this.openTask(opened),
+      // The control centre has no notion of "today's three" — that lives in the sidebar's
+      // `DaySelection` — so there is no slot here to give up.
+      onReschedule: () => {},
       onDone: () => this.refresh(),
     });
   }
