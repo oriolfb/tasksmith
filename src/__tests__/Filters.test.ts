@@ -19,8 +19,8 @@ describe("describeFilters", () => {
   it("names the deadline filter the way the dock's sections do", () => {
     expect(labels({ buckets: ["overdue"] })).toContain("per renegociar");
     expect(labels({ buckets: ["undated"] })).toContain("sense data");
-    // The dock's "N més" hands over both at once, and it is one idea, so it gets one chip.
-    expect(labels({ buckets: ["week", "later"] })).toContain("més endavant");
+    // The dock's "N més" hands over all four at once, and it is one idea, so it gets one chip.
+    expect(labels({ buckets: ["week", "nextWeek", "month", "later"] })).toContain("més endavant");
   });
 
   /** A week that starts tomorrow is not a week. */

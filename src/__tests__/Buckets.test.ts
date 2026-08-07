@@ -1,6 +1,6 @@
 import { BUCKET_ORDER, ageInDays, bucketOf, effectiveDate, isStale } from "../index/Buckets";
 import { parseTaskLine } from "../index/TaskParser";
-import { endOfWeek, formatIsoDate } from "../index/dates";
+import { endOfMonth, endOfNextWeek, endOfWeek, formatIsoDate } from "../index/dates";
 import type { Task } from "../types/task";
 import { ScopeFilter, parseObsidianIgnoreFilters } from "../index/ScopeFilter";
 
@@ -52,7 +52,11 @@ describe("bucketOf", () => {
     expect(bucketOf(task("- [ ] a 📅 2026-08-04"), TODAY)).toBe("overdue");
     expect(bucketOf(task("- [ ] a 📅 2026-08-05"), TODAY)).toBe("today");
     expect(bucketOf(task("- [ ] a 📅 2026-08-09"), TODAY)).toBe("week"); // Sunday
-    expect(bucketOf(task("- [ ] a 📅 2026-08-10"), TODAY)).toBe("later"); // next Monday
+    expect(bucketOf(task("- [ ] a 📅 2026-08-10"), TODAY)).toBe("nextWeek"); // next Monday
+    expect(bucketOf(task("- [ ] a 📅 2026-08-16"), TODAY)).toBe("nextWeek"); // Sunday after next
+    expect(bucketOf(task("- [ ] a 📅 2026-08-17"), TODAY)).toBe("month"); // Monday, still August
+    expect(bucketOf(task("- [ ] a 📅 2026-08-31"), TODAY)).toBe("month"); // last day of August
+    expect(bucketOf(task("- [ ] a 📅 2026-09-01"), TODAY)).toBe("later"); // September
     expect(bucketOf(task("- [ ] a"), TODAY)).toBe("undated");
   });
 
@@ -67,9 +71,20 @@ describe("bucketOf", () => {
     expect(formatIsoDate(endOfWeek(D("2026-08-10")))).toBe("2026-08-16");
   });
 
+  it("ends next week on the Sunday after that", () => {
+    expect(formatIsoDate(endOfNextWeek(TODAY))).toBe("2026-08-16");
+  });
+
+  it("ends the month on its actual last day", () => {
+    expect(formatIsoDate(endOfMonth(TODAY))).toBe("2026-08-31");
+    expect(formatIsoDate(endOfMonth(D("2026-02-01")))).toBe("2026-02-28");
+  });
+
   it("covers all buckets in BUCKET_ORDER", () => {
     expect(new Set(BUCKET_ORDER).size).toBe(BUCKET_ORDER.length);
     expect(BUCKET_ORDER).toContain("undated");
+    expect(BUCKET_ORDER).toContain("nextWeek");
+    expect(BUCKET_ORDER).toContain("month");
   });
 });
 

@@ -35,6 +35,8 @@ const BUCKET_CHIPS: Record<Bucket, string> = {
   // Not "aquesta setmana": the bucket runs from tomorrow to Sunday, and a filter called "this
   // week" that hides what is due today is a filter that lies. That name belongs to `today|week`.
   week: "d'aquí a diumenge",
+  nextWeek: "la setmana que ve",
+  month: "aquest mes",
   later: "més endavant",
   undated: "sense data",
   closed: "tancades",
@@ -43,9 +45,9 @@ const BUCKET_CHIPS: Record<Bucket, string> = {
 /** Combinations that have a name of their own, so two chips do not say one thing. Keys sorted. */
 const BUCKET_SETS: Record<string, string> = {
   "today|week": "aquesta setmana",
-  "later|week": "més endavant",
+  "later|month|nextWeek|week": "més endavant",
   "overdue|undated": "per decidir",
-  "later|overdue|today|undated|week": "totes les obertes",
+  "later|month|nextWeek|overdue|today|undated|week": "totes les obertes",
 };
 
 export function describeFilters(query: QueryState, ctx: ChipContext): FilterChip[] {
@@ -192,7 +194,7 @@ export function filterMenu(query: QueryState, ctx: ChipContext): FilterGroup[] {
         bucketOption(["today", "week"]),
         bucketOption(["later"]),
         bucketOption(["undated"]),
-        bucketOption(["week", "later"]),
+        bucketOption(["week", "nextWeek", "month", "later"]),
         {
           label: "Sense data pròpia però amb data a la nota",
           patch: { noteDatableOnly: !query.noteDatableOnly },

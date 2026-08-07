@@ -69,7 +69,7 @@ describeVault("real vault audit", () => {
       tasks.push(...tasksFromFile({ path: relative, content }, interop));
     }
 
-    byBucket = { overdue: [], today: [], week: [], later: [], undated: [], closed: [] };
+    byBucket = { overdue: [], today: [], week: [], nextWeek: [], month: [], later: [], undated: [], closed: [] };
     for (const task of tasks) byBucket[bucketOf(task, REFERENCE_DAY)].push(task);
 
     const open = tasks.filter((t) => t.open).length;
@@ -78,6 +78,7 @@ describeVault("real vault audit", () => {
     console.log(
       `[audit] ${scanned.length} notes · ${tasks.length} task lines · ${open} open · ` +
         `overdue ${byBucket.overdue.length} today ${byBucket.today.length} week ${byBucket.week.length} ` +
+        `nextWeek ${byBucket.nextWeek.length} month ${byBucket.month.length} ` +
         `later ${byBucket.later.length} undated ${byBucket.undated.length} · ` +
         `empty ${tasks.filter(isEmptyTask).length} · ` +
         `reference ${kinds.reference} someday ${kinds.someday} · ` +
@@ -87,7 +88,7 @@ describeVault("real vault audit", () => {
     const shown = bucketCounts(tasks, REFERENCE_DAY);
     console.log(
       `[audit] shown to the user: overdue ${shown.overdue} today ${shown.today} week ${shown.week} ` +
-        `later ${shown.later} undated ${shown.undated}`
+        `nextWeek ${shown.nextWeek} month ${shown.month} later ${shown.later} undated ${shown.undated}`
     );
   });
 
@@ -115,6 +116,8 @@ describeVault("real vault audit", () => {
       byBucket.overdue.length +
       byBucket.today.length +
       byBucket.week.length +
+      byBucket.nextWeek.length +
+      byBucket.month.length +
       byBucket.later.length +
       byBucket.undated.length;
     expect(bucketed).toBe(open);
@@ -122,7 +125,7 @@ describeVault("real vault audit", () => {
   });
 
   it("resolves an effective date for every task that is not undated", () => {
-    for (const bucket of ["overdue", "today", "week", "later"] as const) {
+    for (const bucket of ["overdue", "today", "week", "nextWeek", "month", "later"] as const) {
       for (const task of byBucket[bucket]) expect(task.effectiveDate).not.toBeNull();
     }
     for (const task of byBucket.undated) expect(task.effectiveDate).toBeNull();
@@ -203,7 +206,9 @@ describeVault("real vault audit", () => {
     const open = openState(tasks, REFERENCE_DAY);
     const shown = bucketCounts(tasks, REFERENCE_DAY);
 
-    expect(open.open).toBe(shown.overdue + shown.today + shown.week + shown.later + shown.undated);
+    expect(open.open).toBe(
+      shown.overdue + shown.today + shown.week + shown.nextWeek + shown.month + shown.later + shown.undated
+    );
     expect(open.renegotiate).toBe(shown.overdue);
     expect(open.undated).toBe(shown.undated);
     // A task lives in exactly one note, so notes can never outnumber tasks.
