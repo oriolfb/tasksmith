@@ -178,7 +178,7 @@ export class ControlTable {
     this.action(actions, "done", "Fet", "Completar", () => this.callbacks.onComplete(task));
     this.action(actions, "today", "Avui", "Posar-la al dia d'avui", () => this.callbacks.onToday(task));
     this.action(actions, "tomorrow", "Demà", "Posar-la demà", () => this.callbacks.onTomorrow(task));
-    this.action(actions, "date", "Data", "Data, o descartar-la", (event) => this.callbacks.onDate(task, event));
+    this.action(actions, "more", "⋮", "Més: data, obrir la nota, no ho faré", (event) => this.callbacks.onDate(task, event));
   }
 
   /**

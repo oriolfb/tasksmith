@@ -1077,7 +1077,7 @@
 .tcc-th,
 .tcc-tr {
   display: grid;
-  grid-template-columns: 16px minmax(220px, 1fr) 88px 104px 92px 120px 108px;
+  grid-template-columns: 16px minmax(220px, 1fr) 88px 104px 92px 120px 152px;
   gap: 12px;
   align-items: baseline;
   padding: 7px 8px;
@@ -1200,7 +1200,8 @@
    heading inherit `opacity: 0` and vanish. */
 .tcc-acts {
   display: flex;
-  gap: 11px;
+  flex-wrap: wrap;
+  gap: 4px 11px;
   opacity: 0;
   transition: opacity 0.12s ease;
 }
@@ -1484,7 +1485,7 @@
 @container tccTable (max-width: 860px) {
   .tcc-th,
   .tcc-tr {
-    grid-template-columns: 16px minmax(200px, 1fr) 84px 96px 104px;
+    grid-template-columns: 16px minmax(200px, 1fr) 84px 96px 148px;
     gap: 10px;
   }
 
@@ -1497,7 +1498,7 @@
 @container tccTable (max-width: 580px) {
   .tcc-th,
   .tcc-tr {
-    grid-template-columns: 16px minmax(150px, 1fr) 84px 100px;
+    grid-template-columns: 16px minmax(150px, 1fr) 84px 144px;
   }
 
   .tcc-cell-who {
@@ -1510,7 +1511,7 @@
 @container tccTable (max-width: 420px) {
   .tcc-th,
   .tcc-tr {
-    grid-template-columns: 16px minmax(90px, 1fr) 78px 92px;
+    grid-template-columns: 16px minmax(90px, 1fr) 78px 136px;
     gap: 8px;
   }
 }
