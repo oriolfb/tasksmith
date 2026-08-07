@@ -103,6 +103,16 @@ describe("filterMenu", () => {
     expect(week?.patch).toEqual({ buckets: ["today", "week"], dueOn: null });
   });
 
+  // The table groups this finely, so the filter menu offers the same two extra buckets on their
+  // own, not only bundled inside "Més endavant".
+  it("offers next week and this month as their own deadline options", () => {
+    const deadline = filterMenu(DEFAULT_QUERY, ctx).find((group) => group.label === "Termini")!;
+    const nextWeek = deadline.options.find((option) => option.label === "La setmana que ve");
+    expect(nextWeek?.patch).toEqual({ buckets: ["nextWeek"], dueOn: null });
+    const month = deadline.options.find((option) => option.label === "Aquest mes");
+    expect(month?.patch).toEqual({ buckets: ["month"], dueOn: null });
+  });
+
   it("offers the line kinds only when the vault holds such lines", () => {
     expect(filterMenu(DEFAULT_QUERY, ctx).some((group) => group.label === "Línies")).toBe(true);
     expect(

@@ -192,6 +192,8 @@ export function filterMenu(query: QueryState, ctx: ChipContext): FilterGroup[] {
         bucketOption(["today"]),
         // Today included, because a week you are planning starts today, not tomorrow.
         bucketOption(["today", "week"]),
+        bucketOption(["nextWeek"]),
+        bucketOption(["month"]),
         bucketOption(["later"]),
         bucketOption(["undated"]),
         bucketOption(["week", "nextWeek", "month", "later"]),
