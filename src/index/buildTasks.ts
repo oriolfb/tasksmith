@@ -6,6 +6,7 @@ import { filenameDate } from "./FilenameDate";
 import { parseFrontmatterBlock } from "./Frontmatter";
 import { DEFAULT_CONTEXT_RULES, grantsDeadline, kindOf, type ContextRules } from "./ContextRules";
 import { areaOf, noteDateOf, peopleOf, projectOf, tagsOf, titleOf, topFolder, typeOf } from "./NoteContext";
+import { extractPersonPrefix } from "./PersonPrefix";
 import { parseTaskLine, priorityOf } from "./TaskParser";
 
 export interface FileInput {
@@ -26,7 +27,8 @@ export interface FileInput {
 export function tasksFromFile(
   file: FileInput,
   interop: TasksInterop,
-  rules: ContextRules = DEFAULT_CONTEXT_RULES
+  rules: ContextRules = DEFAULT_CONTEXT_RULES,
+  knownPeople: ReadonlySet<string> = new Set()
 ): Task[] {
   const lines = file.content.split("\n");
   const folder = file.path.includes("/") ? file.path.slice(0, file.path.lastIndexOf("/")) : "";
@@ -54,12 +56,17 @@ export function tasksFromFile(
     const parsed = parseTaskLine(stripCarriageReturn(raw));
     if (!parsed) continue;
 
+    const prefix = extractPersonPrefix(parsed.description, knownPeople);
+    const description = prefix ? prefix.rest : parsed.description;
+    const taskPeople = prefix ? Array.from(new Set([...people, prefix.name])) : people;
+
     tasks.push({
       ...parsed,
+      description,
       location: { path: file.path, line },
       project,
       area,
-      people,
+      people: taskPeople,
       noteTitle,
       noteType,
       noteDate,

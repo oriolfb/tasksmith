@@ -195,3 +195,30 @@ describe("tasksFromFile with the note's context", () => {
     expect(task!.kind).toBe("reference");
   });
 });
+
+describe("tasksFromFile with a \"Nom:\" prefix", () => {
+  it("assigns the task to a known person and strips the prefix", () => {
+    const content = "- [ ] Carmen: fer algo\n";
+    const [task] = tasksFromFile({ path: "x.md", content }, DEFAULT_INTEROP, undefined, new Set(["Carmen"]));
+    expect(task!.description).toBe("fer algo");
+    expect(task!.people).toEqual(["Carmen"]);
+  });
+
+  it("merges with the note's own Persones without duplicating", () => {
+    const [task] = tasksFromFile(
+      { path: "02 Reunions/Feedback.md", content: MEETING },
+      DEFAULT_INTEROP,
+      undefined,
+      new Set(["Oriol"])
+    );
+    expect(task!.description).toBe("definir l'estructura d'equip pel pla 2030");
+    expect(task!.people).toEqual(["Carmen", "Mireia", "Oriol"]);
+  });
+
+  it("leaves an unrecognised prefix untouched", () => {
+    const content = "- [ ] Idea: explorar una opció\n";
+    const [task] = tasksFromFile({ path: "x.md", content }, DEFAULT_INTEROP, undefined, new Set(["Carmen"]));
+    expect(task!.description).toBe("Idea: explorar una opció");
+    expect(task!.people).toEqual([]);
+  });
+});

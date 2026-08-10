@@ -4,6 +4,7 @@ import type { TasksInterop } from "../tasks/TasksPluginSettings";
 import { ScopeFilter } from "./ScopeFilter";
 import { tasksFromFile } from "./buildTasks";
 import { DEFAULT_CONTEXT_RULES, type ContextRules } from "./ContextRules";
+import { peopleOf } from "./NoteContext";
 import { Logger } from "../utils/Logger";
 
 type Listener = () => void;
@@ -24,6 +25,9 @@ const READ_BATCH = 32;
 export class TaskIndex {
   private byPath = new Map<string, Task[]>();
   private mtimes = new Map<string, number>();
+  /** Each file's own `Persones:`, kept separately from `Task.people` so a "Nom:" prefix
+   *  inferred in one task can never itself count as a known person for another. */
+  private peopleByPath = new Map<string, string[]>();
   private listeners = new Set<Listener>();
   private scanning: Promise<void> | null = null;
   private scanned = false;
@@ -76,6 +80,7 @@ export class TaskIndex {
   }
 
   remove(path: string): void {
+    this.peopleByPath.delete(path);
     if (this.byPath.delete(path)) {
       this.mtimes.delete(path);
       this.emit();
@@ -85,6 +90,7 @@ export class TaskIndex {
   async rename(file: TFile, oldPath: string): Promise<void> {
     this.byPath.delete(oldPath);
     this.mtimes.delete(oldPath);
+    this.peopleByPath.delete(oldPath);
     await this.load(file, true);
   }
 
@@ -112,15 +118,26 @@ export class TaskIndex {
     const files = this.app.vault.getMarkdownFiles().filter((file) => this.scope.includes(file.path));
     const byPath = new Map<string, Task[]>();
     const mtimes = new Map<string, number>();
+    const peopleByPath = new Map<string, string[]>();
+
+    // Frontmatter is already in Obsidian's metadata cache, so this whole-vault pass costs no
+    // I/O. Doing it up front — before any task line is parsed — makes a "Nom:" prefix resolve
+    // the same way regardless of which read batch below happens to land first.
+    for (const file of files) {
+      peopleByPath.set(file.path, peopleOf(this.app.metadataCache.getFileCache(file)?.frontmatter));
+    }
 
     for (let i = 0; i < files.length; i += READ_BATCH) {
-      await Promise.all(files.slice(i, i + READ_BATCH).map((file) => this.read(file, byPath, mtimes)));
+      await Promise.all(
+        files.slice(i, i + READ_BATCH).map((file) => this.read(file, byPath, mtimes, peopleByPath))
+      );
     }
 
     // Swapped in whole rather than cleared up front: a re-scan (a settings change) leaves the
     // views showing the previous index for those milliseconds instead of an empty one.
     this.byPath = byPath;
     this.mtimes = mtimes;
+    this.peopleByPath = peopleByPath;
     this.scanned = true;
     Logger.info(`indexed ${this.all().length} tasks from ${this.byPath.size} notes`);
     this.emit();
@@ -128,19 +145,27 @@ export class TaskIndex {
 
   private async load(file: TFile, notify: boolean): Promise<void> {
     if (!this.scope.includes(file.path)) {
+      this.peopleByPath.delete(file.path);
       if (this.byPath.delete(file.path) && notify) this.emit();
       return;
     }
-    await this.read(file, this.byPath, this.mtimes);
+    await this.read(file, this.byPath, this.mtimes, this.peopleByPath);
     if (notify) this.emit();
   }
 
   /** Reads and parses one note into the given maps. Callers check the scope first. */
-  private async read(file: TFile, byPath: Map<string, Task[]>, mtimes: Map<string, number>): Promise<void> {
+  private async read(
+    file: TFile,
+    byPath: Map<string, Task[]>,
+    mtimes: Map<string, number>,
+    peopleByPath: Map<string, string[]>
+  ): Promise<void> {
     try {
       const content = await this.app.vault.cachedRead(file);
       const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-      const tasks = tasksFromFile({ path: file.path, content, frontmatter }, this.interop, this.rules);
+      peopleByPath.set(file.path, peopleOf(frontmatter));
+      const knownPeople = new Set(Array.from(peopleByPath.values()).flat());
+      const tasks = tasksFromFile({ path: file.path, content, frontmatter }, this.interop, this.rules, knownPeople);
       if (tasks.length > 0) {
         byPath.set(file.path, tasks);
       } else {
