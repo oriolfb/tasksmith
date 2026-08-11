@@ -36,6 +36,7 @@ import {
 } from "../query/Metrics";
 import { healthFindings, type Finding } from "../query/Health";
 import { startOfToday } from "../index/dates";
+import { t, tn } from "../i18n/strings";
 
 /** Still `-triage`: the tab grew into a control centre, but the stored id is API for saved layouts. */
 export const CONTROL_CENTRE_VIEW = "task-smith-triage";
@@ -43,19 +44,19 @@ export const CONTROL_CENTRE_VIEW = "task-smith-triage";
 type Lens = { key: GroupKey; label: string };
 
 const LENSES: Lens[] = [
-  { key: "bucket", label: "Per data" },
-  { key: "person", label: "Amb qui" },
-  { key: "area", label: "Per àrea" },
+  { key: "bucket", label: t("lens.bucket") },
+  { key: "person", label: t("lens.person") },
+  { key: "area", label: t("lens.area") },
 ];
 
 const SORT_LABELS: Record<SortKey, string> = {
-  date: "termini",
-  age: "antiguitat",
-  text: "tasca",
-  person: "amb qui",
-  area: "àrea",
-  note: "origen",
-  priority: "prioritat",
+  date: t("sort.date"),
+  age: t("sort.age"),
+  text: t("sort.text"),
+  person: t("sort.person"),
+  area: t("sort.area"),
+  note: t("sort.note"),
+  priority: t("sort.priority"),
 };
 
 /** How many months of history fit the chart without the bars turning into hairs. */
@@ -131,7 +132,7 @@ export class ControlCentreView extends BaseTaskView {
   }
 
   getDisplayText(): string {
-    return "Centre de control";
+    return t("controlCentre.title");
   }
 
   getIcon(): string {
@@ -153,14 +154,14 @@ export class ControlCentreView extends BaseTaskView {
     const tools = head.createDiv({ cls: "tcc-head-tools" });
     const views = tools.createDiv({ cls: "clickable-icon tcf-icon" });
     setIcon(views, "bookmark");
-    views.setAttribute("aria-label", "Vistes desades");
-    setTooltip(views, "Vistes desades", { delay: 300 });
+    views.setAttribute("aria-label", t("savedViews.tooltip"));
+    setTooltip(views, t("savedViews.tooltip"), { delay: 300 });
     views.addEventListener("click", (event) => this.savedViewsMenu(event));
 
     // A real button, because this one really is a button: it takes you to the dock to decide
     // the day. Obsidian's own styling is what it should look like.
-    const plan = tools.createEl("button", { cls: "tcc-plan", text: "Planificar el dia" });
-    setTooltip(plan, "Obrir «Avui» i triar les tres del dia", { delay: 300 });
+    const plan = tools.createEl("button", { cls: "tcc-plan", text: t("controlCentre.planDay") });
+    setTooltip(plan, t("controlCentre.planDayTooltip"), { delay: 300 });
     plan.addEventListener("click", () => this.openFocus());
 
     this.kpiHost = root.createDiv({ cls: "tcc-kpis" });
@@ -182,7 +183,7 @@ export class ControlCentreView extends BaseTaskView {
 
     const filters = root.createDiv({ cls: "tcc-filters" });
     this.searchInput = filters.createEl("input", { cls: "tcc-search", type: "search" });
-    this.searchInput.placeholder = "Cerca…";
+    this.searchInput.placeholder = t("controlCentre.search");
     this.searchInput.addEventListener("input", () => {
       this.query = { ...this.query, text: this.searchInput.value };
       this.refresh();
@@ -248,29 +249,29 @@ export class ControlCentreView extends BaseTaskView {
 
     this.kpi({
       value: String(open.open),
-      label: "obertes",
-      detail: `en ${open.notes} ${open.notes === 1 ? "nota" : "notes"}`,
+      label: t("kpi.open.label"),
+      detail: tn("kpi.openNotes", open.notes),
       filter: { statusScope: "open", buckets: null, staleOnly: false },
     });
 
     this.kpi({
       value: String(open.renegotiate),
-      label: "per renegociar",
+      label: t("kpi.renegotiate.label"),
       detail:
         open.oldestOverdueDays === null
-          ? "cap endarrerida"
-          : `la més antiga fa ${open.oldestOverdueDays} dies`,
+          ? t("kpi.renegotiate.none")
+          : t("kpi.renegotiate.oldest", { days: open.oldestOverdueDays }),
       late: true,
       filter: { statusScope: "open", buckets: ["overdue"], sort: "age", sortReverse: false },
     });
 
     this.kpi({
       value: String(open.undated),
-      label: "sense data",
+      label: t("kpi.undated.label"),
       detail:
         open.datableFromNote > 0
-          ? `${open.datableFromNote} amb data a la nota`
-          : "cap classificable pel frontmatter",
+          ? t("kpi.undated.withNoteDate", { count: open.datableFromNote })
+          : t("kpi.undated.none"),
       filter: { statusScope: "open", buckets: ["undated"] },
     });
 
@@ -281,20 +282,20 @@ export class ControlCentreView extends BaseTaskView {
      */
     this.kpi({
       value: String(progress.pending),
-      label: "pendents avui",
-      detail: progress.closed === 0 ? "cap tancada encara" : `${progress.closed} ${progress.closed === 1 ? "tancada" : "tancades"} ja avui`,
+      label: t("kpi.pendingToday.label"),
+      detail: progress.closed === 0 ? t("kpi.pendingToday.noneClosed") : tn("kpi.closedToday", progress.closed),
       filter: { statusScope: "open", buckets: ["today"], sort: "date", sortReverse: false },
     });
 
     this.kpi({
       value: String(progress.closed),
-      label: "tancades avui",
+      label: t("kpi.closedToday.label"),
       detail:
         progress.pending > 0
-          ? `${progress.pending} ${progress.pending === 1 ? "pendent" : "pendents"} encara`
+          ? tn("kpi.pendingLeft", progress.pending)
           : progress.closed > 0
-            ? "cap pendent, dia fet"
-            : "cap tasca per avui",
+            ? t("kpi.dayDone")
+            : t("kpi.noTasksToday"),
       filter: { statusScope: "closed", buckets: null, staleOnly: false },
     });
   }
@@ -309,7 +310,7 @@ export class ControlCentreView extends BaseTaskView {
     const cell = this.kpiHost.createDiv({ cls: "tcc-kpi" });
     cell.setAttribute("role", "button");
     cell.tabIndex = 0;
-    setTooltip(cell, `Filtrar: ${spec.label}`, { delay: 400 });
+    setTooltip(cell, t("kpi.filterTooltip", { label: spec.label }), { delay: 400 });
     const value = cell.createDiv({ cls: "tcc-kpi-value", text: spec.value });
     if (spec.late) value.addClass("tcc-late");
     cell.createDiv({ cls: "tcc-kpi-label", text: spec.label });
@@ -345,9 +346,9 @@ export class ControlCentreView extends BaseTaskView {
     if (week.overdue > 0) {
       this.weekAside({
         value: String(week.overdue),
-        label: "abans d'avui",
+        label: t("week.overdue.label"),
         late: true,
-        tooltip: "Endarrerides: la setmana comença amb aquest deute",
+        tooltip: t("week.overdue.tooltip"),
         filter: { statusScope: "open", buckets: ["overdue"], sort: "age", sortReverse: false },
       });
     }
@@ -357,14 +358,14 @@ export class ControlCentreView extends BaseTaskView {
 
     this.weekAside({
       value: String(week.later),
-      label: "més enllà",
-      tooltip: "Amb data després d'aquesta setmana",
+      label: t("week.later.label"),
+      tooltip: t("week.later.tooltip"),
       filter: { statusScope: "open", buckets: ["later"] },
     });
     this.weekAside({
       value: String(week.undated),
-      label: "sense data",
-      tooltip: "Obertes i sense cap data: no cauran en cap dia fins que en tinguin una",
+      label: t("kpi.undated.label"),
+      tooltip: t("week.undated.tooltip"),
       filter: { statusScope: "open", buckets: ["undated"] },
     });
 
@@ -392,7 +393,7 @@ export class ControlCentreView extends BaseTaskView {
       const folded = bar.createDiv({ cls: "tcc-day-bar-folded" });
       folded.style.height = `${Math.max(2, Math.round((day.absorbed / day.count) * height))}px`;
     }
-    column.createSpan({ cls: "tcc-day-label", text: day.today ? "avui" : weekdayLabel(day.date) });
+    column.createSpan({ cls: "tcc-day-label", text: day.today ? t("day.today") : weekdayLabel(day.date) });
     column.createSpan({ cls: "tcc-day-num", text: String(day.date.getDate()) });
 
     setTooltip(column, this.dayTooltip(day, capacity, today), { delay: 200 });
@@ -413,24 +414,20 @@ export class ControlCentreView extends BaseTaskView {
     const own = day.count - day.absorbed;
     const parts = [
       day.count === 0
-        ? `Cap tasca ${name}`
-        : `${day.count} ${day.count === 1 ? "tasca" : "tasques"} ${name} (${shortDate(day.date)})`,
+        ? t("day.none", { name })
+        : tn("day.count", day.count, { name, date: shortDate(day.date) }),
     ];
     // A folded weekend has to say so on the column that swallowed it, or the Monday reads as a
     // Monday that promised more than it did.
     if (day.absorbed > 0) {
-      parts.push(
-        `${own} ${own === 1 ? "és" : "són"} d'aquest dia i ${day.absorbed} ${
-          day.absorbed === 1 ? "ve" : "vénen"
-        } del cap de setmana`
-      );
+      parts.push(tn("day.absorbed", own, { own, absorbed: day.absorbed }));
     } else if (day.days.length > 1) {
-      parts.push("Inclou el cap de setmana anterior");
+      parts.push(t("day.includesWeekend"));
     }
     if (capacity !== null && day.count > Math.ceil(capacity)) {
-      parts.push(`Per sobre del ritme real, que és ${decimal(capacity)} al dia laborable`);
+      parts.push(t("day.aboveCapacity", { capacity: decimal(capacity) }));
     }
-    if (day.weekend && day.count > 0) parts.push("Cap de setmana");
+    if (day.weekend && day.count > 0) parts.push(t("day.weekend"));
     return parts.join("\n");
   }
 
@@ -438,19 +435,21 @@ export class ControlCentreView extends BaseTaskView {
   private weekSentence(week: WeekAhead, capacity: number | null, today: Date): string {
     if (week.planned === 0) {
       return week.undated > 0
-        ? `Cap data aquesta setmana. Les ${week.undated} sense data no apareixeran soles.`
-        : "Cap data aquesta setmana.";
+        ? t("week.noneDated.withUndated", { count: week.undated })
+        : t("week.noneDated");
     }
 
     const busiest = [...week.days].sort((a, b) => b.count - a.count)[0]!;
     // Seven columns are seven calendar days or seven working ones, and the sentence has to say
     // which: with the weekend folded away the strip reaches nine or ten days into the future.
     const ahead = this.settings.showWeekends
-      ? `els propers ${week.days.length} dies`
-      : `els propers ${week.days.length} dies laborables`;
-    const head =
-      `${week.planned} ${week.planned === 1 ? "tasca" : "tasques"} amb data ${ahead}, ` +
-      `${busiest.count} el dia més carregat (${dayLabel(busiest.date, today)}).`;
+      ? t("week.ahead.calendar", { count: week.days.length })
+      : t("week.ahead.working", { count: week.days.length });
+    const head = tn("week.summary", week.planned, {
+      ahead,
+      busiest: busiest.count,
+      day: dayLabel(busiest.date, today),
+    });
     if (capacity === null) return head;
 
     // Working days only: nobody closes tasks on Sunday, and counting them would say the week
@@ -459,9 +458,8 @@ export class ControlCentreView extends BaseTaskView {
     const room = capacity * week.days.filter((day) => !day.weekend).length;
     const verdict =
       workload > room
-        ? ` Als dies laborables n'hi ha ${workload} i el ritme real en dona per ${Math.round(room)}: ` +
-          "alguna cosa s'haurà de moure."
-        : ` Als dies laborables n'hi ha ${workload}, dins del ritme real de ${decimal(capacity)} al dia.`;
+        ? t("week.verdict.over", { workload, room: Math.round(room) })
+        : t("week.verdict.under", { workload, capacity: decimal(capacity) });
     return head + verdict;
   }
 
@@ -511,10 +509,10 @@ export class ControlCentreView extends BaseTaskView {
 
     this.historyToggle.empty();
     setIcon(this.historyToggle.createSpan({ cls: "tcc-history-chevron" }), open ? "chevron-down" : "chevron-right");
-    this.historyToggle.createSpan({ cls: "tcc-history-title", text: "Historial" });
+    this.historyToggle.createSpan({ cls: "tcc-history-title", text: t("history.title") });
     this.historyToggle.createSpan({
       cls: "tcc-history-hint",
-      text: open ? "creades i tancades per mes" : "creades i tancades per mes, els últims 8 mesos",
+      text: open ? t("history.hintOpen") : t("history.hintClosed", { count: CHART_MONTHS }),
     });
     this.historyToggle.setAttribute("aria-expanded", String(open));
 
@@ -540,8 +538,8 @@ export class ControlCentreView extends BaseTaskView {
 
     const legend = chart.createDiv({ cls: "tcc-flow-legend" });
     for (const [cls, label] of [
-      ["tcc-flow-created", "creades"],
-      ["tcc-flow-closed", "tancades"],
+      ["tcc-flow-created", t("history.legendCreated")],
+      ["tcc-flow-closed", t("history.legendClosed")],
     ]) {
       const item = legend.createSpan({ cls: "tcc-flow-key" });
       item.createSpan({ cls: `tcc-flow-swatch ${cls}` });
@@ -563,34 +561,32 @@ export class ControlCentreView extends BaseTaskView {
     const stillOpen = months.reduce((sum, month) => sum + month.stillOpen, 0);
 
     const note = host.createDiv({ cls: "tcc-chart-note tcc-history-note" });
-    note.appendText(`Els últims ${months.length} mesos: `);
-    note.createEl("b", { text: `${created} creades i ${closed} tancades` });
+    note.appendText(t("history.note.intro", { count: months.length }));
+    note.createEl("b", { text: t("history.note.counts", { created, closed }) });
     if (created > 0) {
       const ratio = Math.round((closed / created) * 100);
       const drift = created - closed;
       note.appendText(
         drift > 0
-          ? `, un ${ratio}%. El pendent ha crescut en ${drift}, i ${stillOpen} d'aquelles encara són obertes.`
-          : `, un ${ratio}%. Se n'han tancat més de les que han entrat.`
+          ? t("history.note.grew", { ratio, drift, stillOpen })
+          : t("history.note.shrank", { ratio })
       );
     } else {
       note.appendText(".");
     }
 
     if (closings.perWorkingDay !== null) {
-      note.appendText(` La mitjana real és ${decimal(closings.perWorkingDay)} tancades al dia laborable.`);
+      note.appendText(t("history.note.average", { average: decimal(closings.perWorkingDay) }));
     }
-    note.appendText(
-      " «Creada» és la data de la tasca (➕) o, si no en té, la de la nota on viu — la majoria de línies no porten data de creació pròpia."
-    );
+    note.appendText(t("history.note.footnote"));
   }
 
   private monthTooltip(month: MonthlyFlow, today: Date): string {
     const name = monthLabel(month.year, month.month, today);
-    const parts = [`${name}: ${month.created} creades · ${month.closed} tancades`];
-    if (month.cancelled > 0) parts.push(`${month.done} amb ✅ · ${month.cancelled} amb ❌`);
-    if (month.stillOpen > 0) parts.push(`${month.stillOpen} de les creades encara obertes`);
-    if (month.current) parts.push("mes en curs");
+    const parts = [t("history.month.tooltip", { name, created: month.created, closed: month.closed })];
+    if (month.cancelled > 0) parts.push(t("history.month.doneCancelled", { done: month.done, cancelled: month.cancelled }));
+    if (month.stillOpen > 0) parts.push(t("history.month.stillOpen", { count: month.stillOpen }));
+    if (month.current) parts.push(t("history.month.current"));
     return parts.join("\n");
   }
 
@@ -615,11 +611,11 @@ export class ControlCentreView extends BaseTaskView {
       el.createSpan({ text: chip.label });
       const clear = el.createSpan({ cls: "tcc-chip-x", text: "×" });
       clear.setAttribute("role", "button");
-      clear.setAttribute("aria-label", `Treure «${chip.label}»`);
+      clear.setAttribute("aria-label", t("chip.remove", { label: chip.label }));
       clear.addEventListener("click", () => this.applyFilter(chip.clear));
     }
 
-    const add = this.chipHost.createSpan({ cls: "tcc-chip tcc-chip-add", text: "+ filtre" });
+    const add = this.chipHost.createSpan({ cls: "tcc-chip tcc-chip-add", text: t("chip.add") });
     add.setAttribute("role", "button");
     add.tabIndex = 0;
     add.addEventListener("click", (event) => this.openFilterMenu(event, ctx));
@@ -643,14 +639,14 @@ export class ControlCentreView extends BaseTaskView {
       menu.addSeparator();
     }
 
-    this.pickFilter(menu, "Projecte", () => this.projects(), (value) => ({ project: value, area: null }));
-    this.pickFilter(menu, "Àrea", () => this.areas(), (value) => ({ area: value, project: null }));
-    this.pickFilter(menu, "Persona", () => this.people(), (value) => ({ person: value }));
+    this.pickFilter(menu, t("filter.project"), () => this.projects(), (value) => ({ project: value, area: null }));
+    this.pickFilter(menu, t("filter.area"), () => this.areas(), (value) => ({ area: value, project: null }));
+    this.pickFilter(menu, t("filter.person"), () => this.people(), (value) => ({ person: value }));
 
     menu.addSeparator();
     menu.addItem((item) =>
       item
-        .setTitle("Treure tots els filtres")
+        .setTitle(t("menu.clearAllFilters"))
         .setIcon("filter-x")
         .onClick(() =>
           this.applyFilter({
@@ -679,15 +675,15 @@ export class ControlCentreView extends BaseTaskView {
   ): void {
     menu.addItem((item) =>
       item
-        .setTitle(`${label}…`)
+        .setTitle(t("filter.ellipsis", { label }))
         .setIcon("filter")
         .onClick(async () => {
           const options = values();
           if (options.length === 0) {
-            new Notice(`Cap ${label.toLowerCase()} a les tasques obertes`);
+            new Notice(t("notice.noneOfType", { type: label.toLowerCase() }));
             return;
           }
-          const chosen = await PickModal.ask(this.app, `${label}…`, options);
+          const chosen = await PickModal.ask(this.app, t("filter.ellipsis", { label }), options);
           if (chosen !== null) this.applyFilter(patch(chosen));
         })
     );
@@ -721,10 +717,10 @@ export class ControlCentreView extends BaseTaskView {
     const shown = new Set(groups.flatMap((group) => group.tasks.map(idOf))).size;
     const scope = this.query.statusScope;
     const total = scope === "open" ? open.open : scope === "closed" ? closings.closed : open.open + closings.closed;
-    const what = scope === "open" ? "obertes" : scope === "closed" ? "tancades" : "línies";
+    const what = scope === "open" ? t("summary.open") : scope === "closed" ? t("summary.closed") : t("summary.lines");
     const order = SORT_LABELS[this.query.sort];
     const direction = this.query.sortReverse ? " ↑" : "";
-    this.summaryEl.setText(`${shown} de ${total} ${what} · ordenat per ${order}${direction}`);
+    this.summaryEl.setText(t("summary.line", { shown, total, what, order, direction }));
   }
 
   /* ── the health panel ──────────────────────────────────── */
@@ -742,22 +738,24 @@ export class ControlCentreView extends BaseTaskView {
     this.stacked = this.isStacked();
     const open = this.healthOpen();
     const worth = findings.filter((finding) => finding.tone === "warn").length;
-    const worthPhrase = worth === 0 ? "res a arreglar" : `${worth} ${worth === 1 ? "cosa" : "coses"} a mirar`;
+    const worthPhrase = worth === 0 ? t("health.nothingToFix") : tn("health.itemsToCheck", worth);
 
     this.healthToggle.empty();
     setIcon(
       this.healthToggle.createSpan({ cls: "tcc-health-chevron" }),
       open ? "chevron-down" : "chevron-right"
     );
-    this.healthToggle.createSpan({ cls: "tcc-health-title", text: "Salut del sistema" });
+    this.healthToggle.createSpan({ cls: "tcc-health-title", text: t("health.title") });
     this.healthToggle.setAttribute("aria-expanded", String(open));
     // The sentence used to live on the toggle itself while folded, but that's what made a
     // folded panel almost as wide as an open one. The tooltip can afford to spell it out; the
     // toggle — which has to stay put, not grow, so the table keeps the width it gives back —
     // can't.
-    setTooltip(this.healthToggle, open ? "Plegar la salut del sistema" : `Desplegar la salut del sistema — ${worthPhrase}`, {
-      delay: 300,
-    });
+    setTooltip(
+      this.healthToggle,
+      open ? t("health.collapseTooltip") : t("health.expandTooltip", { worthPhrase }),
+      { delay: 300 }
+    );
 
     this.healthHost.toggleClass("tcc-health-shut", !open);
     // Open, it belongs beside the table — a child of the layout row, taking its 250px.
@@ -775,7 +773,7 @@ export class ControlCentreView extends BaseTaskView {
     if (!open) return;
 
     if (findings.length === 0) {
-      this.healthBody.createDiv({ cls: "tcc-health-detail", text: "Res a arreglar." });
+      this.healthBody.createDiv({ cls: "tcc-health-detail", text: t("health.nothingBody") });
       return;
     }
     for (const finding of findings) this.renderFinding(finding);
@@ -849,13 +847,13 @@ export class ControlCentreView extends BaseTaskView {
     if (selected.length === 0) {
       const keys = this.footerHost.createDiv({ cls: "tcf-keys" });
       for (const [key, what] of [
-        ["J K", "moure"],
-        ["Espai · ⌘/Ctrl+clic · Maj+clic", "seleccionar"],
-        ["A", "avui"],
-        ["D", "data"],
-        ["X", "fet"],
-        ["O", "obrir"],
-        ["/", "cerca"],
+        ["J K", t("footer.key.move")],
+        [t("footer.key.selectCombo"), t("footer.key.select")],
+        ["A", t("footer.key.today")],
+        ["D", t("footer.key.date")],
+        ["X", t("footer.key.done")],
+        ["O", t("footer.key.open")],
+        ["/", t("footer.key.search")],
       ]) {
         const hint = keys.createSpan();
         hint.createEl("b", { text: key });
@@ -867,15 +865,18 @@ export class ControlCentreView extends BaseTaskView {
     const bar = this.footerHost.createDiv({ cls: "tcc-bulk" });
     bar.createSpan({
       cls: "tcc-bulk-count",
-      text: `${selected.length} ${selected.length === 1 ? "seleccionada" : "seleccionades"}`,
+      text: tn("footer.selectedCount", selected.length),
     });
 
     const actions: [string, () => Promise<void>][] = [
-      ["Avui", () => this.bulk(selected, (task) => this.actions.today(task), "Avui")],
-      ["Demà", () => this.bulk(selected, (task) => this.actions.tomorrow(task), "Demà")],
-      ["Divendres", () => this.bulk(selected, (task) => this.actions.scheduleOn(task, nextFriday(startOfToday())), "Divendres")],
-      ["+1 setmana", () => this.bulk(selected, (task) => this.actions.nextWeek(task), "+1 setmana")],
-      ["Treure la data", () => this.bulk(selected, (task) => this.actions.clearDue(task), "Treure la data")],
+      [t("action.today"), () => this.bulk(selected, (task) => this.actions.today(task), t("action.today"))],
+      [t("dateMenu.tomorrow"), () => this.bulk(selected, (task) => this.actions.tomorrow(task), t("dateMenu.tomorrow"))],
+      [
+        t("dateMenu.friday"),
+        () => this.bulk(selected, (task) => this.actions.scheduleOn(task, nextFriday(startOfToday())), t("dateMenu.friday")),
+      ],
+      [t("dateMenu.plusWeek"), () => this.bulk(selected, (task) => this.actions.nextWeek(task), t("dateMenu.plusWeek"))],
+      [t("dateMenu.clearDate"), () => this.bulk(selected, (task) => this.actions.clearDue(task), t("dateMenu.clearDate"))],
     ];
     for (const [label, run] of actions) {
       const word = bar.createSpan({ cls: "tcc-act", text: label });
@@ -884,15 +885,15 @@ export class ControlCentreView extends BaseTaskView {
     }
 
     // Cancelling and deleting sit apart from the reschedules, and read as warnings.
-    const cancel = bar.createSpan({ cls: "tcc-act tcc-act-warn", text: "No ho faré" });
+    const cancel = bar.createSpan({ cls: "tcc-act tcc-act-warn", text: t("dateMenu.wontDo") });
     cancel.setAttribute("role", "button");
     cancel.addEventListener("click", () => void this.bulkCancel(selected));
 
-    const remove = bar.createSpan({ cls: "tcc-act tcc-act-warn", text: "Eliminar" });
+    const remove = bar.createSpan({ cls: "tcc-act tcc-act-warn", text: t("button.delete") });
     remove.setAttribute("role", "button");
     remove.addEventListener("click", () => void this.bulkDelete(selected));
 
-    const clear = bar.createSpan({ cls: "tcc-act tcc-bulk-clear", text: "Desmarcar" });
+    const clear = bar.createSpan({ cls: "tcc-act tcc-bulk-clear", text: t("action.clearSelection") });
     clear.setAttribute("role", "button");
     clear.addEventListener("click", () => this.table.clearSelection());
   }
@@ -900,28 +901,28 @@ export class ControlCentreView extends BaseTaskView {
   private async bulkCancel(tasks: Task[]): Promise<void> {
     const confirmed = await ConfirmModal.ask(
       this.app,
-      "No les faré",
-      `Es cancel·laran ${tasks.length} tasques (${"- [-]"} amb ❌). No s'esborra res i es pot desfer.`,
-      `Cancel·lar ${tasks.length}`
+      t("modal.cancelTasks.title"),
+      t("modal.cancelTasks.body", { count: tasks.length }),
+      t("modal.cancelTasks.confirm", { count: tasks.length })
     );
     if (!confirmed) return;
-    await this.bulk(tasks, (task) => this.actions.cancel(task), "Cancel·lar");
+    await this.bulk(tasks, (task) => this.actions.cancel(task), t("button.cancel"));
   }
 
   /** Deleting several lines at once still asks first, even though it can now be undone. */
   private async bulkDelete(tasks: Task[]): Promise<void> {
     const confirmed = await ConfirmModal.ask(
       this.app,
-      "Eliminar tasques",
-      `S'eliminaran ${tasks.length} línies de les seves notes. Es pot desfer amb «Desfés».`,
-      `Eliminar ${tasks.length}`
+      t("modal.deleteTasks.title"),
+      t("modal.deleteTasks.body", { count: tasks.length, undo: t("button.undo") }),
+      t("modal.deleteTasks.confirm", { count: tasks.length })
     );
     if (!confirmed) return;
 
     const { deleted, skipped } = await this.actions.removeMany(tasks);
     this.table.clearSelection();
     undoableNotice(
-      skipped === 0 ? `${deleted} tasques eliminades` : `${deleted} eliminades, ${skipped} omeses`,
+      skipped === 0 ? tn("notice.tasksDeleted", deleted) : t("notice.tasksDeletedWithSkipped", { deleted, skipped }),
       this.actions
     );
   }
@@ -931,7 +932,7 @@ export class ControlCentreView extends BaseTaskView {
    * The whole batch is one history entry, so undoing a bulk action is one step and not twenty.
    */
   private async bulk(tasks: Task[], run: (task: Task) => Promise<unknown>, label: string): Promise<void> {
-    this.actions.beginGroup(`${label} · ${tasks.length} tasques`);
+    this.actions.beginGroup(t("group.label", { label, count: tasks.length }));
     let done = 0;
     let skipped = 0;
     try {
@@ -945,7 +946,7 @@ export class ControlCentreView extends BaseTaskView {
     }
     this.table.clearSelection();
     undoableNotice(
-      skipped === 0 ? `${done} tasques actualitzades` : `${done} actualitzades, ${skipped} omeses`,
+      skipped === 0 ? tn("notice.tasksUpdated", done) : t("notice.tasksUpdatedWithSkipped", { done, skipped }),
       this.actions
     );
   }
@@ -985,7 +986,7 @@ export class ControlCentreView extends BaseTaskView {
   private savedViewsMenu(event: MouseEvent): void {
     const menu = new Menu();
     if (this.settings.savedViews.length === 0) {
-      menu.addItem((item) => item.setTitle("Cap vista desada").setDisabled(true));
+      menu.addItem((item) => item.setTitle(t("menu.noSavedViews")).setDisabled(true));
     }
     for (const view of this.settings.savedViews) {
       menu.addItem((item) =>
@@ -1002,14 +1003,14 @@ export class ControlCentreView extends BaseTaskView {
     menu.addSeparator();
     menu.addItem((item) =>
       item
-        .setTitle("Desar els filtres actuals…")
+        .setTitle(t("menu.saveCurrentFilters"))
         .setIcon("save")
         .onClick(() => void this.saveCurrentView())
     );
     if (this.settings.savedViews.length > 0) {
       menu.addItem((item) =>
         item
-          .setTitle("Esborrar una vista…")
+          .setTitle(t("menu.deleteView"))
           .setIcon("trash-2")
           .onClick(() => void this.deleteView())
       );
@@ -1018,7 +1019,7 @@ export class ControlCentreView extends BaseTaskView {
   }
 
   private async saveCurrentView(): Promise<void> {
-    const name = await PromptModal.ask(this.app, "Nom de la vista", "");
+    const name = await PromptModal.ask(this.app, t("prompt.viewName"), "");
     if (!name) return;
 
     const existing = this.settings.savedViews.findIndex((view) => view.name === name);
@@ -1027,20 +1028,20 @@ export class ControlCentreView extends BaseTaskView {
     else this.settings.savedViews.push(entry);
 
     await this.persist();
-    new Notice(`Vista "${name}" desada`);
+    new Notice(t("notice.viewSaved", { name }));
   }
 
   private async deleteView(): Promise<void> {
-    const name = await PromptModal.ask(this.app, "Quina vista vols esborrar?", this.settings.savedViews[0]!.name);
+    const name = await PromptModal.ask(this.app, t("prompt.whichViewToDelete"), this.settings.savedViews[0]!.name);
     if (!name) return;
     const index = this.settings.savedViews.findIndex((view) => view.name === name);
     if (index < 0) {
-      new Notice(`No hi ha cap vista "${name}"`);
+      new Notice(t("notice.viewNotFound", { name }));
       return;
     }
     this.settings.savedViews.splice(index, 1);
     await this.persist();
-    new Notice(`Vista "${name}" esborrada`);
+    new Notice(t("notice.viewDeleted", { name }));
   }
 
   /* ── keyboard ──────────────────────────────────────────── */
@@ -1109,7 +1110,7 @@ export class ControlCentreView extends BaseTaskView {
   private async openTask(task: Task): Promise<void> {
     const file = this.app.vault.getAbstractFileByPath(task.location.path);
     if (!(file instanceof TFile)) {
-      new Notice(`No trobo ${task.location.path}`);
+      new Notice(t("notice.fileNotFound", { path: task.location.path }));
       return;
     }
     const leaf = this.app.workspace.getLeaf(false);

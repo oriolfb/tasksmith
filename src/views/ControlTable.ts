@@ -3,6 +3,7 @@ import type { Task } from "../types/task";
 import { bucketOf } from "../index/Buckets";
 import type { SortKey, TaskGroup } from "../query/Query";
 import { noteName, relativeLabel, shortDate } from "./format";
+import { t } from "../i18n/strings";
 
 /**
  * The detailed table: Tasca · Termini · Amb qui · Àrea · Origen · Accions.
@@ -28,12 +29,12 @@ export interface TableColumn {
 }
 
 export const COLUMNS: TableColumn[] = [
-  { key: "text", label: "Tasca", sort: "text" },
-  { key: "due", label: "Termini", sort: "date" },
-  { key: "who", label: "Amb qui", sort: "person" },
-  { key: "area", label: "Àrea", sort: "area" },
-  { key: "origin", label: "Origen", sort: "note" },
-  { key: "actions", label: "Accions" },
+  { key: "text", label: t("table.column.text"), sort: "text" },
+  { key: "due", label: t("table.column.due"), sort: "date" },
+  { key: "who", label: t("table.column.who"), sort: "person" },
+  { key: "area", label: t("table.column.area"), sort: "area" },
+  { key: "origin", label: t("table.column.origin"), sort: "note" },
+  { key: "actions", label: t("table.column.actions") },
 ];
 
 export interface TableCallbacks {
@@ -94,7 +95,7 @@ export class ControlTable {
     this.rows.clear();
 
     if (groups.length === 0) {
-      host.createDiv({ cls: "tcc-empty", text: "Cap tasca compleix aquest filtre." });
+      host.createDiv({ cls: "tcc-empty", text: t("table.empty") });
       return;
     }
 
@@ -138,7 +139,11 @@ export class ControlTable {
       if (active) cell.addClass("tcc-th-on");
       cell.setAttribute("role", "button");
       cell.tabIndex = 0;
-      setTooltip(cell, active ? "Girar l'ordre" : `Ordenar per ${column.label.toLowerCase()}`, { delay: 300 });
+      setTooltip(
+        cell,
+        active ? t("table.reverseSort") : t("table.sortBy", { column: column.label.toLowerCase() }),
+        { delay: 300 }
+      );
       const sort = (): void => this.callbacks.onSort(column.sort!);
       cell.addEventListener("click", sort);
       cell.addEventListener("keydown", (event) => {
@@ -163,8 +168,8 @@ export class ControlTable {
     const mark = row.createDiv({ cls: "tcc-mark" });
     mark.setAttribute("role", "button");
     if (task.open) {
-      mark.setAttribute("aria-label", "Completar");
-      setTooltip(mark, "Completar", { delay: 300 });
+      mark.setAttribute("aria-label", t("row.complete"));
+      setTooltip(mark, t("row.complete"), { delay: 300 });
       mark.addEventListener("click", (event) => {
         event.stopPropagation();
         this.callbacks.onComplete(task);
@@ -172,8 +177,8 @@ export class ControlTable {
     } else {
       mark.addClass("tcc-mark-on");
       setIcon(mark, "check");
-      mark.setAttribute("aria-label", "Reobrir");
-      setTooltip(mark, "Reobrir", { delay: 300 });
+      mark.setAttribute("aria-label", t("row.reopen"));
+      setTooltip(mark, t("row.reopen"), { delay: 300 });
       mark.addEventListener("click", (event) => {
         event.stopPropagation();
         this.callbacks.onReopen(task);
@@ -182,10 +187,10 @@ export class ControlTable {
 
     const text = row.createSpan({
       cls: "tcc-cell-text",
-      text: task.description || "(sense descripció)",
+      text: task.description || t("row.noDescription"),
     });
     if (!task.open) text.addClass("tcc-closed");
-    setTooltip(text, task.description || "(sense descripció)", { delay: 400 });
+    setTooltip(text, task.description || t("row.noDescription"), { delay: 400 });
     text.addEventListener("click", () => this.callbacks.onOpen(task));
 
     this.renderDue(row, task, today);
@@ -203,7 +208,7 @@ export class ControlTable {
     // usually empty in this vault — rides along in the tooltip rather than competing for the cell.
     const area = row.createSpan({ cls: "tcc-cell-area", text: task.area ?? "—" });
     if (!task.area) area.addClass("tcc-none");
-    if (task.project) setTooltip(area, `Projecte: ${task.project}`, { delay: 300 });
+    if (task.project) setTooltip(area, t("table.project", { project: task.project }), { delay: 300 });
 
     const origin = row.createSpan({
       cls: "tcc-cell-origin",
@@ -221,9 +226,9 @@ export class ControlTable {
      * and "Accions" was invisible — same shape of mistake as `lead.className = "ord"`.
      */
     const actions = row.createDiv({ cls: "tcc-cell-actions tcc-acts" });
-    this.action(actions, "today", "Avui", "Posar-la al dia d'avui", () => this.callbacks.onToday(task));
-    this.action(actions, "tomorrow", "Demà", "Posar-la demà", () => this.callbacks.onTomorrow(task));
-    this.action(actions, "more", "⋮", "Més: data, obrir la nota, no ho faré", (event) => this.callbacks.onDate(task, event));
+    this.action(actions, "today", t("action.today"), t("row.todayTooltip"), () => this.callbacks.onToday(task));
+    this.action(actions, "tomorrow", t("dateMenu.tomorrow"), t("table.tomorrowTooltip"), () => this.callbacks.onTomorrow(task));
+    this.action(actions, "more", "⋮", t("table.moreTooltip"), (event) => this.callbacks.onDate(task, event));
   }
 
   /**
@@ -236,12 +241,12 @@ export class ControlTable {
 
     if (bucket === "undated") {
       cell.addClass("tcc-none");
-      cell.setText("sense data");
+      cell.setText(t("kpi.undated.label"));
       setTooltip(
         cell,
         task.noteDate
-          ? `Sense data. La nota porta ${shortDate(task.noteDate)}, que no compta com a termini.`
-          : "Sense data.",
+          ? t("table.due.noneWithNote", { date: shortDate(task.noteDate) })
+          : t("table.due.none"),
         { delay: 300 }
       );
       return;
@@ -256,7 +261,10 @@ export class ControlTable {
       cell,
       own
         ? shortDate(task.effectiveDate)
-        : `${shortDate(task.effectiveDate)} · heretada de ${task.noteTitle ?? noteName(task.location.path)}`,
+        : t("table.due.inherited", {
+            date: shortDate(task.effectiveDate),
+            origin: task.noteTitle ?? noteName(task.location.path),
+          }),
       { delay: 300 }
     );
   }

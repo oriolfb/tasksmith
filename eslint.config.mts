@@ -9,6 +9,7 @@ export default defineConfig(
 		'.claude',
 		'esbuild.config.mjs',
 		'jest.config.js',
+		'jest.setup.ts',
 		'scripts',
 		'version-bump.mjs',
 		'versions.json',

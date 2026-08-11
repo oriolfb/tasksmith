@@ -11,6 +11,7 @@ import { DAY_LIMIT, dayKey, focusSections, isUrgent } from "../query/Focus";
 import { DaySelection } from "./DaySelection";
 import { FocusRenderer, type Section } from "./FocusRenderer";
 import { relativeLabel } from "./format";
+import { t, tn } from "../i18n/strings";
 
 export const SIDEBAR_VIEW = "task-smith-sidebar";
 
@@ -83,7 +84,7 @@ export class SidebarView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "Avui";
+    return t("sidebar.title");
   }
 
   getIcon(): string {
@@ -113,8 +114,8 @@ export class SidebarView extends ItemView {
 
     const head = root.createDiv({ cls: "tcf-lens" });
     for (const [lens, label] of [
-      ["date", "Per data"],
-      ["person", "Amb qui"],
+      ["date", t("lens.bucket")],
+      ["person", t("lens.person")],
     ] as [Lens, string][]) {
       const tab = head.createEl("button", { cls: "tcf-tab", text: label });
       tab.addEventListener("click", () => this.setLens(lens));
@@ -126,21 +127,21 @@ export class SidebarView extends ItemView {
     // Ours only adds the size, so it matches the icons in every other header in the app.
     const magnifier = tools.createDiv({ cls: "clickable-icon tcf-icon" });
     setIcon(magnifier, "search");
-    magnifier.setAttribute("aria-label", "Cercar");
-    setTooltip(magnifier, "Cercar  /", { delay: 300 });
+    magnifier.setAttribute("aria-label", t("search.label"));
+    setTooltip(magnifier, t("search.tooltipWithKey"), { delay: 300 });
     magnifier.addEventListener("click", () => this.toggleSearch());
 
     const wide = tools.createDiv({ cls: "clickable-icon tcf-icon" });
     setIcon(wide, "layout-list");
-    wide.setAttribute("aria-label", "Obrir el centre de control");
-    setTooltip(wide, "Centre de control", { delay: 300 });
+    wide.setAttribute("aria-label", t("command.openControlCentre"));
+    setTooltip(wide, t("controlCentre.title"), { delay: 300 });
     wide.addEventListener("click", () => this.openControlCentre());
 
     this.totalEl = head.createSpan({ cls: "tcf-total" });
 
     this.searchRow = root.createDiv({ cls: "tcf-search tcf-hidden" });
     this.searchInput = this.searchRow.createEl("input", { type: "search" });
-    this.searchInput.placeholder = "Cerca…";
+    this.searchInput.placeholder = t("controlCentre.search");
     this.searchInput.addEventListener("input", () => {
       this.search = this.searchInput.value;
       this.refresh();
@@ -159,12 +160,12 @@ export class SidebarView extends ItemView {
 
     const keys = root.createDiv({ cls: "tcf-keys" });
     for (const [key, what] of [
-      ["J K", "moure"],
-      ["A", "avui"],
-      ["D", "data"],
-      ["X", "fet"],
-      ["O", "obrir"],
-      ["/", "cerca"],
+      ["J K", t("footer.key.move")],
+      ["A", t("footer.key.today")],
+      ["D", t("footer.key.date")],
+      ["X", t("footer.key.done")],
+      ["O", t("footer.key.open")],
+      ["/", t("footer.key.search")],
     ]) {
       const hint = keys.createSpan();
       hint.createEl("b", { text: key });
@@ -266,31 +267,36 @@ export class SidebarView extends ItemView {
       (a, b) => (ordinals.get(dayKey(a)) ?? 0) - (ordinals.get(dayKey(b)) ?? 0)
     );
 
-    this.totalEl.setText(`${this.openCount(all)} obertes`);
+    this.totalEl.setText(t("sidebar.openCount", { count: this.openCount(all) }));
 
     const said: SayPart[] = [];
     if (focus.urgent.length > 0) {
-      const soles = focus.urgent.length === 1 ? "ha arribat sola a avui." : "han arribat soles a avui.";
       said.push(
-        { text: `${count(focus.urgent.length, "tasca", "tasques")} ${soles}`, strong: true },
-        { text: " Tries " },
-        { text: `${settled} de ${DAY_LIMIT}`, accent: true },
-        { text: `, i queden ${focus.renegotiate.length} per renegociar.` }
+        { text: tn("sidebar.arrivedAlone", focus.urgent.length), strong: true },
+        { text: t("sidebar.tries") },
+        { text: t("sidebar.fraction", { settled, limit: DAY_LIMIT }), accent: true },
+        { text: t("sidebar.remainingToRenegotiate", { count: focus.renegotiate.length }) }
       );
     } else if (settled > 0) {
       said.push(
-        { text: "Tries " },
-        { text: `${settled} de ${DAY_LIMIT}`, accent: true },
-        { text: ` per avui. Queden ${focus.renegotiate.length} per renegociar.` }
+        { text: t("sidebar.tries") },
+        { text: t("sidebar.fraction", { settled, limit: DAY_LIMIT }), accent: true },
+        { text: t("sidebar.forToday", { count: focus.renegotiate.length }) }
       );
     } else {
       said.push(
-        { text: "Què faràs avui?", strong: true },
-        { text: ` Tria'n ${DAY_LIMIT}. Hi ha ${focus.renegotiate.length} per renegociar i ${focus.undated.length} sense data.` }
+        { text: t("sidebar.whatToday"), strong: true },
+        {
+          text: t("sidebar.pickN", {
+            limit: DAY_LIMIT,
+            renegotiate: focus.renegotiate.length,
+            undated: focus.undated.length,
+          }),
+        }
       );
     }
     // Said last and said plainly: the line that answers "he fet res, avui?".
-    if (finishedToday > 0) said.push({ text: ` ${doneSoFar(finishedToday)}`, strong: true });
+    if (finishedToday > 0) said.push({ text: tn("sidebar.doneSoFar", finishedToday), strong: true });
     this.say(...said);
 
     /*
@@ -308,7 +314,7 @@ export class SidebarView extends ItemView {
     return [
       {
         key: "avui",
-        label: "Avui",
+        label: t("sidebar.section.today"),
         // No count: "2 han arribat soles · 1 de 3 triada" already says it, and a bare number
         // next to it only invites the question of which one it is counting.
         why: whyToday(focus.urgent.length, settled, finishedToday),
@@ -325,22 +331,22 @@ export class SidebarView extends ItemView {
       },
       {
         key: "renegociar",
-        label: "Per renegociar",
-        why: "decisió pendent, no fracàs",
+        label: t("sidebar.section.renegotiate"),
+        why: t("sidebar.section.renegotiateWhy"),
         count: focus.renegotiate.length,
         tasks: focus.renegotiate,
         limit: SECTION_LIMIT,
       },
       {
         key: "sense-data",
-        label: "Sense data",
+        label: t("sidebar.section.undated"),
         count: focus.undated.length,
         tasks: focus.undated,
         limit: SECTION_LIMIT,
       },
       {
         key: "mes-endavant",
-        label: "Més endavant",
+        label: t("sidebar.section.later"),
         count: focus.later.length,
         tasks: focus.later,
         limit: SECTION_LIMIT,
@@ -380,7 +386,7 @@ export class SidebarView extends ItemView {
           label: person,
           why:
             late.length > 0
-              ? `${count(late.length, "retardada", "retardades")} · la més antiga ${relativeLabel(addDaysBack(today, oldest), today)}`
+              ? tn("sidebar.lateWhy", late.length, { age: relativeLabel(addDaysBack(today, oldest), today) })
               : undefined,
           count: tasks.length,
           tasks: [...tasks].sort((a, b) => byLateness(a, b, today)),
@@ -391,15 +397,15 @@ export class SidebarView extends ItemView {
 
     const people = sections.filter((section) => section.key !== `person:${NO_PERSON}`).length;
     const withPerson = open.filter((task) => task.people.length > 0).length;
-    this.totalEl.setText(`${this.openCount(all)} obertes`);
+    this.totalEl.setText(t("sidebar.openCount", { count: this.openCount(all) }));
     if (people === 0) {
-      this.say({ text: "Cap tasca amb persona. Surten de " }, { text: "Persones:", strong: true }, {
-        text: " del frontmatter de la nota.",
+      this.say({ text: t("sidebar.noPeople.part1") }, { text: t("sidebar.noPeople.label"), strong: true }, {
+        text: t("sidebar.noPeople.part2"),
       });
     } else {
       this.say(
-        { text: count(people, "conversa", "converses"), strong: true },
-        { text: ` ${people === 1 ? "tanca" : "tanquen"} ${count(withPerson, "tasca", "tasques")}.` }
+        { text: tn("sidebar.conversations", people), strong: true },
+        { text: tn("sidebar.closesTasks", people, { tasks: tn("sidebar.tasksCount", withPerson) }) }
       );
     }
     return sections;
@@ -440,7 +446,7 @@ export class SidebarView extends ItemView {
       return;
     }
     if (!this.day.add(task)) {
-      new Notice(`Ja tens ${DAY_LIMIT} tasques per avui. Treu-ne una abans d'afegir-hi cap altra.`);
+      new Notice(t("notice.dayLimitReached", { limit: DAY_LIMIT }));
       return;
     }
     this.refresh();
@@ -558,18 +564,10 @@ export class SidebarView extends ItemView {
 
 function whyToday(urgent: number, chosen: number, done: number): string {
   const parts: string[] = [];
-  if (urgent > 0) parts.push(`${urgent} ${urgent === 1 ? "ha arribat sola" : "han arribat soles"}`);
-  parts.push(`${chosen} de ${DAY_LIMIT} ${chosen === 1 ? "triada" : "triades"}`);
-  if (done > 0) parts.push(`${done} ${done === 1 ? "feta" : "fetes"}`);
+  if (urgent > 0) parts.push(tn("sidebar.arrived", urgent));
+  parts.push(tn("sidebar.chosenCount", chosen, { limit: DAY_LIMIT }));
+  if (done > 0) parts.push(tn("sidebar.doneCount", done));
   return parts.join(" · ");
-}
-
-function doneSoFar(done: number): string {
-  return done === 1 ? "Ja n'has feta una." : `Ja n'has fetes ${done}.`;
-}
-
-function count(n: number, one: string, many: string): string {
-  return `${n} ${n === 1 ? one : many}`;
 }
 
 function byLateness(a: Task, b: Task, today: Date): number {

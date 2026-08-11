@@ -7,6 +7,7 @@ module.exports = {
   // copy it likes, which means a mock the tests here rely on can come from another branch —
   // "Class extends value undefined" for a class that is right there in this one.
   modulePathIgnorePatterns: ["<rootDir>/.claude/worktrees/"],
+  setupFiles: ["<rootDir>/jest.setup.ts"],
   moduleNameMapper: {
     obsidian: "<rootDir>/src/__mocks__/obsidian.ts",
   },

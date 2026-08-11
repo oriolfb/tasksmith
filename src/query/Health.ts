@@ -4,6 +4,7 @@ import { isEmptyTask } from "../index/EmptyTasks";
 import { startOfToday } from "../index/dates";
 import { NO_PROJECT, type QueryState } from "./Query";
 import { closingState, commitments, datableFromNote, monthsBetween } from "./Metrics";
+import { getLocale, t, tn } from "../i18n/strings";
 
 /**
  * The health panel: not statistics, but a short list of concrete things to fix, each with the
@@ -58,11 +59,9 @@ export function healthFindings(tasks: Task[], ctx: HealthContext): Finding[] {
     findings.push({
       key: "no-cancellations",
       tone: "warn",
-      title: span > 0 ? `Cap tasca cancel·lada en ${span} ${span === 1 ? "mes" : "mesos"}` : "Cap tasca cancel·lada",
-      detail:
-        `${closings.closed} tancades, ${closings.done} amb ✅ i cap amb ❌. Dir «no ho faré» és una ` +
-        "decisió que encara no has pres mai — per això les endarrerides s'acumulen en lloc de tancar-se.",
-      action: "Renegociar-les una a una →",
+      title: span > 0 ? tn("health.noCancellations.title.withSpan", span) : t("health.noCancellations.title.noSpan"),
+      detail: t("health.noCancellations.detail", { closed: closings.closed, done: closings.done }),
+      action: t("health.renegotiateAction"),
       filter: { statusScope: "open", buckets: ["overdue"], sort: "age", sortReverse: false },
     });
   } else if (
@@ -70,13 +69,15 @@ export function healthFindings(tasks: Task[], ctx: HealthContext): Finding[] {
     closings.cancelled > 0 &&
     closings.cancelled / Math.max(1, closings.closed) < 0.03
   ) {
-    const percent = ((closings.cancelled / closings.closed) * 100).toFixed(1).replace(".", ",");
+    const percent = ((closings.cancelled / closings.closed) * 100)
+      .toFixed(1)
+      .replace(".", getLocale() === "en" ? "." : ",");
     findings.push({
       key: "few-cancellations",
       tone: "warn",
-      title: `Només ${closings.cancelled} de ${closings.closed} tancades s'han cancel·lat`,
-      detail: `Un ${percent}%. Renegociar és una sortida tan vàlida com acabar-la, i gairebé no es fa servir.`,
-      action: "Renegociar-les una a una →",
+      title: t("health.fewCancellations.title", { cancelled: closings.cancelled, closed: closings.closed }),
+      detail: t("health.fewCancellations.detail", { percent }),
+      action: t("health.renegotiateAction"),
       filter: { statusScope: "open", buckets: ["overdue"], sort: "age", sortReverse: false },
     });
   }
@@ -92,11 +93,9 @@ export function healthFindings(tasks: Task[], ctx: HealthContext): Finding[] {
     findings.push({
       key: "undated-with-note-date",
       tone: "warn",
-      title: `${datable.length} sense data que la nota sí que té`,
-      detail:
-        "La nota porta una «data:» que el plugin no fa servir com a termini a propòsit — el dia " +
-        "d'una reunió no és el termini de les seves tasques. Però és la data que hi posaries.",
-      action: "Veure-les →",
+      title: t("health.undatedWithNoteDate.title", { count: datable.length }),
+      detail: t("health.undatedWithNoteDate.detail"),
+      action: t("health.viewThemAction"),
       filter: { statusScope: "open", buckets: ["undated"], noteDatableOnly: true, sort: "age", sortReverse: false },
     });
   }
@@ -113,11 +112,9 @@ export function healthFindings(tasks: Task[], ctx: HealthContext): Finding[] {
     findings.push({
       key: "notes-without-project",
       tone: "warn",
-      title: `${withoutProject.size} notes amb tasques obertes i sense «Projecte»`,
-      detail:
-        "Sense ell la lent «Per àrea» agrupa per carpeta i prou. S'omple al frontmatter de la nota: " +
-        "el plugin no escriu mai fora de la línia de la tasca.",
-      action: "Veure-les →",
+      title: t("health.notesWithoutProject.title", { count: withoutProject.size }),
+      detail: t("health.notesWithoutProject.detail"),
+      action: t("health.viewThemAction"),
       filter: { statusScope: "open", project: NO_PROJECT, buckets: null },
     });
   }
@@ -133,9 +130,9 @@ export function healthFindings(tasks: Task[], ctx: HealthContext): Finding[] {
     findings.push({
       key: "stale",
       tone: "warn",
-      title: `${stale.length} apuntades fa més de ${ctx.staleThresholdDays} dies`,
-      detail: `La més antiga fa ${oldest} dies. Amb data o sense: si segueix aquí, o es fa o es descarta.`,
-      action: "Veure les aturades →",
+      title: t("health.stale.title", { count: stale.length, days: ctx.staleThresholdDays }),
+      detail: t("health.stale.detail", { oldest }),
+      action: t("health.staleAction"),
       filter: { statusScope: "open", staleOnly: true, buckets: null, sort: "age", sortReverse: false },
     });
   }
@@ -145,11 +142,10 @@ export function healthFindings(tasks: Task[], ctx: HealthContext): Finding[] {
     findings.push({
       key: "empty-tasks",
       tone: "warn",
-      title: `${empty.length} ${empty.length === 1 ? "línia buida" : "línies buides"} de plantilla`,
+      title: tn("health.emptyTasks.title", empty.length),
       detail: ctx.autoDeleteEmptyTasks
-        ? "Un «- [ ]» sense text, deixat per una plantilla. S'esborraran soles; cap vista les compta."
-        : "Un «- [ ]» sense text, deixat per una plantilla. No es compten enlloc; l'ordre " +
-          "«Eliminar les tasques buides ara» les treu, i es pot desfer.",
+        ? t("health.emptyTasks.detail.auto")
+        : t("health.emptyTasks.detail.manual"),
     });
   }
 
@@ -158,11 +154,9 @@ export function healthFindings(tasks: Task[], ctx: HealthContext): Finding[] {
     findings.push({
       key: "reference-lines",
       tone: "ok",
-      title: `${reference.length} línies de documentació fora dels comptadors`,
-      detail:
-        "Checklists de notes amb «tipus: documentacio». Es queden a la nota i no es compten mai " +
-        "com a tasques obertes.",
-      action: "Ensenya-me-les →",
+      title: t("health.referenceLines.title", { count: reference.length }),
+      detail: t("health.referenceLines.detail"),
+      action: t("health.showThemAction"),
       filter: { statusScope: "open", includeReference: true, buckets: null },
     });
   }
@@ -171,10 +165,14 @@ export function healthFindings(tasks: Task[], ctx: HealthContext): Finding[] {
     findings.push({
       key: "index",
       tone: "ok",
-      title: "Índex",
-      detail:
-        `${ctx.notes} notes · ${ctx.lines} línies de tasca · ${open.length} obertes ` +
-        `(${renegotiable.length} per renegociar) · ${empty.length} buides.`,
+      title: t("health.index.title"),
+      detail: t("health.index.detail", {
+        notes: ctx.notes,
+        lines: ctx.lines,
+        open: open.length,
+        renegotiate: renegotiable.length,
+        empty: empty.length,
+      }),
     });
   }
 

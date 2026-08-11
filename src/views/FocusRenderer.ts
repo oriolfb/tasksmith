@@ -6,6 +6,7 @@ import { dayKey, isUrgent } from "../query/Focus";
 import { addDays } from "../index/dates";
 import { openDateMenu } from "./DateMenu";
 import { noteName, relativeLabel, shortDate } from "./format";
+import { t } from "../i18n/strings";
 
 export interface Section {
   key: string;
@@ -49,9 +50,9 @@ export interface Section {
 }
 
 const SLOT_HINTS: Record<number, string> = {
-  1: "tria la primera…",
-  2: "tria la segona…",
-  3: "i la tercera",
+  1: t("slot.hint.1"),
+  2: t("slot.hint.2"),
+  3: t("slot.hint.3"),
 };
 
 export interface RowCallbacks {
@@ -93,7 +94,7 @@ export class FocusRenderer {
 
     const anything = sections.some((section) => this.weight(section) > 0);
     if (!anything) {
-      host.createDiv({ cls: "tcf-empty", text: "Res per aquí. Cap tasca compleix el filtre." });
+      host.createDiv({ cls: "tcf-empty", text: t("row.empty") });
       return;
     }
 
@@ -149,7 +150,7 @@ export class FocusRenderer {
       const more = host.createDiv({ cls: "tcf-more" });
       more.setAttribute("role", "button");
       more.tabIndex = 0;
-      more.setText(`${hidden} més`);
+      more.setText(t("row.more", { count: hidden }));
       more.addEventListener("click", () => this.callbacks.onMore(section));
     }
 
@@ -159,21 +160,21 @@ export class FocusRenderer {
       // Same width as the checkbox it stands in for, so the hint text lands under the task
       // text above it instead of creeping left into the checkbox's own column.
       empty.createDiv({ cls: "tcf-lead" });
-      empty.createSpan({ text: SLOT_HINTS[slot] ?? "tria'n una més…" });
+      empty.createSpan({ text: SLOT_HINTS[slot] ?? t("slot.hintExtra") });
     }
 
     if (section.optionalSlot) {
       const empty = host.createDiv({ cls: "tcf-slot tcf-slot-optional" });
       empty.createSpan({ cls: "tcf-ord tcf-ord-empty" });
       empty.createDiv({ cls: "tcf-lead" });
-      empty.createSpan({ text: "en pots afegir una més, si vols" });
+      empty.createSpan({ text: t("slot.optional") });
     }
 
     // Last, under its own quiet label: what you have already closed today. The invitation to pick
     // another one stays right above it, so a freed slot never reads as a loss.
     const done = section.done ?? [];
     if (done.length === 0) return;
-    host.createDiv({ cls: "tcf-done-head", text: "fetes avui" });
+    host.createDiv({ cls: "tcf-done-head", text: t("row.doneToday") });
     for (const task of done) this.renderDone(host, task);
   }
 
@@ -189,15 +190,15 @@ export class FocusRenderer {
     const box = row.createDiv({ cls: "tcf-lead tcf-mark tcf-mark-on" });
     setIcon(box, "check");
     box.setAttribute("role", "button");
-    box.setAttribute("aria-label", "Reobrir");
-    setTooltip(box, "Reobrir", { delay: 200 });
+    box.setAttribute("aria-label", t("row.reopen"));
+    setTooltip(box, t("row.reopen"), { delay: 200 });
     box.addEventListener("click", (event) => {
       event.stopPropagation();
       this.callbacks.onReopen(task);
     });
 
     const main = row.createDiv({ cls: "tcf-main" });
-    const text = main.createDiv({ cls: "tcf-text", text: task.description || "(sense descripció)" });
+    const text = main.createDiv({ cls: "tcf-text", text: task.description || t("row.noDescription") });
     text.addEventListener("click", () => this.callbacks.onOpen(task));
   }
 
@@ -226,8 +227,8 @@ export class FocusRenderer {
     const box = row.createDiv({ cls: "tcf-lead tcf-mark" });
     box.setAttribute("role", "button");
     if (task.open) {
-      box.setAttribute("aria-label", "Completar");
-      setTooltip(box, "Completar", { delay: 200 });
+      box.setAttribute("aria-label", t("row.complete"));
+      setTooltip(box, t("row.complete"), { delay: 200 });
       box.addEventListener("click", (event) => {
         event.stopPropagation();
         this.callbacks.onComplete(task, section);
@@ -235,8 +236,8 @@ export class FocusRenderer {
     } else {
       box.addClass("tcf-mark-on");
       setIcon(box, "check");
-      box.setAttribute("aria-label", "Reobrir");
-      setTooltip(box, "Reobrir", { delay: 200 });
+      box.setAttribute("aria-label", t("row.reopen"));
+      setTooltip(box, t("row.reopen"), { delay: 200 });
       box.addEventListener("click", (event) => {
         event.stopPropagation();
         this.callbacks.onReopen(task);
@@ -244,7 +245,7 @@ export class FocusRenderer {
     }
 
     const main = row.createDiv({ cls: "tcf-main" });
-    const text = main.createDiv({ cls: "tcf-text", text: task.description || "(sense descripció)" });
+    const text = main.createDiv({ cls: "tcf-text", text: task.description || t("row.noDescription") });
     text.addEventListener("click", () => this.callbacks.onOpen(task));
 
     // Finished: no metadata, no "Avui · Data" — the only thing left to decide about it is
@@ -267,8 +268,8 @@ export class FocusRenderer {
      * the bottom of the date menu, which costs one deliberate step more.
      */
     const tools = footer.createDiv({ cls: "tcf-do" });
-    this.action(tools, "today", "Avui", "Posar-la al dia d'avui", () => this.callbacks.onToday(task));
-    this.action(tools, "date", "Data", "Data, o descartar-la", (event) => this.callbacks.onDate(task, event));
+    this.action(tools, "today", t("row.today"), t("row.todayTooltip"), () => this.callbacks.onToday(task));
+    this.action(tools, "date", t("row.date"), t("row.dateTooltip"), (event) => this.callbacks.onDate(task, event));
   }
 
   /**
@@ -281,15 +282,18 @@ export class FocusRenderer {
     const arrived = section.urgent && !chosen && isUrgent(task, today);
 
     if (arrived && bucket === "today") {
-      meta.createSpan({ cls: "tcf-now", text: "avui" });
+      meta.createSpan({ cls: "tcf-now", text: t("day.today") });
     } else if (arrived) {
-      meta.createSpan({ cls: "tcf-now", text: "marcada com a urgent" });
+      meta.createSpan({ cls: "tcf-now", text: t("row.markedUrgent") });
     } else if (bucket === "overdue") {
       meta.createSpan({ cls: "tcf-late", text: relativeLabel(task.effectiveDate, today) });
     } else if (bucket === "undated") {
       const age = ageInDays(task, null, today);
       meta.createSpan({
-        text: age !== null && age > 0 ? `apuntada ${relativeLabel(addDays(today, -age), today)}` : "sense data",
+        text:
+          age !== null && age > 0
+            ? t("row.notedRelative", { relative: relativeLabel(addDays(today, -age), today) })
+            : t("kpi.undated.label"),
       });
     } else {
       meta.createSpan({ text: relativeLabel(task.effectiveDate, today) });
@@ -404,7 +408,7 @@ export class FocusRenderer {
   async openTask(task: Task): Promise<void> {
     const file = this.app.vault.getAbstractFileByPath(task.location.path);
     if (!(file instanceof TFile)) {
-      new Notice(`No trobo ${task.location.path}`);
+      new Notice(t("notice.fileNotFound", { path: task.location.path }));
       return;
     }
     const leaf = this.app.workspace.getLeaf(false);
@@ -417,5 +421,5 @@ function dateNote(task: Task): string {
   const own = task.fields.due?.date ?? task.fields.scheduled?.date ?? task.fields.start?.date;
   return own
     ? ` · ${shortDate(task.effectiveDate)}`
-    : ` · ${shortDate(task.effectiveDate)}, heretada de la nota`;
+    : ` · ${shortDate(task.effectiveDate)}${t("row.inheritedFromNote")}`;
 }

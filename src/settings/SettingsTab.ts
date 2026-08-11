@@ -1,5 +1,6 @@
 import { type App, PluginSettingTab, Setting } from "obsidian";
 import type TaskSmithPlugin from "../main";
+import { t } from "../i18n/strings";
 
 export class TaskSmithSettingTab extends PluginSettingTab {
   constructor(app: App, private readonly plugin: TaskSmithPlugin) {
@@ -13,17 +14,15 @@ export class TaskSmithSettingTab extends PluginSettingTab {
     // Which build is actually running. Obsidian only re-reads main.js when the plugin is
     // re-enabled, so "I reloaded" and "the new code is running" are not the same claim.
     new Setting(containerEl)
-      .setName("Versió carregada")
-      .setDesc(
-        `${this.plugin.manifest.version} · si no coincideix amb l'última desplegada, desactiva i torna a activar el plugin.`
-      );
+      .setName(t("settings.loadedVersion.name"))
+      .setDesc(t("settings.loadedVersion.desc", { version: this.plugin.manifest.version }));
 
     new Setting(containerEl)
-      .setName("Carpetes excloses")
-      .setDesc("Una per línia. Les tasques d'aquestes carpetes no s'indexen.")
+      .setName(t("settings.excludedFolders.name"))
+      .setDesc(t("settings.excludedFolders.desc"))
       .addTextArea((text) =>
         text
-          .setPlaceholder("96 IA Docs\n07 Arxiu")
+          .setPlaceholder(t("settings.excludedFolders.placeholder"))
           .setValue(this.plugin.settings.excludedFolders.join("\n"))
           .onChange(async (value) => {
             this.plugin.settings.excludedFolders = lines(value);
@@ -32,8 +31,8 @@ export class TaskSmithSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Respectar els fitxers exclosos d'Obsidian")
-      .setDesc("Afegeix el que ja tens configurat a Opcions → Fitxers i enllaços → Fitxers exclosos.")
+      .setName(t("settings.respectObsidianExcluded.name"))
+      .setDesc(t("settings.respectObsidianExcluded.desc"))
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.respectObsidianIgnoreFilters).onChange(async (value) => {
           this.plugin.settings.respectObsidianIgnoreFilters = value;
@@ -42,13 +41,11 @@ export class TaskSmithSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Notes que posen termini a les seves tasques")
-      .setDesc(
-        "Una per línia: una etiqueta o un valor de «tipus» de la nota. Les tasques sense data pròpia dins d'aquestes notes hereten el «data:» del frontmatter com a venciment. La data de les altres notes només serveix per saber quant fa que existeix la tasca."
-      )
+      .setName(t("settings.deadlineNotes.name"))
+      .setDesc(t("settings.deadlineNotes.desc"))
       .addTextArea((text) =>
         text
-          .setPlaceholder("Nota_Diaria\nNota_Setmanal")
+          .setPlaceholder(t("settings.deadlineNotes.placeholder"))
           .setValue(this.plugin.settings.deadlineFromNotes.join("\n"))
           .onChange(async (value) => {
             this.plugin.settings.deadlineFromNotes = lines(value);
@@ -57,13 +54,11 @@ export class TaskSmithSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Tipus de nota que són documentació")
-      .setDesc(
-        "Valors de «tipus» les caselles dels quals no són compromisos (per exemple una plantilla o un manual). No s'esborra res: queden fora dels comptadors i es poden veure amb un filtre."
-      )
+      .setName(t("settings.docTypes.name"))
+      .setDesc(t("settings.docTypes.desc"))
       .addTextArea((text) =>
         text
-          .setPlaceholder("documentacio")
+          .setPlaceholder(t("settings.docTypes.placeholder"))
           .setValue(this.plugin.settings.referenceNoteTypes.join("\n"))
           .onChange(async (value) => {
             this.plugin.settings.referenceNoteTypes = lines(value);
@@ -72,11 +67,11 @@ export class TaskSmithSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Tipus de nota que són «algun dia»")
-      .setDesc("Buit per defecte. Afegeix-hi «idea» si vols que les intencions no comptin com a tasques del dia.")
+      .setName(t("settings.somedayTypes.name"))
+      .setDesc(t("settings.somedayTypes.desc"))
       .addTextArea((text) =>
         text
-          .setPlaceholder("idea")
+          .setPlaceholder(t("settings.somedayTypes.placeholder"))
           .setValue(this.plugin.settings.somedayNoteTypes.join("\n"))
           .onChange(async (value) => {
             this.plugin.settings.somedayNoteTypes = lines(value);
@@ -85,8 +80,8 @@ export class TaskSmithSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Dies per considerar una tasca estancada")
-      .setDesc("Es compta des de la data de creació, o de la data de la nota, o de l'última modificació.")
+      .setName(t("settings.staleDays.name"))
+      .setDesc(t("settings.staleDays.desc"))
       .addText((text) =>
         text.setValue(String(this.plugin.settings.staleThresholdDays)).onChange(async (value) => {
           const parsed = Number.parseInt(value, 10);
@@ -98,10 +93,8 @@ export class TaskSmithSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Eliminar automàticament les tasques buides")
-      .setDesc(
-        "Desactivat per defecte. Si l'actives, esborra la línia sencera de les tasques sense cap contingut (`- [ ]` de plantilla) en desar una nota. Mai toca la nota que tens oberta, ni una tasca amb subtasques, i cada neteja es pot desfer amb «Desfés l'últim canvi del plugin»."
-      )
+      .setName(t("settings.autoDeleteEmpty.name"))
+      .setDesc(t("settings.autoDeleteEmpty.desc"))
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.autoDeleteEmptyTasks).onChange(async (value) => {
           this.plugin.settings.autoDeleteEmptyTasks = value;
@@ -110,10 +103,8 @@ export class TaskSmithSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Caps de setmana a la tira de la setmana")
-      .setDesc(
-        "Activat, la tira del centre de control ensenya set dies naturals. Desactivat, ensenya set dies laborables i les tasques amb data en dissabte o diumenge es compten al dilluns següent: el tooltip de la columna ho diu i clicar-la també les obre. Cap tasca queda amagada."
-      )
+      .setName(t("settings.weekendsInStrip.name"))
+      .setDesc(t("settings.weekendsInStrip.desc"))
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.showWeekends).onChange(async (value) => {
           this.plugin.settings.showWeekends = value;
@@ -122,7 +113,7 @@ export class TaskSmithSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Comptador d'endarrerides a la barra lateral d'icones")
+      .setName(t("settings.overdueBadge.name"))
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.showOverdueBadge).onChange(async (value) => {
           this.plugin.settings.showOverdueBadge = value;
