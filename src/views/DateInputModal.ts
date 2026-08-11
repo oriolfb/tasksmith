@@ -2,6 +2,7 @@ import { type App, SuggestModal } from "obsidian";
 import { type DateMatch, parseDateInput } from "../query/DateInput";
 import { startOfToday } from "../index/dates";
 import { dayWithAge } from "./format";
+import { t } from "../i18n/strings";
 
 /**
  * The date field: type a phrase, see what it means, press `↵`.
@@ -26,11 +27,11 @@ export class DateInputModal extends SuggestModal<DateMatch> {
     // Above anything a phrase can produce — `d` alone is nine readings before duplicates go, and
     // a match the field decided not to show is a date you cannot reach.
     this.limit = 12;
-    this.setPlaceholder("Quan: dv · dl que ve · 3d · 2s · 15/9");
-    this.emptyStateText = "No sé llegir-ho. Prova «dv», «3d», «2s» o «15/9».";
+    this.setPlaceholder(t("dateInput.placeholder"));
+    this.emptyStateText = t("dateInput.empty");
     this.setInstructions([
-      { command: "↵", purpose: "posar la data" },
-      { command: "esc", purpose: "deixar-ho" },
+      { command: "↵", purpose: t("dateInput.instructionSet") },
+      { command: "esc", purpose: t("dateInput.instructionLeave") },
     ]);
   }
 

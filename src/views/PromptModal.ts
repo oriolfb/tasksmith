@@ -1,4 +1,5 @@
 import { type App, Modal, Setting } from "obsidian";
+import { t } from "../i18n/strings";
 
 /** Single-field prompt. Resolves with the trimmed value, or null if dismissed. */
 export class PromptModal extends Modal {
@@ -36,8 +37,8 @@ export class PromptModal extends Modal {
     });
 
     new Setting(this.contentEl)
-      .addButton((button) => button.setButtonText("Cancel·lar").onClick(() => this.close()))
-      .addButton((button) => button.setButtonText("Desar").setCta().onClick(() => this.submit()));
+      .addButton((button) => button.setButtonText(t("button.cancel")).onClick(() => this.close()))
+      .addButton((button) => button.setButtonText(t("button.save")).setCta().onClick(() => this.submit()));
   }
 
   onClose(): void {

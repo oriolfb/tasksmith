@@ -4,6 +4,7 @@ import type { TaskActions } from "../tasks/TaskActions";
 import { nextWeekday, startOfToday } from "../index/dates";
 import { DateInputModal } from "./DateInputModal";
 import { shortDate } from "./format";
+import { t } from "../i18n/strings";
 
 /**
  * The date menu, shared by the dock and the control centre.
@@ -49,20 +50,21 @@ export function openDateMenu(
     );
   };
 
-  entry("Demà", () => actions.tomorrow(task));
-  entry("Divendres", () => actions.scheduleOn(task, nextFriday(today)));
-  entry("Dilluns que ve", () => actions.scheduleOn(task, nextMonday(today)));
-  entry("+1 setmana", () => actions.nextWeek(task));
-  entry("+1 mes", () => actions.postpone(task, 30));
+  entry(t("dateMenu.tomorrow"), () => actions.tomorrow(task));
+  entry(t("dateMenu.friday"), () => actions.scheduleOn(task, nextFriday(today)));
+  entry(t("dateMenu.nextMonday"), () => actions.scheduleOn(task, nextMonday(today)));
+  entry(t("dateMenu.plusWeek"), () => actions.nextWeek(task));
+  entry(t("dateMenu.plusMonth"), () => actions.postpone(task, 30));
   // Only when the note actually lends one: the health panel points here instead of dating
   // tasks itself, precisely so each one gets this offer rather than a batch write.
-  if (task.noteDate) entry(`Data de la nota (${shortDate(task.noteDate)})`, () => actions.scheduleOn(task, task.noteDate!));
+  if (task.noteDate)
+    entry(t("dateMenu.noteDate", { date: shortDate(task.noteDate) }), () => actions.scheduleOn(task, task.noteDate!));
   // Last of the postponements, and the one that covers everything the fixed offers above cannot:
   // they were never the vocabulary, they were the shortcuts. "15 de setembre" meant opening the
   // note. The reading is `DateInput.parseDateInput`; this only writes what comes back.
   menu.addItem((item) =>
     item
-      .setTitle("Escriure una data…")
+      .setTitle(t("dateMenu.writeDate"))
       .setIcon("calendar")
       .onClick(async () => {
         const date = await DateInputModal.ask(app, today);
@@ -74,11 +76,11 @@ export function openDateMenu(
       })
   );
   menu.addSeparator();
-  entry("Treure la data", () => actions.clearDue(task));
+  entry(t("dateMenu.clearDate"), () => actions.clearDue(task));
   menu.addSeparator();
   menu.addItem((item) =>
     item
-      .setTitle("Obrir la nota")
+      .setTitle(t("dateMenu.openNote"))
       .setIcon("file-text")
       .onClick(() => callbacks.onOpen(task))
   );
@@ -87,7 +89,7 @@ export function openDateMenu(
   menu.addSeparator();
   menu.addItem((item) =>
     item
-      .setTitle("No ho faré")
+      .setTitle(t("dateMenu.wontDo"))
       .setIcon("x")
       .setWarning(true)
       .onClick(async () => {

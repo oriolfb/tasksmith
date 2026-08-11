@@ -1,4 +1,5 @@
 import { type App, Modal, Setting } from "obsidian";
+import { t } from "../i18n/strings";
 
 /** Yes/no gate for destructive actions. Resolves false when dismissed. */
 export class ConfirmModal extends Modal {
@@ -14,7 +15,7 @@ export class ConfirmModal extends Modal {
     super(app);
   }
 
-  static ask(app: App, title: string, body: string, confirmLabel = "Eliminar"): Promise<boolean> {
+  static ask(app: App, title: string, body: string, confirmLabel = t("button.delete")): Promise<boolean> {
     return new Promise((resolve) => new ConfirmModal(app, title, body, confirmLabel, resolve).open());
   }
 
@@ -23,7 +24,7 @@ export class ConfirmModal extends Modal {
     this.contentEl.createEl("p", { text: this.body });
 
     new Setting(this.contentEl)
-      .addButton((button) => button.setButtonText("Cancel·lar").onClick(() => this.close()))
+      .addButton((button) => button.setButtonText(t("button.cancel")).onClick(() => this.close()))
       .addButton((button) =>
         button
           .setButtonText(this.confirmLabel)

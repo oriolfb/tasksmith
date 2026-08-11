@@ -2,6 +2,7 @@ import type { Bucket, Priority, Task } from "../types/task";
 import { BUCKET_ORDER, ageInDays, bucketOf } from "../index/Buckets";
 import { isEmptyTask } from "../index/EmptyTasks";
 import { formatIsoDate, startOfToday } from "../index/dates";
+import { t } from "../i18n/strings";
 
 export type SortKey = "date" | "priority" | "age" | "note" | "text" | "person" | "area";
 export type GroupKey = "bucket" | "person" | "project" | "area" | "note" | "none";
@@ -69,14 +70,14 @@ const PRIORITY_RANK: Record<Priority, number> = {
 };
 
 const BUCKET_LABELS: Record<Bucket, string> = {
-  overdue: "Endarrerides",
-  today: "Avui",
-  week: "Aquesta setmana",
-  nextWeek: "La setmana que ve",
-  month: "Aquest mes",
-  later: "Més endavant",
-  undated: "Sense data",
-  closed: "Tancades",
+  overdue: t("bucketGroup.overdue"),
+  today: t("bucketGroup.today"),
+  week: t("bucketGroup.week"),
+  nextWeek: t("bucketGroup.nextWeek"),
+  month: t("bucketGroup.month"),
+  later: t("bucketGroup.later"),
+  undated: t("bucketGroup.undated"),
+  closed: t("bucketGroup.closed"),
 };
 
 export const NO_PROJECT = "Sense projecte";

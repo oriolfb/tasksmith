@@ -4,6 +4,7 @@ import { daysBetween, parseIsoDate } from "../index/dates";
 // rather than keeping a second copy of the Catalan month names here.
 import { dayLabel } from "../views/format";
 import { NO_PROJECT, type QueryState } from "./Query";
+import { t } from "../i18n/strings";
 
 /**
  * The filter bar reads as a sentence.
@@ -30,35 +31,35 @@ export interface ChipContext {
 }
 
 const BUCKET_CHIPS: Record<Bucket, string> = {
-  overdue: "per renegociar",
-  today: "amb data d'avui",
+  overdue: t("bucket.overdue"),
+  today: t("bucket.today"),
   // Not "aquesta setmana": the bucket runs from tomorrow to Sunday, and a filter called "this
   // week" that hides what is due today is a filter that lies. That name belongs to `today|week`.
-  week: "d'aquí a diumenge",
-  nextWeek: "la setmana que ve",
-  month: "aquest mes",
-  later: "més endavant",
-  undated: "sense data",
-  closed: "tancades",
+  week: t("bucket.week"),
+  nextWeek: t("bucket.nextWeek"),
+  month: t("bucket.month"),
+  later: t("bucket.later"),
+  undated: t("bucket.undated"),
+  closed: t("bucket.closed"),
 };
 
 /** Combinations that have a name of their own, so two chips do not say one thing. Keys sorted. */
 const BUCKET_SETS: Record<string, string> = {
-  "today|week": "aquesta setmana",
-  "later|month|nextWeek|week": "més endavant",
-  "overdue|undated": "per decidir",
-  "later|month|nextWeek|overdue|today|undated|week": "totes les obertes",
+  "today|week": t("bucketSet.thisWeek"),
+  "later|month|nextWeek|week": t("bucketSet.later"),
+  "overdue|undated": t("bucketSet.toDecide"),
+  "later|month|nextWeek|overdue|today|undated|week": t("bucketSet.allOpen"),
 };
 
 export function describeFilters(query: QueryState, ctx: ChipContext): FilterChip[] {
   const chips: FilterChip[] = [];
 
   if (query.statusScope === "open") {
-    chips.push({ key: "status", label: "obertes", clear: { statusScope: "all" } });
+    chips.push({ key: "status", label: t("chip.status.open"), clear: { statusScope: "all" } });
   } else if (query.statusScope === "closed") {
-    chips.push({ key: "status", label: "tancades", clear: { statusScope: "open" } });
+    chips.push({ key: "status", label: t("chip.status.closed"), clear: { statusScope: "open" } });
   } else {
-    chips.push({ key: "status", label: "obertes i tancades", clear: { statusScope: "open" } });
+    chips.push({ key: "status", label: t("chip.status.all"), clear: { statusScope: "open" } });
   }
 
   if (query.buckets && query.buckets.length > 0) {
@@ -70,50 +71,50 @@ export function describeFilters(query: QueryState, ctx: ChipContext): FilterChip
   }
 
   if (query.text.trim()) {
-    chips.push({ key: "text", label: `«${query.text.trim()}»`, clear: { text: "" } });
+    chips.push({ key: "text", label: t("chip.text", { text: query.text.trim() }), clear: { text: "" } });
   }
 
   if (query.project !== null) {
     chips.push({
       key: "project",
-      label: query.project === NO_PROJECT ? "sense projecte" : `projecte: ${query.project}`,
+      label: query.project === NO_PROJECT ? t("chip.noProject") : t("chip.project", { project: query.project }),
       clear: { project: null },
     });
   }
 
   if (query.area !== null) {
-    chips.push({ key: "area", label: `àrea: ${query.area || "sense àrea"}`, clear: { area: null } });
+    chips.push({ key: "area", label: t("chip.area", { area: query.area || t("chip.noArea") }), clear: { area: null } });
   }
 
   if (query.person !== null) {
-    chips.push({ key: "person", label: `amb ${query.person}`, clear: { person: null } });
+    chips.push({ key: "person", label: t("chip.person", { person: query.person }), clear: { person: null } });
   }
 
   if (query.staleOnly) {
     chips.push({
       key: "stale",
-      label: `aturades fa més de ${ctx.staleThresholdDays} dies`,
+      label: t("chip.stale", { days: ctx.staleThresholdDays }),
       clear: { staleOnly: false },
     });
   }
 
   if (query.noteDatableOnly) {
-    chips.push({ key: "noteDatable", label: "amb data a la nota", clear: { noteDatableOnly: false } });
+    chips.push({ key: "noteDatable", label: t("chip.noteDatable"), clear: { noteDatableOnly: false } });
   }
 
   // Only worth saying when the vault actually holds such lines.
   if (ctx.referenceLines > 0) {
     chips.push(
       query.includeReference
-        ? { key: "reference", label: "amb documentació", clear: { includeReference: false } }
-        : { key: "reference", label: "és una tasca (no documentació)", clear: { includeReference: true } }
+        ? { key: "reference", label: t("chip.reference.on"), clear: { includeReference: false } }
+        : { key: "reference", label: t("chip.reference.off"), clear: { includeReference: true } }
     );
   }
   if (ctx.somedayLines > 0) {
     chips.push(
       query.includeSomeday
-        ? { key: "someday", label: "amb «algun dia»", clear: { includeSomeday: false } }
-        : { key: "someday", label: "sense «algun dia»", clear: { includeSomeday: true } }
+        ? { key: "someday", label: t("chip.someday.on"), clear: { includeSomeday: false } }
+        : { key: "someday", label: t("chip.someday.off"), clear: { includeSomeday: true } }
     );
   }
 
@@ -127,15 +128,15 @@ export function describeFilters(query: QueryState, ctx: ChipContext): FilterChip
  */
 export function daysLabel(days: string[], today?: Date): string {
   const dates = days.map(parseIsoDate).filter((date): date is Date => date !== null);
-  if (dates.length === 0) return `amb data ${days.join(", ")}`;
-  if (dates.length === 1) return `amb data ${dayLabel(dates[0]!, today)}`;
+  if (dates.length === 0) return t("days.fallback", { days: days.join(", ") });
+  if (dates.length === 1) return t("days.single", { day: dayLabel(dates[0]!, today) });
 
   const first = dates[0]!;
   const last = dates[dates.length - 1]!;
   const consecutive = daysBetween(first, last) === dates.length - 1;
   return consecutive
-    ? `amb data del ${dayLabel(first, today)} al ${dayLabel(last, today)}`
-    : `amb data ${dates.map((date) => dayLabel(date, today)).join(" o ")}`;
+    ? t("days.range", { first: dayLabel(first, today), last: dayLabel(last, today) })
+    : t("days.list", { days: dates.map((date) => dayLabel(date, today)).join(" o ") });
 }
 
 export function bucketsLabel(buckets: Bucket[]): string {
@@ -173,18 +174,23 @@ export function filterMenu(query: QueryState, ctx: ChipContext): FilterGroup[] {
 
   const groups: FilterGroup[] = [
     {
-      label: "Estat",
+      label: t("filterMenu.status"),
       options: (["open", "closed", "all"] as const).map((scope) => ({
-        label: scope === "open" ? "Obertes" : scope === "closed" ? "Tancades" : "Totes",
+        label:
+          scope === "open"
+            ? t("filterMenu.status.open")
+            : scope === "closed"
+              ? t("filterMenu.status.closed")
+              : t("filterMenu.status.all"),
         patch: { statusScope: scope },
         checked: query.statusScope === scope,
       })),
     },
     {
-      label: "Termini",
+      label: t("filterMenu.deadline"),
       options: [
         {
-          label: "Totes",
+          label: t("filterMenu.deadline.all"),
           patch: { buckets: null, dueOn: null },
           checked: query.buckets === null && query.dueOn === null,
         },
@@ -198,17 +204,17 @@ export function filterMenu(query: QueryState, ctx: ChipContext): FilterGroup[] {
         bucketOption(["undated"]),
         bucketOption(["week", "nextWeek", "month", "later"]),
         {
-          label: "Sense data pròpia però amb data a la nota",
+          label: t("filterMenu.deadline.noteDatable"),
           patch: { noteDatableOnly: !query.noteDatableOnly },
           checked: query.noteDatableOnly,
         },
       ],
     },
     {
-      label: "Antiguitat",
+      label: t("filterMenu.age"),
       options: [
         {
-          label: `Aturades fa més de ${ctx.staleThresholdDays} dies`,
+          label: t("filterMenu.age.stale", { days: ctx.staleThresholdDays }),
           patch: { staleOnly: !query.staleOnly },
           checked: query.staleOnly,
         },
@@ -219,19 +225,19 @@ export function filterMenu(query: QueryState, ctx: ChipContext): FilterGroup[] {
   const lines: FilterOption[] = [];
   if (ctx.referenceLines > 0) {
     lines.push({
-      label: `Incloure la documentació (${ctx.referenceLines})`,
+      label: t("filterMenu.lines.reference", { count: ctx.referenceLines }),
       patch: { includeReference: !query.includeReference },
       checked: query.includeReference,
     });
   }
   if (ctx.somedayLines > 0) {
     lines.push({
-      label: `Incloure «algun dia» (${ctx.somedayLines})`,
+      label: t("filterMenu.lines.someday", { count: ctx.somedayLines }),
       patch: { includeSomeday: !query.includeSomeday },
       checked: query.includeSomeday,
     });
   }
-  if (lines.length > 0) groups.push({ label: "Línies", options: lines });
+  if (lines.length > 0) groups.push({ label: t("filterMenu.lines"), options: lines });
 
   return groups;
 }

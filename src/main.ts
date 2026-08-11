@@ -11,6 +11,7 @@ import { SIDEBAR_VIEW, SidebarView } from "./views/SidebarView";
 import { CONTROL_CENTRE_VIEW, ControlCentreView } from "./views/ControlCentre";
 import { bucketCounts, type QueryState } from "./query/Query";
 import { Logger } from "./utils/Logger";
+import { t } from "./i18n/strings";
 
 export default class TaskSmithPlugin extends Plugin {
   settings: TaskSmithSettings = { ...DEFAULT_SETTINGS };
@@ -62,32 +63,32 @@ export default class TaskSmithPlugin extends Plugin {
         )
     );
 
-    this.ribbon = this.addRibbonIcon("list-checks", "Tasques", () => void this.openSidebar());
+    this.ribbon = this.addRibbonIcon("list-checks", t("ribbon.tasks"), () => void this.openSidebar());
     this.ribbon.addClass("tc-ribbon");
     this.addSettingTab(new TaskSmithSettingTab(this.app, this));
 
-    this.addCommand({ id: "open-sidebar", name: "Obrir la barra lateral de tasques", callback: () => void this.openSidebar() });
+    this.addCommand({ id: "open-sidebar", name: t("command.openSidebar"), callback: () => void this.openSidebar() });
     // Still `open-triage` from when this tab was the triage view: a command id is API once released.
     this.addCommand({
       id: "open-triage",
-      name: "Obrir el centre de control",
+      name: t("command.openControlCentre"),
       callback: () => void this.openControlCentre(),
     });
-    this.addCommand({ id: "rebuild-index", name: "Refer l'índex de tasques", callback: () => void this.rebuild() });
+    this.addCommand({ id: "rebuild-index", name: t("command.rebuildIndex"), callback: () => void this.rebuild() });
     this.addCommand({
       id: "clean-empty-tasks",
-      name: "Eliminar les tasques buides ara",
+      name: t("command.cleanEmptyTasks"),
       callback: () => {
         void this.cleaner.clean(this.index.all()).then((deleted) => {
-          if (deleted === 0) new Notice("Cap tasca buida per eliminar");
+          if (deleted === 0) new Notice(t("notice.noEmptyTasks"));
         });
       },
     });
     // Deliberately without a default hotkey: Mod+Z belongs to the editor. Bind it yourself
-    // if you want one — the notices carry their own Desfés button.
+    // if you want one — the notices carry their own Undo button.
     this.addCommand({
       id: "undo-last-write",
-      name: "Desfés l'últim canvi del plugin",
+      name: t("command.undoLastWrite"),
       checkCallback: (checking) => {
         const label = this.actions.undoLabel();
         if (checking) return label !== null;
@@ -151,13 +152,13 @@ export default class TaskSmithPlugin extends Plugin {
   private async undoLastWrite(): Promise<void> {
     const result = await this.actions.undo();
     if (!result.ok) {
-      new Notice("No hi ha res per desfer");
+      new Notice(t("notice.nothingToUndo"));
       return;
     }
     new Notice(
       result.skipped === 0
-        ? `Desfet: ${result.label} · ${result.restored} línies restaurades`
-        : `Desfet: ${result.label} · ${result.restored} restaurades, ${result.skipped} ja havien canviat`
+        ? t("notice.undoRestored", { label: result.label, restored: result.restored })
+        : t("notice.undoRestoredWithSkipped", { label: result.label, restored: result.restored, skipped: result.skipped })
     );
   }
 
@@ -221,7 +222,7 @@ export default class TaskSmithPlugin extends Plugin {
     if (!leaf) {
       leaf = this.app.workspace.getRightLeaf(false);
       if (!leaf) {
-        new Notice("No he pogut obrir la barra lateral dreta");
+        new Notice(t("notice.cantOpenSidebar"));
         return;
       }
       await leaf.setViewState({ type: SIDEBAR_VIEW, active: true });

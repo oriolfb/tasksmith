@@ -1,5 +1,6 @@
 import { Notice } from "obsidian";
 import type { UndoResult } from "../tasks/TaskWriter";
+import { t } from "../i18n/strings";
 
 /** Anything that can revert its last write: `TaskWriter` itself, or `TaskActions` over it. */
 export interface Undoable {
@@ -22,7 +23,7 @@ export function undoableNotice(message: string, writer: Undoable, duration = 900
   const host = notice.noticeEl;
   if (!host || typeof host.createEl !== "function") return;
 
-  const button = host.createEl("button", { cls: "tc-undo", text: "Desfés" });
+  const button = host.createEl("button", { cls: "tc-undo", text: t("button.undo") });
   button.addEventListener("click", (event) => {
     event.stopPropagation();
     button.disabled = true;
@@ -31,8 +32,8 @@ export function undoableNotice(message: string, writer: Undoable, duration = 900
       if (!result.ok) return;
       new Notice(
         result.skipped === 0
-          ? `Desfet: ${result.label}`
-          : `Desfet: ${result.label} · ${result.skipped} línies ja havien canviat`
+          ? t("notice.undo", { label: result.label })
+          : t("notice.undoWithSkipped", { label: result.label, skipped: result.skipped })
       );
     });
   });
