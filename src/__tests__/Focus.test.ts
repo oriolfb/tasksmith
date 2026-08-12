@@ -1,4 +1,4 @@
-import { DAY_LIMIT, dayKey, focusSections, isUrgent } from "../query/Focus";
+import { DAY_LIMIT, dayKey, focusSections, isUrgent, wasUrgent } from "../query/Focus";
 import { DaySelection, EMPTY_PLAN, type DayPlan } from "../views/DaySelection";
 import { effectiveDate } from "../index/Buckets";
 import { parseTaskLine, priorityOf } from "../index/TaskParser";
@@ -53,6 +53,17 @@ describe("isUrgent", () => {
 
   it("is false once the task is closed", () => {
     expect(isUrgent(task("- [x] feta 📅 2026-08-05", { open: false }), TODAY)).toBe(false);
+  });
+});
+
+describe("wasUrgent", () => {
+  it("is true for a closed task that would be urgent were it still open", () => {
+    expect(wasUrgent(task("- [x] feta 📅 2026-08-05", { open: false }), TODAY)).toBe(true);
+    expect(wasUrgent(task("- [x] feta #urgent", { open: false }), TODAY)).toBe(true);
+  });
+
+  it("is false for a closed task with no urgent signal", () => {
+    expect(wasUrgent(task("- [x] feta", { open: false }), TODAY)).toBe(false);
   });
 });
 
@@ -300,6 +311,39 @@ describe("DaySelection", () => {
     day.prune([after]);
     expect(day.size).toBe(0);
     expect(day.doneKeys()).toEqual([dayKey(after)]);
+  });
+
+  /**
+   * The bug: an urgent task (due today) was never picked as one of the three, then got ticked
+   * off directly in the note. `focusSections` only shows a closed, unchosen task under "Fetes
+   * avui" when its key is in `done` — so if `prune` never notices it, marking it done from the
+   * note silently drops it off today's record entirely.
+   */
+  it("records an urgent task ticked off in the note even though it was never chosen", () => {
+    const chosen = task("- [ ] triada");
+    const closed = task("- [x] crema 📅 2026-08-05", { open: false });
+    const { day } = selection({
+      date: formatIsoDate(TODAY),
+      keys: [dayKey(chosen)],
+      done: [],
+      slotted: [dayKey(chosen)],
+    });
+    day.prune([chosen, closed], TODAY);
+    expect(day.doneKeys()).toEqual([dayKey(closed)]);
+  });
+
+  it("records an urgent task ticked off in the note even with nothing chosen yet today", () => {
+    const { day } = selection();
+    const closed = task("- [x] crema #urgent", { open: false });
+    day.prune([closed], TODAY);
+    expect(day.doneKeys()).toEqual([dayKey(closed)]);
+  });
+
+  it("does not record a closed task that was never chosen and never urgent", () => {
+    const { day } = selection();
+    const closed = task("- [x] tasca normal", { open: false });
+    day.prune([closed], TODAY);
+    expect(day.doneKeys()).toEqual([]);
   });
 
   it("drops the record of a task that no longer exists", () => {

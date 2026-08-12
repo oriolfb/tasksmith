@@ -226,7 +226,7 @@ export class SidebarView extends ItemView {
     this.day.refresh(today);
     // Only once the index has actually been read. Reconciling the plan against a scan still in
     // flight is how a day's three chosen tasks disappeared between one Obsidian session and the next.
-    if (this.index.ready) this.day.prune(all);
+    if (this.index.ready) this.day.prune(all, today);
 
     const sections = this.lens === "date" ? this.dateSections(all, today) : this.personSections(all, today);
     // The colour says which lens is active; `aria-pressed` says it out loud for a screen reader.
