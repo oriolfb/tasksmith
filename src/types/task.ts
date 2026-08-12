@@ -72,6 +72,12 @@ export type TaskKind = "commitment" | "reference" | "someday";
 
 export interface Task extends ParsedTask {
   location: TaskLocation;
+  /**
+   * `description` before a "Nom:" prefix is stripped off it. `dayKey` reads this, not
+   * `description` — identity has to survive that strip toggling on or off as `knownPeople`
+   * fills in, which happens on its own schedule and must not desync an already-chosen task.
+   */
+  identityDescription: string;
   /** Resolved from `Projecte:` in the host note's frontmatter; null when absent or empty. */
   project: string | null;
   /** Top-level folder of the host note, for grouping. */

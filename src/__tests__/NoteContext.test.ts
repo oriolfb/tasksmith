@@ -12,6 +12,7 @@ import { DEFAULT_CONTEXT_RULES, grantsDeadline, kindOf } from "../index/ContextR
 import { tasksFromFile } from "../index/buildTasks";
 import { DEFAULT_INTEROP } from "../tasks/TasksPluginSettings";
 import { formatIsoDate } from "../index/dates";
+import { dayKey } from "../query/Focus";
 
 /** Copied verbatim from a real meeting note, block lists and empty keys included. */
 const MEETING = `---
@@ -220,5 +221,16 @@ describe("tasksFromFile with a \"Nom:\" prefix", () => {
     const [task] = tasksFromFile({ path: "x.md", content }, DEFAULT_INTEROP, undefined, new Set(["Carmen"]));
     expect(task!.description).toBe("Idea: explorar una opció");
     expect(task!.people).toEqual([]);
+  });
+
+  it("keeps the same day-plan identity whether or not the name is known yet", () => {
+    // Before the vault's first full scan, or between incremental reindexes, a name can be
+    // "known" on one pass and not on another — the same line must not change identity because
+    // of it, or a task already chosen for today drops out the moment the prefix starts/stops
+    // stripping.
+    const content = "- [ ] Carmen: fer algo\n";
+    const [beforeKnown] = tasksFromFile({ path: "x.md", content }, DEFAULT_INTEROP, undefined, new Set());
+    const [afterKnown] = tasksFromFile({ path: "x.md", content }, DEFAULT_INTEROP, undefined, new Set(["Carmen"]));
+    expect(dayKey(beforeKnown!)).toBe(dayKey(afterKnown!));
   });
 });

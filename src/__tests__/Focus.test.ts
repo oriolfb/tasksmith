@@ -18,6 +18,7 @@ function task(raw: string, extra: Partial<Task> = {}): Task {
   const filenameDate = extra.filenameDate ?? null;
   return {
     ...parsed,
+    identityDescription: parsed.description,
     location: { path: extra.location?.path ?? "01 Diari/nota.md", line: line++ },
     project: null,
     area: null,
