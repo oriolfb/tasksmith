@@ -17,7 +17,22 @@ const URGENT_TAGS = ["#urgent", "#urgente"];
  */
 export function isUrgent(task: Task, today: Date = startOfToday()): boolean {
   if (!task.open) return false;
-  if (bucketOf(task, today) === "today") return true;
+  return matchesUrgentCriteria(task, today);
+}
+
+/**
+ * Whether a task would be urgent if it were still open. `isUrgent` itself must stay false for a
+ * closed task — a finished task is never something that still needs a slot — but `DaySelection`
+ * needs to ask this same question about a task that just closed, to tell "arrived on its own and
+ * got ticked off before you got to it" from an ordinary closed task that never earned a place in
+ * today's record.
+ */
+export function wasUrgent(task: Task, today: Date = startOfToday()): boolean {
+  return matchesUrgentCriteria(task, today);
+}
+
+function matchesUrgentCriteria(task: Task, today: Date): boolean {
+  if (bucketOf({ ...task, open: true }, today) === "today") return true;
   if (task.priority === "highest") return true;
   return task.tags.some((tag) => URGENT_TAGS.includes(tag.toLowerCase()));
 }

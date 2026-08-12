@@ -1,5 +1,5 @@
 import type { Task } from "../types/task";
-import { DAY_LIMIT, dayKey } from "../query/Focus";
+import { DAY_LIMIT, dayKey, wasUrgent } from "../query/Focus";
 import { formatIsoDate, startOfToday } from "../index/dates";
 
 export interface DayPlan {
@@ -153,9 +153,12 @@ export class DaySelection {
    * otherwise a finished task would hold one for the rest of the day — but a task that was ticked
    * off moves to the day's record instead of vanishing, whether you ticked it here or in the note.
    * Keys whose task no longer exists at all (deleted, or reworded) are simply forgotten.
+   *
+   * A task that was never chosen joins the record too, the same way `markDone` would, but only if
+   * it `wasUrgent` — otherwise every closed task in the vault would flood "Fetes avui" the moment
+   * its note is scanned, rather than just the ones that arrived on their own.
    */
-  prune(tasks: Task[]): void {
-    if (this.plan.keys.length === 0 && this.plan.done.length === 0) return;
+  prune(tasks: Task[], today: Date = startOfToday()): void {
     /*
      * Nothing to reconcile against, so nothing is reconciled. An index that has not finished its
      * first scan looks exactly like a vault with no tasks in it, and pruning against that wiped
@@ -176,6 +179,12 @@ export class DaySelection {
     const done = this.plan.done.filter((key) => exists.has(key));
     for (const key of this.plan.keys) {
       if (!open.has(key) && exists.has(key) && !done.includes(key)) done.push(key);
+    }
+    for (const t of tasks) {
+      if (t.open) continue;
+      const key = dayKey(t);
+      if (done.includes(key)) continue;
+      if (wasUrgent(t, today)) done.push(key);
     }
     const slotted = this.plan.slotted.filter((key) => exists.has(key));
 

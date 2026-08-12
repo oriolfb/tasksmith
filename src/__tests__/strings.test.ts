@@ -1,4 +1,30 @@
-import { resolveLocale, t, tn, setLocale, getLocale } from "../i18n/strings";
+import { resolveLocale, detectLocale, t, tn, setLocale, getLocale } from "../i18n/strings";
+
+describe("detectLocale", () => {
+  const originalNavigator = (globalThis as { navigator?: unknown }).navigator;
+  const originalLocalStorage = (globalThis as { localStorage?: unknown }).localStorage;
+
+  afterEach(() => {
+    (globalThis as { navigator?: unknown }).navigator = originalNavigator;
+    (globalThis as { localStorage?: unknown }).localStorage = originalLocalStorage;
+  });
+
+  it("prefers Obsidian's own configured language over the OS locale", () => {
+    (globalThis as { navigator?: unknown }).navigator = { language: "es-ES" };
+    (globalThis as { localStorage?: unknown }).localStorage = {
+      getItem: (key: string) => (key === "language" ? "ca" : null),
+    };
+    expect(detectLocale()).toBe("ca");
+  });
+
+  it("falls back to the OS locale when Obsidian has no language stored", () => {
+    (globalThis as { navigator?: unknown }).navigator = { language: "es-ES" };
+    (globalThis as { localStorage?: unknown }).localStorage = {
+      getItem: () => null,
+    };
+    expect(detectLocale()).toBe("es");
+  });
+});
 
 describe("resolveLocale", () => {
   it("maps a supported BCP-47 tag to its base locale", () => {

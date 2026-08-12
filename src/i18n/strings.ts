@@ -8,7 +8,16 @@ export function resolveLocale(tag: string | undefined | null): Locale {
   return (SUPPORTED_LOCALES as string[]).includes(primary) ? (primary as Locale) : "en";
 }
 
+/**
+ * The plugin's language follows Obsidian's own configured language, not the OS locale:
+ * Obsidian stores the user's choice from Settings → General → Language in localStorage
+ * under "language" (empty when left on "Default"). Only when Obsidian has no explicit
+ * choice do we fall back to the OS locale via navigator.language, matching what
+ * Obsidian itself does for "Default".
+ */
 export function detectLocale(): Locale {
+  const obsidianLanguage = typeof localStorage !== "undefined" ? localStorage.getItem("language") : null;
+  if (obsidianLanguage) return resolveLocale(obsidianLanguage);
   if (typeof navigator === "undefined") return "en";
   return resolveLocale(navigator.language);
 }
