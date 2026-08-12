@@ -1,6 +1,7 @@
 import { Notice, Plugin, TFile, type WorkspaceLeaf } from "obsidian";
 import { TaskIndex } from "./index/TaskIndex";
 import { ScopeFilter, parseObsidianIgnoreFilters } from "./index/ScopeFilter";
+import { serializeTaskCache } from "./index/TaskCache";
 import { DEFAULT_INTEROP, TASKS_PLUGIN_DATA, parseTasksData, type TasksInterop } from "./tasks/TasksPluginSettings";
 import { TaskWriter } from "./tasks/TaskWriter";
 import { TaskActions } from "./tasks/TaskActions";
@@ -167,6 +168,10 @@ export default class TaskSmithPlugin extends Plugin {
     this.index.setInterop(this.interop);
     this.actions.setInterop(this.interop);
     await this.index.rebuild();
+    // Not `saveSettings()`: that also re-triggers `rebuild()` itself. This is the same
+    // `saveData` primitive the views' own `persist` callbacks use.
+    this.settings.taskCache = serializeTaskCache(this.index.all(), new Date());
+    await this.saveData(this.settings);
     this.updateBadge();
     await this.cleaner.clean(this.index.all());
   }

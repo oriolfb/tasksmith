@@ -1,5 +1,6 @@
 import type { QueryState } from "../query/Query";
 import { DEFAULT_CONTEXT_RULES, type ContextRules } from "../index/ContextRules";
+import type { SerializedTaskCache } from "../index/TaskCache";
 import { EMPTY_PLAN, type DayPlan } from "../views/DaySelection";
 
 export interface SavedView {
@@ -60,6 +61,12 @@ export interface TaskSmithSettings {
    * the list it opens can never disagree.
    */
   showWeekends: boolean;
+  /**
+   * The last full scan, painted on the very next launch until the real one finishes — an
+   * Obsidian vault this size shares disk I/O with every other indexing plugin at startup, and
+   * that wait can run into several seconds before any of them has read a single file.
+   */
+  taskCache: SerializedTaskCache | null;
 }
 
 export const DEFAULT_SETTINGS: TaskSmithSettings = {
@@ -77,6 +84,7 @@ export const DEFAULT_SETTINGS: TaskSmithSettings = {
   showHistory: false,
   healthPanel: "auto",
   showWeekends: true,
+  taskCache: null,
 };
 
 export function contextRulesOf(settings: TaskSmithSettings): ContextRules {

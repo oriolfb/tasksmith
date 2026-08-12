@@ -1322,6 +1322,81 @@
   font-size: var(--font-ui-smaller);
 }
 
+/* ── loading skeleton ───────────────────────────────────────
+   Drawn for the one refresh that can land before the first scan finishes, in the same shapes
+   the KPIs and rows occupy — real data replaces blocks that were already the right size, rather
+   than a page of zeroes flashing into a page of numbers. */
+.tcc-skel-value,
+.tcc-skel-label,
+.tcc-skel-box,
+.tcc-skel-text,
+.tcf-skel-box,
+.tcf-skel-text {
+  background: var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  animation: tcc-skel-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes tcc-skel-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.tcc-skel-value {
+  height: 25px;
+  width: 34px;
+  margin-bottom: 6px;
+}
+
+.tcc-skel-label {
+  height: 11px;
+  width: 68%;
+}
+
+.tcc-skel-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.tcc-skel-box {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 4px;
+}
+
+.tcc-skel-text {
+  height: 13px;
+  flex: 1 1 auto;
+}
+
+.tcf-skel-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+}
+
+.tcf-skel-box {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 4px;
+}
+
+.tcf-skel-text {
+  height: 13px;
+  flex: 1 1 auto;
+}
+
 /* ── the health panel ───────────────────────────────────── */
 
 /* Not statistics: three things to fix, each with its one action. No boxes — a card per finding

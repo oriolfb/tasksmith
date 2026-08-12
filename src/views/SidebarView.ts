@@ -5,6 +5,7 @@ import type { TaskSmithSettings } from "../settings/Config";
 import type { Bucket, Task } from "../types/task";
 import { ageInDays, bucketOf } from "../index/Buckets";
 import { isEmptyTask } from "../index/EmptyTasks";
+import { deserializeTaskCache } from "../index/TaskCache";
 import { startOfToday } from "../index/dates";
 import { NO_PERSON, type QueryState, peopleOf } from "../query/Query";
 import { DAY_LIMIT, dayKey, focusSections, isUrgent } from "../query/Focus";
@@ -220,13 +221,29 @@ export class SidebarView extends ItemView {
 
   refresh(): void {
     if (!this.listHost) return;
+    if (!this.index.ready) {
+      const cached = deserializeTaskCache(this.settings.taskCache);
+      if (!cached) {
+        this.paintLoading();
+        return;
+      }
+      // Painted from the last full scan until the real one lands. `prune` stays off here: it
+      // persists what it reconciles, and reconciling against a stale snapshot could drop a pick
+      // the live scan — moments away — would actually have kept. Reading a stale row is fine;
+      // it's a fresh write to a cache-only decision that would not undo itself.
+      this.paintFrom(cached, false);
+      return;
+    }
+    this.paintFrom(this.index.all(), true);
+  }
+
+  private paintFrom(all: Task[], pruneAgainstLive: boolean): void {
     const today = startOfToday();
-    const all = this.index.all();
 
     this.day.refresh(today);
     // Only once the index has actually been read. Reconciling the plan against a scan still in
     // flight is how a day's three chosen tasks disappeared between one Obsidian session and the next.
-    if (this.index.ready) this.day.prune(all, today);
+    if (pruneAgainstLive) this.day.prune(all, today);
 
     const sections = this.lens === "date" ? this.dateSections(all, today) : this.personSections(all, today);
     // The colour says which lens is active; `aria-pressed` says it out loud for a screen reader.
@@ -241,6 +258,21 @@ export class SidebarView extends ItemView {
     this.listHost.toggleClass("tcf-committed", this.lens === "date" && this.day.isFull);
 
     this.renderer.render(this.listHost, sections, today);
+  }
+
+  /**
+   * Placeholder rows in the shape real ones take, so the list does not jump from a lone
+   * "loading" line into rows once the scan finishes.
+   */
+  private paintLoading(): void {
+    this.listHost.empty();
+    const wrap = this.listHost.createDiv({ attr: { "aria-busy": "true", "aria-label": t("row.loading") } });
+    for (const width of [70, 45, 85]) {
+      const row = wrap.createDiv({ cls: "tcf-skel-row" });
+      row.createDiv({ cls: "tcf-skel-box" });
+      const text = row.createDiv({ cls: "tcf-skel-text" });
+      text.style.maxWidth = `${width}%`;
+    }
   }
 
   private dateSections(all: Task[], today: Date): Section[] {
