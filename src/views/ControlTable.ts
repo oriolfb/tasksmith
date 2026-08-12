@@ -242,6 +242,7 @@ export class ControlTable {
     if (bucket === "undated") {
       cell.addClass("tcc-none");
       cell.setText(t("kpi.undated.label"));
+      cell.setAttribute("role", "button");
       setTooltip(
         cell,
         task.noteDate
@@ -249,6 +250,10 @@ export class ControlTable {
           : t("table.due.none"),
         { delay: 300 }
       );
+      cell.addEventListener("click", (event) => {
+        event.stopPropagation();
+        this.callbacks.onDate(task, event);
+      });
       return;
     }
 
