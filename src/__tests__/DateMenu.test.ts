@@ -18,6 +18,7 @@ function task(raw: string): Task {
   if (!parsed) throw new Error(raw);
   return {
     ...parsed,
+    identityDescription: parsed.description,
     location: { path: "01 Diari/nota.md", line: 0 },
     project: null,
     area: null,

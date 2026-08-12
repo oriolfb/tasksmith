@@ -63,6 +63,7 @@ export function tasksFromFile(
     tasks.push({
       ...parsed,
       description,
+      identityDescription: parsed.description,
       location: { path: file.path, line },
       project,
       area,

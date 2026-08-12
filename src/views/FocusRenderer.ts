@@ -289,12 +289,18 @@ export class FocusRenderer {
       meta.createSpan({ cls: "tcf-late", text: relativeLabel(task.effectiveDate, today) });
     } else if (bucket === "undated") {
       const age = ageInDays(task, null, today);
-      meta.createSpan({
-        text:
-          age !== null && age > 0
-            ? t("row.notedRelative", { relative: relativeLabel(addDays(today, -age), today) })
-            : t("kpi.undated.label"),
-      });
+      if (age !== null && age > 0) {
+        meta.createSpan({
+          text: t("row.notedRelative", { relative: relativeLabel(addDays(today, -age), today) }),
+        });
+      } else {
+        const undated = meta.createSpan({ text: t("kpi.undated.label") });
+        undated.setAttribute("role", "button");
+        undated.addEventListener("click", (event) => {
+          event.stopPropagation();
+          this.callbacks.onDate(task, event);
+        });
+      }
     } else {
       meta.createSpan({ text: relativeLabel(task.effectiveDate, today) });
     }

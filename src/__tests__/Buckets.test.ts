@@ -16,6 +16,7 @@ function task(line: string, filenameDate: Date | null = null, open = true): Task
   if (!parsed) throw new Error(`not parsed: ${line}`);
   return {
     ...parsed,
+    identityDescription: parsed.description,
     location: { path: "x.md", line: 0 },
     project: null,
     area: null,

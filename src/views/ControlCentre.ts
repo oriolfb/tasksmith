@@ -213,6 +213,32 @@ export class ControlCentreView extends BaseTaskView {
     this.footerHost = root.createDiv({ cls: "tcc-footer" });
   }
 
+  /**
+   * Placeholder blocks in the exact shapes the KPIs and table rows take, so the real paint
+   * lands in a layout that already looks like this one instead of jumping from "0 of
+   * everything" straight to the true count, which read as a flicker rather than a load.
+   */
+  protected paintLoading(): void {
+    this.kpiHost.empty();
+    for (let i = 0; i < 5; i++) {
+      const cell = this.kpiHost.createDiv({ cls: "tcc-kpi" });
+      cell.createDiv({ cls: "tcc-skel-value" });
+      cell.createDiv({ cls: "tcc-skel-label" });
+    }
+
+    this.tableHost.empty();
+    // A wrapper, not attributes on `tableHost` itself: the next real paint only empties this
+    // host's children, so `aria-busy` set on the host would outlive the skeleton it describes.
+    const wrap = this.tableHost.createDiv({ attr: { "aria-busy": "true", "aria-label": t("table.loading") } });
+    const widths = [70, 45, 85, 55];
+    for (const width of widths) {
+      const row = wrap.createDiv({ cls: "tcc-skel-row" });
+      row.createDiv({ cls: "tcc-skel-box" });
+      const text = row.createDiv({ cls: "tcc-skel-text" });
+      text.style.maxWidth = `${width}%`;
+    }
+  }
+
   protected paint(groups: TaskGroup[], today: Date): void {
     const all = this.index.all();
     // Measured once per paint and handed down: the strip, the chart and the summary line all

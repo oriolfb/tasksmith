@@ -192,7 +192,7 @@ export function focusSections(input: FocusInput): FocusSections {
  * you type a line above the task, and this selection has to survive that for a whole day.
  */
 export function dayKey(task: Task): string {
-  return `${task.location.path}|${task.description.trim()}`;
+  return `${task.location.path}|${task.identityDescription.trim()}`;
 }
 
 function byAge(today: Date): (a: Task, b: Task) => number {
