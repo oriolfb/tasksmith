@@ -1,5 +1,64 @@
 # Changelog
 
+## 0.6.5
+
+### Fixed
+
+- Les cinc decisions d'una proposta es mantenen en una sola fila al modal d'escriptori, amb
+  «No ho faré» ancorat a la dreta. L'acció de completar s'escurça a «Ja està feta» i el layout
+  estret continua plegant els botons de manera responsive.
+
+## 0.6.4
+
+### Fixed
+
+- L'assistent ja no queda esperant el primer escaneig complet del vault: mostra les propostes des
+  de la mateixa instantània d'arrencada que les vistes i canvia automàticament a l'índex en viu
+  quan està preparat, sense reconciliar el pla contra dades antigues.
+
+## 0.6.3
+
+### Added
+
+- L'assistent permet marcar una proposta com a feta i avança a la següent. L'acció està
+  disponible tant en triar les tres d'avui com en planificar la resta, i reutilitza el flux
+  reversible de `TaskActions` i la protecció de les tasques recurrents.
+
+## 0.6.2
+
+### Fixed
+
+- El hover de «No ho faré» ja no adopta el vermell sòlid del tema: aplica un tint lleu amb
+  contrast estable per mantenir l'etiqueta llegible.
+
+## 0.6.1
+
+### Changed
+
+- «No ho faré» deixa de competir visualment amb l'acció principal: ara és neutre en repòs i
+  només mostra un avís vermell suau en passar-hi per sobre o enfocar-lo amb el teclat.
+
+## 0.6.0
+
+### Added
+
+- **«Planificar el dia» és ara una sessió assistida en una finestra pròpia.** Proposa una tasca
+  cada vegada, explica la proposta només amb dades que l'índex coneix i manté visibles les tres
+  places del dia. Les endarrerides van primer, de més antiga a més recent, i després les que no
+  tenen data; queden fora les tancades, futures, documentals, urgents i les que ja has triat.
+- **La planificació pot continuar més enllà de les tres d'avui.** En omplir-les desapareix
+  «Afegeix-la a avui» i la decisió passa a ser començar, substituir-ne una o planificar la resta.
+  Aquesta segona fase posa data o cancel·la cada pendent, una per una, reutilitzant els canvis
+  protegits i reversibles de `TaskActions`.
+- **Nou comandament `TaskSmith: Planificar el dia`.** Obre el mateix assistent que el botó del
+  centre de control i es pot assignar a una drecera d'Obsidian.
+
+### Changed
+
+- El missatge de confirmació té espai reservat, de manera que els botons no salten quan apareix.
+- El dock continua sent la vista compacta del dia; l'assistent escriu al mateix `DaySelection`,
+  així que totes dues superfícies es mantenen sincronitzades.
+
 ## 0.5.2
 
 ### Changed

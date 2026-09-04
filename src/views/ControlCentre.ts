@@ -110,7 +110,7 @@ export class ControlCentreView extends BaseTaskView {
     index: TaskIndex,
     actions: TaskActions,
     settings: TaskSmithSettings,
-    private readonly openFocus: () => void,
+    private readonly openPlanner: () => void,
     private readonly persist: () => Promise<void>
   ) {
     super(leaf, index, actions, settings);
@@ -159,11 +159,11 @@ export class ControlCentreView extends BaseTaskView {
     setTooltip(views, t("savedViews.tooltip"), { delay: 300 });
     views.addEventListener("click", (event) => this.savedViewsMenu(event));
 
-    // A real button, because this one really is a button: it takes you to the dock to decide
-    // the day. Obsidian's own styling is what it should look like.
+    // A real button, because this one really is a button: it opens the dedicated assistant
+    // instead of turning the narrow dock into a multi-step planning surface.
     const plan = tools.createEl("button", { cls: "tcc-plan", text: t("controlCentre.planDay") });
     setTooltip(plan, t("controlCentre.planDayTooltip"), { delay: 300 });
-    plan.addEventListener("click", () => this.openFocus());
+    plan.addEventListener("click", () => this.openPlanner());
 
     this.kpiHost = root.createDiv({ cls: "tcc-kpis" });
     this.weekHost = root.createDiv({ cls: "tcc-week" });

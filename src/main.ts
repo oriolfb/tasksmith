@@ -10,6 +10,7 @@ import { DEFAULT_SETTINGS, contextRulesOf, type TaskSmithSettings } from "./sett
 import { TaskSmithSettingTab } from "./settings/SettingsTab";
 import { SIDEBAR_VIEW, SidebarView } from "./views/SidebarView";
 import { CONTROL_CENTRE_VIEW, ControlCentreView } from "./views/ControlCentre";
+import { DayPlannerModal } from "./views/DayPlannerModal";
 import { bucketCounts, type QueryState } from "./query/Query";
 import { Logger } from "./utils/Logger";
 import { t } from "./i18n/strings";
@@ -57,9 +58,7 @@ export default class TaskSmithPlugin extends Plugin {
           this.index,
           this.actions,
           this.settings,
-          // "Planificar el dia" does not just reveal the dock: with the dock already open it
-          // would have looked like a button that does nothing. It starts the planning.
-          () => void this.openSidebar(true),
+          () => this.openDayPlanner(),
           () => this.saveData(this.settings)
         )
     );
@@ -69,6 +68,7 @@ export default class TaskSmithPlugin extends Plugin {
     this.addSettingTab(new TaskSmithSettingTab(this.app, this));
 
     this.addCommand({ id: "open-sidebar", name: t("command.openSidebar"), callback: () => void this.openSidebar() });
+    this.addCommand({ id: "plan-day", name: t("controlCentre.planDay"), callback: () => this.openDayPlanner() });
     // Still `open-triage` from when this tab was the triage view: a command id is API once released.
     this.addCommand({
       id: "open-triage",
@@ -221,8 +221,7 @@ export default class TaskSmithPlugin extends Plugin {
     badge.setText(String(overdue));
   }
 
-  /** `plan` asks the dock to start the day's planning once it is on screen. */
-  private async openSidebar(plan = false): Promise<void> {
+  private async openSidebar(): Promise<void> {
     let leaf = this.app.workspace.getLeavesOfType(SIDEBAR_VIEW)[0] ?? null;
     if (!leaf) {
       leaf = this.app.workspace.getRightLeaf(false);
@@ -233,7 +232,21 @@ export default class TaskSmithPlugin extends Plugin {
       await leaf.setViewState({ type: SIDEBAR_VIEW, active: true });
     }
     await this.app.workspace.revealLeaf(leaf);
-    if (plan && leaf.view instanceof SidebarView) leaf.view.beginPlanning();
+  }
+
+  private openDayPlanner(): void {
+    new DayPlannerModal(
+      this.app,
+      this.index,
+      this.actions,
+      this.settings,
+      () => this.saveData(this.settings),
+      () => {
+        for (const leaf of this.app.workspace.getLeavesOfType(SIDEBAR_VIEW)) {
+          if (leaf.view instanceof SidebarView) leaf.view.refresh();
+        }
+      }
+    ).open();
   }
 
   private async openControlCentre(filter?: Partial<QueryState>): Promise<void> {

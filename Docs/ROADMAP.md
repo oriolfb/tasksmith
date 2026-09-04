@@ -133,7 +133,9 @@ the numbers, the table and the health panel and no day plan.
    the vault rather than written down here. Today: no cancellation in 8 months → renegotiate them;
    12 undated tasks whose note has a date → put that date on them; 22 notes without `Projecte` → see
    them; 20 stale → see them. The documentation lines and the index line read as the system working.
-6. Same three lenses as the dock, and `Planificar el dia` back to it.
+6. Same three lenses as the dock, and `Planificar el dia` opens a dedicated assistant over the
+   same three slots. Once they are full, the session can end or continue through the unresolved
+   backlog, dating or cancelling one task at a time.
 
 Three decisions taken while building it, all of them narrowing the mockup:
 

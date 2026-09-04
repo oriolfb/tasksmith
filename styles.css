@@ -1704,3 +1704,311 @@
     gap: 8px;
   }
 }
+
+/* ══ day planner assistant ══════════════════════════════════
+   A modal rather than a third pane: one proposal at a time, with today's three kept visible.
+   Once they are full, the proposal is replaced by a real next decision — start, revise, or
+   continue dating the backlog — so no enabled-looking action promises a fourth slot. */
+
+.modal.tsp-modal {
+  width: min(900px, calc(100vw - 48px));
+  max-width: 900px;
+}
+
+.tsp {
+  padding: 0;
+}
+
+.tsp-shell {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  min-height: 500px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.tsp-plan {
+  display: flex;
+  flex-direction: column;
+  padding: 22px 18px 18px;
+  background: var(--background-secondary);
+  border-right: 1px solid var(--background-modifier-border);
+}
+
+.tsp-overline {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tsp-plan h2 {
+  margin: 5px 0 2px;
+  font-size: var(--font-ui-large);
+}
+
+.tsp-plan-hint,
+.tsp-plan-foot {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.45;
+}
+
+.tsp-plan-hint {
+  padding-bottom: 13px;
+}
+
+.tsp-plan-foot {
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.tsp-slot {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 24px;
+  gap: 7px;
+  align-items: start;
+  min-height: 62px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-size: var(--font-ui-small);
+}
+
+.tsp-slot-number {
+  color: var(--tcf-lila, var(--interactive-accent));
+  font-weight: 700;
+}
+
+.tsp-slot-meta {
+  margin-top: 3px;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.tsp-slot-empty,
+.tsp-slot-empty .tsp-slot-number {
+  color: var(--text-faint);
+}
+
+.tsp-slot-remove {
+  visibility: hidden;
+  color: var(--text-faint);
+}
+
+.tsp-slot:hover .tsp-slot-remove,
+.tsp-slot-remove:focus-visible,
+.tsp-changing .tsp-slot-remove {
+  visibility: visible;
+}
+
+.tsp-conversation {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 28px 34px 22px;
+}
+
+.tsp-assistant {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 19px;
+}
+
+.tsp-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 27px;
+  width: 27px;
+  height: 27px;
+  border-radius: var(--radius-s);
+  background: var(--tcf-lila, var(--interactive-accent));
+  color: var(--text-on-accent);
+  font-weight: 700;
+}
+
+.tsp-assistant p {
+  max-width: 560px;
+  margin: 2px 0 0;
+  line-height: 1.5;
+}
+
+.tsp-proposal,
+.tsp-ready {
+  padding: 19px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.tsp-proposal h2,
+.tsp-ready h2 {
+  margin: 7px 0 10px;
+  font-size: var(--font-ui-large);
+  line-height: 1.35;
+}
+
+.tsp-reason {
+  color: var(--tcf-ocre, var(--text-accent));
+  font-size: var(--font-ui-smaller);
+  font-weight: 650;
+}
+
+.tsp-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.tsp-meta span {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.tsp-why,
+.tsp-ready p {
+  margin: 13px 0 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: 1.5;
+}
+
+.tsp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+  margin-top: 17px;
+}
+
+.tsp-proposal .tsp-actions {
+  display: grid;
+  grid-template-columns: repeat(4, max-content) minmax(0, 1fr) max-content;
+}
+
+.tsp-actions-centred {
+  justify-content: center;
+}
+
+.tsp-actions .tsp-danger {
+  margin-left: auto;
+  border-color: var(--background-modifier-border);
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-error);
+  transition: background-color 100ms ease, border-color 100ms ease;
+}
+
+.tsp-actions .tsp-danger:hover {
+  border-color: color-mix(in srgb, var(--text-error) 28%, transparent);
+  background: color-mix(in srgb, var(--text-error) 8%, transparent);
+  color: var(--text-error);
+}
+
+.tsp-actions .tsp-danger:focus-visible {
+  border-color: color-mix(in srgb, var(--text-error) 28%, transparent);
+  background: color-mix(in srgb, var(--text-error) 8%, transparent);
+  color: var(--text-error);
+}
+
+.tsp-proposal .tsp-actions .tsp-danger {
+  grid-column: 6;
+  margin-left: 0;
+}
+
+.tsp-ready {
+  padding: 25px 20px;
+  text-align: center;
+}
+
+.tsp-ready-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tcf-lila, var(--interactive-accent)) 14%, transparent);
+  color: var(--tcf-lila, var(--interactive-accent));
+  font-weight: 700;
+}
+
+.tsp-status {
+  flex: 0 0 38px;
+  height: 38px;
+  padding-top: 9px;
+  color: var(--color-green);
+  font-size: var(--font-ui-smaller);
+  font-weight: 650;
+}
+
+.tsp-footer {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-top: auto;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.tsp-footer-line {
+  flex: 1;
+  height: 1px;
+  background: var(--background-modifier-border);
+}
+
+.tsp-footer .tsp-finish {
+  height: auto;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-accent);
+}
+
+.tsp-loading {
+  min-height: 240px;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+}
+
+@media (max-width: 720px) {
+  .modal.tsp-modal {
+    width: calc(100vw - 24px);
+  }
+
+  .tsp-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .tsp-plan {
+    border-right: 0;
+    border-bottom: 1px solid var(--background-modifier-border);
+  }
+
+  .tsp-plan-hint,
+  .tsp-plan-foot {
+    display: none;
+  }
+
+  .tsp-slot {
+    min-height: 0;
+    padding: 7px 0;
+  }
+
+  .tsp-conversation {
+    padding: 22px 17px 18px;
+  }
+
+  .tsp-proposal .tsp-actions {
+    display: flex;
+  }
+
+  .tsp-actions .tsp-danger {
+    margin-left: 0;
+  }
+}

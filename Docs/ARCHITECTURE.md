@@ -46,7 +46,8 @@ different code.
 
 **Everything a view says is computed by a pure function.** `Focus.ts` (the dock's four sections),
 `Metrics.ts` (the KPI strip, the week strip and the history bars), `Health.ts` (the findings) and
-`Filters.ts` (the filter chips and the `+ filtre` menu) take tasks and a date and return data. No DOM, no
+`Filters.ts` (the filter chips and the `+ filtre` menu) take tasks and a date and return data. The
+planning assistant's queue and its phase boundary live in `DayPlanner.ts` for the same reason. No DOM, no
 `App`, no settings object — which is what lets the vault audit assert them against the real vault
 and print them from `npm run audit:vault`. A figure in the panel that no test can see is a figure
 nobody can trust. `DateInput.ts` is the same shape pointed the other way: text and a day in, the
@@ -58,9 +59,11 @@ month names would be a worse dependency than the arrow on the diagram. That tabl
 full month name beside the abbreviation, because the parser has to *read* what the views *print* —
 `set` and `setembre` are one month, and two lists would have been two chances to drift.
 
-**Two views, two jobs, no shared controls.** The dock (`SidebarView` + `FocusRenderer`) owns the
-day's three slots; the control centre (`ControlCentreView` + `ControlTable`) owns the numbers, the
-table and the health panel. What they do share is the one thing that must not diverge: the date
+**Two views, two jobs, and one planning session.** The dock (`SidebarView` + `FocusRenderer`) owns
+the live day; the control centre (`ControlCentreView` + `ControlTable`) owns the numbers, the table
+and the health panel. `DayPlannerModal` is neither another list nor a stored view: it is the finite
+conversation that fills the same `DaySelection`, then optionally dates or cancels the remaining
+unresolved tasks through `TaskActions`. What all three surfaces share is the one thing that must not diverge: the date
 menu, in `DateMenu.ts`, because "No ho faré" living at the bottom of it, separated and marked as a
 warning, is a rule and not a layout detail. `BaseTaskView` holds the query plumbing — query state,
 index subscription, coalesced refresh, and the `applyFilter` the dock's "N més" hands over.
@@ -73,12 +76,15 @@ recognises. Edits in `TaskLineEditor` splice `raw`, so any text the parser does 
 **Fields are read from the end of the line**, one at a time, matching the Tasks plugin.
 A marker with no valid value stays part of the description rather than becoming a null date.
 
-**No persisted cache, but the scan is concurrent.** ~900 notes and ~530 task lines. Measured:
-2,392 ms reading them one `await` at a time, 168 ms in batches of 32, 32 ms to parse all of it.
-The scan was never CPU-bound, so it reads `READ_BATCH` notes at once and there is still nothing
-to persist. The finished index replaces the old one in a single assignment rather than clearing
-it up front, so a re-scan never shows an empty vault. `metadataCache.on("changed")` reindexes
-single notes, and waits for a scan in flight so an older read cannot overwrite a newer one.
+**A persisted startup snapshot, then a concurrent live scan.** ~900 notes and ~530 task lines.
+Measured: 2,392 ms reading them one `await` at a time, 168 ms in batches of 32, 32 ms to parse all
+of it. The scan reads `READ_BATCH` notes at once; until it lands, both views and the planning
+assistant paint the last completed snapshot. Writes from that snapshot remain safe because
+`TaskWriter` verifies the current source line first. The snapshot is never used to prune the
+saved day plan. The finished index replaces the old one in a single assignment rather than
+clearing it up front, so a re-scan never shows an empty vault. `metadataCache.on("changed")`
+reindexes single notes, and waits for a scan in flight so an older read cannot overwrite a newer
+one.
 
 **"Loading" is not "empty".** `index.ready` is false until the first full scan lands. Anything
 that reconciles saved state against the index has to check it: the day's plan did not, and was

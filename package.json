@@ -1,6 +1,6 @@
 {
   "name": "task-smith",
-  "version": "0.5.2",
+  "version": "0.6.5",
   "description": "Obsidian plugin: robust task console over Tasks-compatible markdown",
   "main": "main.js",
   "scripts": {

@@ -5,6 +5,7 @@
 | Command | Effect |
 |---|---|
 | `TaskSmith: Obrir la barra lateral de tasques` | Reveals the sidebar view in the right dock. |
+| `TaskSmith: Planificar el dia` | Opens the planning assistant. It fills today's three slots and can continue by dating or cancelling every unresolved task. |
 | `TaskSmith: Obrir el centre de control` | Opens the control centre in a tab. The command id is still `open-triage` from when the tab was the triage view. |
 | `TaskSmith: Refer l'índex de tasques` | Re-reads the Tasks plugin config and rescans the vault. |
 | `TaskSmith: Eliminar les tasques buides ara` | Deletes empty task lines outside the active note. |
@@ -16,6 +17,10 @@
 |---|---|---|
 | `task-smith-sidebar` | `SidebarView` | Right dock. The focus view: two lenses (date / who with), three day slots, collapsible sections, keyboard. |
 | `task-smith-triage` | `ControlCentreView` | Tab. The control centre: KPI strip, the week ahead, a folded history, filter chips, sortable table, health panel. Still `-triage` from when the tab was the triage view. |
+
+`DayPlannerModal` has no view id and creates no third workspace pane. The control-centre button and
+the `plan-day` command open it as a finite session over the existing index, `DaySelection` and
+`TaskActions`.
 
 ### The focus view
 

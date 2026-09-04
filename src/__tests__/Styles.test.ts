@@ -24,3 +24,26 @@ describe("control centre styles", () => {
     expect(icon).toContain("background: var(--text-muted)");
   });
 });
+
+describe("day planner styles", () => {
+  it("keeps the five proposal decisions on one deliberate row", () => {
+    const actions = declarations(".tsp-proposal .tsp-actions");
+    expect(actions).toContain("display: grid");
+    expect(actions).toContain("grid-template-columns: repeat(4, max-content) minmax(0, 1fr) max-content");
+
+    const danger = declarations(".tsp-proposal .tsp-actions .tsp-danger");
+    expect(danger).toContain("grid-column: 6");
+  });
+
+  it("keeps the destructive action subordinate until hover", () => {
+    const danger = declarations(".tsp-actions .tsp-danger");
+    expect(danger).toContain("background: transparent");
+    expect(danger).toContain("color: var(--text-error)");
+    expect(danger).toContain("box-shadow: none");
+
+    const hover = declarations(".tsp-actions .tsp-danger:hover");
+    expect(hover).toContain("background: color-mix(in srgb, var(--text-error) 8%, transparent)");
+    expect(hover).toContain("border-color: color-mix(in srgb, var(--text-error) 28%, transparent)");
+    expect(hover).toContain("color: var(--text-error)");
+  });
+});
