@@ -18,7 +18,7 @@
   "author": "Oriol Farré",
   "license": "MIT",
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
+    "@eslint/js": "^10.0.1",
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
     "builtin-modules": "^3.3.0",
