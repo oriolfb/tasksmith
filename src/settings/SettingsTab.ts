@@ -1,8 +1,11 @@
 import { type App, PluginSettingTab, Setting } from "obsidian";
 import type TaskSmithPlugin from "../main";
 import { t } from "../i18n/strings";
+import { DebouncedAction } from "../utils/DebouncedAction";
 
 export class TaskSmithSettingTab extends PluginSettingTab {
+  private readonly indexRefresh = new DebouncedAction(300);
+
   constructor(app: App, private readonly plugin: TaskSmithPlugin) {
     super(app, plugin);
   }
@@ -26,7 +29,7 @@ export class TaskSmithSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.excludedFolders.join("\n"))
           .onChange(async (value) => {
             this.plugin.settings.excludedFolders = lines(value);
-            await this.plugin.saveSettings();
+            await this.saveTextSetting();
           })
       );
 
@@ -49,7 +52,7 @@ export class TaskSmithSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.deadlineFromNotes.join("\n"))
           .onChange(async (value) => {
             this.plugin.settings.deadlineFromNotes = lines(value);
-            await this.plugin.saveSettings();
+            await this.saveTextSetting();
           })
       );
 
@@ -62,7 +65,7 @@ export class TaskSmithSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.referenceNoteTypes.join("\n"))
           .onChange(async (value) => {
             this.plugin.settings.referenceNoteTypes = lines(value);
-            await this.plugin.saveSettings();
+            await this.saveTextSetting();
           })
       );
 
@@ -75,7 +78,7 @@ export class TaskSmithSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.somedayNoteTypes.join("\n"))
           .onChange(async (value) => {
             this.plugin.settings.somedayNoteTypes = lines(value);
-            await this.plugin.saveSettings();
+            await this.saveTextSetting();
           })
       );
 
@@ -87,7 +90,7 @@ export class TaskSmithSettingTab extends PluginSettingTab {
           const parsed = Number.parseInt(value, 10);
           if (Number.isFinite(parsed) && parsed > 0) {
             this.plugin.settings.staleThresholdDays = parsed;
-            await this.plugin.saveSettings();
+            await this.plugin.saveSettings(false);
           }
         })
       );
@@ -98,7 +101,7 @@ export class TaskSmithSettingTab extends PluginSettingTab {
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.autoDeleteEmptyTasks).onChange(async (value) => {
           this.plugin.settings.autoDeleteEmptyTasks = value;
-          await this.plugin.saveSettings();
+          await this.plugin.saveSettings(value);
         })
       );
 
@@ -108,7 +111,18 @@ export class TaskSmithSettingTab extends PluginSettingTab {
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.showWeekends).onChange(async (value) => {
           this.plugin.settings.showWeekends = value;
-          await this.plugin.saveSettings();
+          await this.plugin.saveSettings(false);
+        })
+      );
+
+    new Setting(containerEl)
+      .setName(t("settings.persistTaskCache.name"))
+      .setDesc(t("settings.persistTaskCache.desc"))
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.persistTaskCache).onChange(async (value) => {
+          this.plugin.settings.persistTaskCache = value;
+          if (!value) this.plugin.settings.taskCache = null;
+          await this.plugin.saveSettings(false);
         })
       );
 
@@ -117,9 +131,14 @@ export class TaskSmithSettingTab extends PluginSettingTab {
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.showOverdueBadge).onChange(async (value) => {
           this.plugin.settings.showOverdueBadge = value;
-          await this.plugin.saveSettings();
+          await this.plugin.saveSettings(false);
         })
       );
+  }
+
+  private async saveTextSetting(): Promise<void> {
+    await this.plugin.saveSettings(false);
+    this.indexRefresh.schedule(() => void this.plugin.refreshSettingsIndex());
   }
 }
 

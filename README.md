@@ -18,7 +18,7 @@ telemetry.
 
 ## Requirements
 
-- Obsidian 1.6.0 or later.
+- Obsidian Desktop 1.6.0 or later.
 - The Tasks plugin, for the task syntax and its settings. TaskSmith falls back to built-in
   defaults if it is not installed.
 

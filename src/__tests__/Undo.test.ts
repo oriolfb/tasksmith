@@ -86,6 +86,19 @@ describe("TaskWriter.undo", () => {
     expect(files["a.md"]).toBe(content);
   });
 
+  it("finds the original neighbours when lines moved after a deletion", async () => {
+    const content = ["# Nota", "- [ ] primera", "text final"].join("\n");
+    const files = { "a.md": content };
+    const writer = new TaskWriter(fakeApp(files));
+
+    await writer.deleteLine(build("a.md", content)[0]!);
+    files["a.md"] = ["introducció nova", files["a.md"]].join("\n");
+
+    const result = await writer.undo();
+    expect(result).toEqual({ ok: true, label: "Eliminar la tasca", restored: 1, skipped: 0 });
+    expect(files["a.md"]).toBe(["introducció nova", "# Nota", "- [ ] primera", "text final"].join("\n"));
+  });
+
   it("restores a multi-line deletion to the exact original, across files", async () => {
     const a = ["- [ ] una", "entremig", "- [ ] dues", "- [ ] tres"].join("\n");
     const b = ["capçalera", "- [ ] altra"].join("\n");

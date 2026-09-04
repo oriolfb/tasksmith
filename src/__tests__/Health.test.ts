@@ -1,7 +1,7 @@
 import { healthFindings, type Finding } from "../query/Health";
 import { effectiveDate } from "../index/Buckets";
 import { parseTaskLine, priorityOf } from "../index/TaskParser";
-import type { Task, TaskKind } from "../types/task";
+import type { Task } from "../types/task";
 
 const D = (iso: string) => {
   const [y, m, d] = iso.split("-").map(Number);

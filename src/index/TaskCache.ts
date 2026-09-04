@@ -24,6 +24,10 @@ export function serializeTaskCache(tasks: Task[], scannedAt: Date): SerializedTa
   return { scannedAt: scannedAt.toISOString(), tasks: tasks.map(serializeTask) };
 }
 
+export function taskCacheFor(tasks: Task[], scannedAt: Date, enabled: boolean): SerializedTaskCache | null {
+  return enabled ? serializeTaskCache(tasks, scannedAt) : null;
+}
+
 function serializeTask(task: Task): SerializedTask {
   const fields: Partial<Record<FieldKey, SerializedField>> = {};
   for (const key of Object.keys(task.fields) as FieldKey[]) {
@@ -58,13 +62,21 @@ function deserializeTask(raw: unknown): Task {
   for (const key of Object.keys(s.fields ?? {}) as FieldKey[]) {
     const field = s.fields[key];
     if (!field) continue;
-    fields[key] = { ...field, date: field.date ? new Date(field.date) : null };
+    fields[key] = { ...field, date: parseCachedDate(field.date) };
   }
   return {
     ...s,
-    noteDate: s.noteDate ? new Date(s.noteDate) : null,
-    filenameDate: s.filenameDate ? new Date(s.filenameDate) : null,
-    effectiveDate: s.effectiveDate ? new Date(s.effectiveDate) : null,
+    noteDate: parseCachedDate(s.noteDate),
+    filenameDate: parseCachedDate(s.filenameDate),
+    effectiveDate: parseCachedDate(s.effectiveDate),
     fields,
   };
+}
+
+function parseCachedDate(value: string | null): Date | null {
+  if (value === null) return null;
+  if (typeof value !== "string") throw new Error("invalid cached date");
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) throw new Error("invalid cached date");
+  return date;
 }

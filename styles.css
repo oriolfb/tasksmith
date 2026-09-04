@@ -1342,6 +1342,14 @@
   color: var(--tcf-terra);
 }
 
+.tcf-mark:focus-visible,
+.tcc-mark:focus-visible,
+.tcf-more:focus-visible,
+.tcc-bulk .tcc-act:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
 .tcc-sec {
   display: flex;
   align-items: baseline;

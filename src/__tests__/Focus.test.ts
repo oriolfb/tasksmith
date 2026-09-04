@@ -3,7 +3,7 @@ import { DaySelection, EMPTY_PLAN, type DayPlan } from "../views/DaySelection";
 import { effectiveDate } from "../index/Buckets";
 import { parseTaskLine, priorityOf } from "../index/TaskParser";
 import { formatIsoDate } from "../index/dates";
-import type { Task, TaskKind } from "../types/task";
+import type { Task } from "../types/task";
 
 const D = (iso: string) => {
   const [y, m, d] = iso.split("-").map(Number);

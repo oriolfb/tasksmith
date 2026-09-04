@@ -26,6 +26,12 @@ jobs:
                   npm ci
                   npm run build
 
+            - name: Validate release metadata
+              env:
+                  RELEASE_TAG: ${{ github.ref_name }}
+              run: |
+                  node -e 'const fs=require("fs"); const tag=process.env.RELEASE_TAG; const pkg=require("./package.json"); const manifest=require("./manifest.json"); if (!/^\d+\.\d+\.\d+$/.test(tag) || pkg.version !== tag || manifest.version !== tag) { console.error(`Tag ${tag}, package ${pkg.version} and manifest ${manifest.version} must be the same semantic version`); process.exit(1); }'
+
             - name: Check for optional styles
               id: styles
               run: |
@@ -36,6 +42,7 @@ jobs:
               with:
                   subject-path: |
                       main.js
+                      manifest.json
                       ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }}
 
             - name: Create release

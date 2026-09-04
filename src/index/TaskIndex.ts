@@ -9,6 +9,13 @@ import { Logger } from "../utils/Logger";
 
 type Listener = () => void;
 
+interface ScanResult {
+  byPath: Map<string, Task[]>;
+  mtimes: Map<string, number>;
+  peopleByPath: Map<string, string[]>;
+  failures: string[];
+}
+
 /**
  * How many notes are read at once during a full scan.
  *
@@ -30,6 +37,9 @@ export class TaskIndex {
   private peopleByPath = new Map<string, string[]>();
   private listeners = new Set<Listener>();
   private scanning: Promise<void> | null = null;
+  private requestedScan = 0;
+  private appliedScan = 0;
+  private scanFailures: string[] = [];
   private scanned = false;
 
   constructor(
@@ -62,14 +72,19 @@ export class TaskIndex {
     return this.scanned;
   }
 
+  /** Paths that could not be read in the last completed full scan. */
+  get failures(): readonly string[] {
+    return this.scanFailures;
+  }
+
   async rebuild(): Promise<void> {
-    const run = this.scan();
-    this.scanning = run;
-    try {
-      await run;
-    } finally {
-      if (this.scanning === run) this.scanning = null;
+    this.requestedScan++;
+    if (!this.scanning) {
+      this.scanning = this.runRequestedScans().finally(() => {
+        this.scanning = null;
+      });
     }
+    await this.scanning;
   }
 
   async reindex(file: TFile): Promise<void> {
@@ -114,11 +129,30 @@ export class TaskIndex {
     return () => this.listeners.delete(listener);
   }
 
-  private async scan(): Promise<void> {
-    const files = this.app.vault.getMarkdownFiles().filter((file) => this.scope.includes(file.path));
+  /** Serialises rebuilds and only publishes a scan made with the newest configuration. */
+  private async runRequestedScans(): Promise<void> {
+    while (this.appliedScan < this.requestedScan) {
+      const revision = this.requestedScan;
+      const result = await this.scan(this.scope, this.interop, this.rules);
+      if (revision !== this.requestedScan) continue;
+
+      this.byPath = result.byPath;
+      this.mtimes = result.mtimes;
+      this.peopleByPath = result.peopleByPath;
+      this.scanFailures = result.failures;
+      this.appliedScan = revision;
+      this.scanned = true;
+      Logger.info(`indexed ${this.all().length} tasks from ${this.byPath.size} notes`);
+      this.emit();
+    }
+  }
+
+  private async scan(scope: ScopeFilter, interop: TasksInterop, rules: ContextRules): Promise<ScanResult> {
+    const files = this.app.vault.getMarkdownFiles().filter((file) => scope.includes(file.path));
     const byPath = new Map<string, Task[]>();
     const mtimes = new Map<string, number>();
     const peopleByPath = new Map<string, string[]>();
+    const failures: string[] = [];
 
     // Frontmatter is already in Obsidian's metadata cache, so this whole-vault pass costs no
     // I/O. Doing it up front — before any task line is parsed — makes a "Nom:" prefix resolve
@@ -126,21 +160,17 @@ export class TaskIndex {
     for (const file of files) {
       peopleByPath.set(file.path, peopleOf(this.app.metadataCache.getFileCache(file)?.frontmatter));
     }
+    const knownPeople = new Set(Array.from(peopleByPath.values()).flat());
 
     for (let i = 0; i < files.length; i += READ_BATCH) {
-      await Promise.all(
-        files.slice(i, i + READ_BATCH).map((file) => this.read(file, byPath, mtimes, peopleByPath))
+      const batch = await Promise.all(
+        files
+          .slice(i, i + READ_BATCH)
+          .map((file) => this.read(file, byPath, mtimes, peopleByPath, knownPeople, interop, rules))
       );
+      for (const failed of batch) if (failed) failures.push(failed);
     }
-
-    // Swapped in whole rather than cleared up front: a re-scan (a settings change) leaves the
-    // views showing the previous index for those milliseconds instead of an empty one.
-    this.byPath = byPath;
-    this.mtimes = mtimes;
-    this.peopleByPath = peopleByPath;
-    this.scanned = true;
-    Logger.info(`indexed ${this.all().length} tasks from ${this.byPath.size} notes`);
-    this.emit();
+    return { byPath, mtimes, peopleByPath, failures };
   }
 
   private async load(file: TFile, notify: boolean): Promise<void> {
@@ -149,7 +179,8 @@ export class TaskIndex {
       if (this.byPath.delete(file.path) && notify) this.emit();
       return;
     }
-    await this.read(file, this.byPath, this.mtimes, this.peopleByPath);
+    const knownPeople = new Set(Array.from(this.peopleByPath.values()).flat());
+    await this.read(file, this.byPath, this.mtimes, this.peopleByPath, knownPeople, this.interop, this.rules);
     if (notify) this.emit();
   }
 
@@ -158,22 +189,30 @@ export class TaskIndex {
     file: TFile,
     byPath: Map<string, Task[]>,
     mtimes: Map<string, number>,
-    peopleByPath: Map<string, string[]>
-  ): Promise<void> {
+    peopleByPath: Map<string, string[]>,
+    knownPeople: ReadonlySet<string>,
+    interop: TasksInterop,
+    rules: ContextRules
+  ): Promise<string | null> {
     try {
       const content = await this.app.vault.cachedRead(file);
       const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
       peopleByPath.set(file.path, peopleOf(frontmatter));
-      const knownPeople = new Set(Array.from(peopleByPath.values()).flat());
-      const tasks = tasksFromFile({ path: file.path, content, frontmatter }, this.interop, this.rules, knownPeople);
+      const tasks = tasksFromFile({ path: file.path, content, frontmatter }, interop, rules, knownPeople);
       if (tasks.length > 0) {
         byPath.set(file.path, tasks);
       } else {
         byPath.delete(file.path);
       }
       mtimes.set(file.path, file.stat.mtime);
+      return null;
     } catch (err) {
       Logger.error(`failed to index ${file.path}`, err);
+      const previous = this.byPath.get(file.path);
+      if (previous) byPath.set(file.path, previous);
+      const previousMtime = this.mtimes.get(file.path);
+      if (previousMtime !== undefined) mtimes.set(file.path, previousMtime);
+      return file.path;
     }
   }
 

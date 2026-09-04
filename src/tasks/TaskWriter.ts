@@ -75,8 +75,17 @@ export class TaskWriter {
             Logger.warn(`delete skipped (conflict) at ${path}:${task.location.line}`);
             continue;
           }
+          const anchorBefore = bareLine(lines[task.location.line - 1]) ?? null;
+          const anchorAfter = bareLine(lines[task.location.line + 1]) ?? null;
           lines.splice(task.location.line, 1);
-          records.push({ path, line: task.location.line, before: task.raw, after: null });
+          records.push({
+            path,
+            line: task.location.line,
+            before: task.raw,
+            after: null,
+            anchorBefore,
+            anchorAfter,
+          });
           deleted++;
         }
         return lines.join("\n");
@@ -169,14 +178,15 @@ export class TaskWriter {
         const lines = content.split("\n");
         for (const record of ordered) {
           if (record.after === null) {
-            // Undoing a deletion. Skip if the text is somehow back already: better to leave
-            // the file as it is than to duplicate a line the user retyped by hand.
-            if (bareLine(lines[record.line]) === record.before || record.line > lines.length) {
+            const insertion = deletionInsertionPoint(lines, record);
+            // Skip when the original context is no longer unique: restoring to a guessed position
+            // is more dangerous than asking the user to recover the line manually.
+            if (insertion === null || bareLine(lines[insertion]) === record.before) {
               skipped++;
               Logger.warn(`undo skipped (line moved) at ${path}:${record.line}`);
               continue;
             }
-            lines.splice(record.line, 0, record.before ?? "");
+            lines.splice(insertion, 0, record.before ?? "");
             restored++;
             continue;
           }
@@ -207,4 +217,18 @@ export class TaskWriter {
 function bareLine(line: string | undefined): string | undefined {
   if (line === undefined) return undefined;
   return line.endsWith("\r") ? line.slice(0, -1) : line;
+}
+
+function deletionInsertionPoint(lines: string[], record: WriteRecord): number | null {
+  if (record.anchorBefore === undefined && record.anchorAfter === undefined) {
+    return record.line <= lines.length ? record.line : null;
+  }
+
+  const candidates: number[] = [];
+  for (let i = 0; i <= lines.length; i++) {
+    const before = i === 0 ? null : bareLine(lines[i - 1]);
+    const after = i === lines.length ? null : bareLine(lines[i]);
+    if (before === record.anchorBefore && after === record.anchorAfter) candidates.push(i);
+  }
+  return candidates.length === 1 ? candidates[0]! : null;
 }

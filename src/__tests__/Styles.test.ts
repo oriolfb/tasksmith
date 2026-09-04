@@ -23,4 +23,9 @@ describe("control centre styles", () => {
     expect(icon).toContain("border-radius: 50%");
     expect(icon).toContain("background: var(--text-muted)");
   });
+
+  it("shows focus on keyboard-enabled task actions", () => {
+    const focus = declarations(".tcf-mark:focus-visible,\n.tcc-mark:focus-visible,\n.tcf-more:focus-visible,\n.tcc-bulk .tcc-act:focus-visible");
+    expect(focus).toContain("outline: 2px solid var(--interactive-accent)");
+  });
 });

@@ -3,7 +3,7 @@
 Where the plugin is, what was decided and why, and what is left. Written so a new session can pick
 up the next phase without re-deriving any of it.
 
-Current version: **0.5.0**. The plugin's settings tab shows the version actually loaded —
+Current version: **0.5.3**. The plugin's settings tab shows the version actually loaded —
 Obsidian only re-reads `main.js` when the plugin is re-enabled, so "I pressed ⌘R" and "the new
 code is running" are not the same claim.
 
@@ -105,8 +105,8 @@ what turned up that `PickModal` had never worked: the modal closes *before* it s
 chosen, so a promise resolved from `onClose` answered "cancelled" every time. Fixed in both, and
 written down in [LLIÇONS.md](LLIÇONS.md#rendering-inside-obsidian).
 
-With this the plan is built. What is left is in **Not scheduled** below, and nothing there is
-committed to.
+With this the plan is built. What is left is in **Audit backlog** below, and nothing pending there
+is committed to.
 
 ## Phase 4 — the control centre (done, 0.3.0)
 
@@ -149,16 +149,46 @@ Three decisions taken while building it, all of them narrowing the mockup:
 - **The health panel is not capped at three items.** It shows every finding, severity first. A
   silent "top 3" reads as "that is all there is".
 
-## Not scheduled
+## Audit backlog — 2026-09-04
 
-- **Mobile layout.** `isDesktopOnly: false`, so the plugin loads on the iPhone, where a 5-column
-  grid and 22px targets do not work. Either a mobile layer (one column, 44px targets, swipe) or
-  mark it desktop-only honestly.
-- **Virtualised rendering.** The list is rebuilt on every change. Fine at 474 lines; the focus
-  view's 5-row cap removed the immediate pressure.
-- **Publishing to the community store.** Deliberately out of scope: the plugin's value is that it
-  is calibrated to one vault's conventions. i18n would divert effort from what makes it useful.
-- **Recurring tasks.** Completing a `🔁` task is left to the Tasks plugin. One such task exists.
+This is the durable register of the productivity, UX, performance, security and engineering audit.
+It includes completed work as well as deferred proposals so a later session does not have to
+reconstruct the audit from conversation history. **P0** means correctness or data safety, **P1** a
+high-value improvement, **P2** worthwhile after measurement or when distribution grows. A ⭐ marks
+the recommendation that was selected as the first priority in each area.
+
+| Area | Priority | Proposal | Expected effect | Status | Acceptance criteria |
+|---|---:|---|---|---|---|
+| Reliability / performance | ⭐ P0 | Serialize index rebuilds, coalesce overlapping requests and only publish the newest completed scan | Faster under bursts of vault events and immune to an older scan overwriting newer data | **Done in 0.5.3** | Concurrent rebuild tests prove one active scan and latest-request-wins publication |
+| Data safety / UX | ⭐ P0 | Make undo robust when surrounding lines move after an action | Safer: undo restores the intended task instead of changing an unrelated line | **Done in 0.5.3** | Tests cover moved lines, neighbouring anchors and ambiguous matches; ambiguity performs no write |
+| Compatibility / mobile | ⭐ P0 | State the real platform contract instead of presenting an unverified mobile experience | More predictable and safer to install: unsupported mobile use is blocked | **Done in 0.5.3** | `manifest.json` declares desktop-only until the mobile acceptance criteria below pass |
+| Productivity / settings | ⭐ P1 | Debounce text settings and avoid a full index rebuild for visual-only changes | Faster configuration with fewer redundant vault scans | **Done in 0.5.3** | Rapid edits cause one save/rebuild; visual settings refresh views without scanning the vault |
+| Privacy / storage | ⭐ P1 | Let the user disable the persistent task cache and reject malformed cached records | More private and robust: task text need not persist outside notes, and bad cache data cannot leak into the UI | **Done in 0.5.3** | Cache persistence is opt-in/out through settings and invalid dates/records are discarded by tests |
+| Accessibility | ⭐ P1 | Give custom icon controls keyboard activation, focusability and accessible names | Easier and safer to use with keyboard and assistive technology | **Partly done in 0.5.3** | Every interactive control is reachable in logical order, works with Enter/Space, exposes its state/name and has visible focus |
+| Quality / testing | ⭐ P1 | Add lifecycle and DOM integration coverage around the index, settings and principal views | Fewer regressions in behaviours that pure-function tests cannot see | **Partly done in 0.5.3** | Tests cover listener registration/cleanup, settings debounce and rebuild policy, navigation, actions and ARIA state in `main.ts`, `SettingsTab`, `BaseTaskView`, `SidebarView` and `ControlCentreView` |
+| Supply chain / releases | ⭐ P1 | Harden dependencies and release provenance | More secure and reproducible builds | **Partly done in 0.5.3** | Runtime packages are minimal and pinned, Dependabot is active, workflow permissions are least-privilege, Actions use full commit SHAs, and releases attest all distributed artifacts |
+| Reliability / observability | P1 | Preserve the last known tasks when a note cannot be read and make partial scans visible | More trustworthy: one bad file does not silently erase tasks | **Base done in 0.5.3; UX pending** | Notice reports partial failure; control centre also lists affected paths, offers retry and clears the warning after a clean scan |
+| Productivity / health | P1 | Turn health findings into a review workflow with fix, snooze and safe bulk actions | Faster backlog maintenance and fewer findings that remain indefinitely | **Proposed** | Each actionable finding has a next step; writes require confirmation where appropriate and are undoable; snoozed items return predictably |
+| UX / onboarding | P1 if published | Add first-run configuration instead of assuming this vault's conventions | Easier adoption and fewer misleading results in a new vault | **Proposed; distribution-dependent** | Setup detects the Tasks plugin, explains data access, and configures excluded folders, note types, deadline sources and cache preference |
+| Privacy / storage | P1 | Minimise the persistent cache schema, version it, expire stale entries and provide a purge action | More private, recoverable upgrades and less stale sensitive text on disk | **Proposed** | Cache stores only fields required for startup, has schema version + expiry, migrates or rejects old data, and can be erased from settings |
+| Performance | P2 | Establish a synthetic large-vault benchmark before adding virtualised rendering | Measurably faster large-vault UI without speculative complexity | **Proposed** | Benchmark covers 5,000–10,000 tasks with documented scan/render budgets; virtualization is added only if a budget is exceeded |
+| Performance | P2 | Compute vault-wide derived values once per rebuild and share them with task parsing | Faster scans with less repeated work | **Done in 0.5.3** | `knownPeople` is computed once per rebuild and covered by index tests |
+| Maintainability | P2 | Split `ControlCentre.ts` into KPI, week, history, health, filter and bulk-action components | Easier and safer changes through smaller units with clearer ownership | **Proposed** | View orchestration contains no section implementation details; extracted units keep pure computations separate and retain behaviour tests |
+| Maintainability / CSS | P2 | Partition the large stylesheet by view/component and remove dead selectors | Easier visual maintenance and a smaller risk of cross-view regressions | **Proposed** | Every selector has an owning component/view, dead rules are removed, and rendering snapshots/manual checks remain unchanged |
+| Compatibility / API | P2 | Decide when to raise the minimum Obsidian version, then replace compatibility fallbacks and deprecated APIs | Cleaner code and fewer lint warnings without breaking current users | **Proposed** | Decision is recorded; either 1.6 compatibility stays documented or the minimum is raised and `getLanguage`, setting definitions, destructive styling and notice APIs are migrated |
+| Repository hygiene | P2 | Keep generated `main.js` out of Git and verify release artifacts automatically | Cleaner reviews and fewer mismatches between source and shipped plugin | **Mostly done in 0.5.3** | `main.js` is ignored/untracked; CI fails on tracked generated bundles or version/artifact mismatch |
+| Mobile UX | P2 | Build a deliberate mobile layer before enabling mobile support | Usable on small touch screens rather than merely installable | **Not scheduled** | One-column layouts, minimum 44 px targets, touch-native interactions and representative phone/tablet tests pass before `isDesktopOnly` changes |
+| Publishing | P2 | Reassess community-store publication only after defaults and onboarding are vault-agnostic | Broader reach without exporting personal assumptions as product defaults | **Not scheduled** | Public defaults contain no vault-specific conventions, onboarding passes on a clean vault, documentation and support policy are ready |
+| Recurring tasks | P2 | Define an explicit coexistence contract with the Tasks plugin | More predictable completion of `🔁` tasks and no duplicate recurrence logic | **Not scheduled** | Documentation and UI consistently delegate recurrence; integration test proves TaskSmith does not corrupt or duplicate a recurring task |
+
+### Suggested order for pending work
+
+1. Finish the accessibility audit and lifecycle/DOM integration coverage.
+2. Complete cache minimisation and supply-chain SHA pinning.
+3. Expose partial-scan details and turn health findings into a review workflow.
+4. Refactor the control centre and CSS behind green tests.
+5. Benchmark a large synthetic vault; virtualise only if the measurements justify it.
+6. Treat onboarding, mobile and publication as one product-distribution decision, not three isolated features.
 
 ## Decisions that are settled — do not re-litigate
 
