@@ -92,6 +92,16 @@ very difference the state colour was meant to draw. Rules a theme must not reach
 deep, and `mockups/06-render-real.html` simulates buttons at theme specificity so the regression
 shows up outside Obsidian.
 
+**The visible icon and its hit target are not the same box.** The first search-clear control put a
+circle, background and 22 px dimensions on the `<button>` itself. A theme's button chrome then
+turned a small utility into a heavy, standalone control — visually louder than the query it was
+meant to clear. Obsidian's own pattern separates the two jobs: a transparent, fully reset 20 px
+button provides the forgiving click and keyboard target, while its 14 px `svg` carries the filled
+circle and inverse cross. This keeps the affordance compact without making it hard to hit. The reset
+(`border`, `box-shadow`, minimum dimensions and `appearance`) still needs a two-class selector to
+beat theme specificity; copying the native silhouette without protecting it from the theme only
+copies it in one screenshot.
+
 **Marking a state with a colour the pane already uses.** The active lens carried
 `--background-secondary`, which in the left dock *is* the pane background: the pill existed and was
 invisible, so neither tab looked selected. A state colour has to come from a hue the surroundings
