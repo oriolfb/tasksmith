@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0
+
+### Changed
+
+- Integra el planificador assistit amb les millores d'índex, caché, desfer, accessibilitat,
+  configuració i cadena de release auditades. El plugin es declara només d'escriptori i fixa
+  l'API d'Obsidian com a dependència de desenvolupament reproduïble.
+
 ## 0.6.5
 
 ### Fixed
@@ -58,7 +66,23 @@
 - El missatge de confirmació té espai reservat, de manera que els botons no salten quan apareix.
 - El dock continua sent la vista compacta del dia; l'assistent escriu al mateix `DaySelection`,
   així que totes dues superfícies es mantenen sincronitzades.
+## 0.5.3
 
+### Changed
+
+- **L'índex ja no pot retrocedir a una configuració antiga.** Els escaneigs es serialitzen,
+  descarten resultats superats i calculen el conjunt de persones una sola vegada. Els camps de
+  configuració agrupen les pulsacions abans de reindexar, i els canvis només visuals no escanegen.
+- **Un error temporal de lectura conserva l'últim resultat conegut.** L'usuari rep un avís d'índex
+  parcial en lloc de veure desaparèixer tasques per una incidència d'iCloud.
+- **Desfer una eliminació resisteix moviments de línies.** Les línies veïnes actuen com a àncores;
+  si el context és ambigu, la restauració s'atura en lloc d'endevinar.
+- **La cache d'inici és validada i opcional.** Les dates corruptes invaliden la cache i una nova
+  opció permet no persistir còpies del text de les tasques.
+- **Contracte i controls més honestos.** El plugin es declara només d'escriptori fins que tingui
+  una experiència tàctil, i els controls principals basats en `div`/`span` funcionen amb teclat.
+- **Builds més reproduïbles.** L'API d'Obsidian queda fixada com a dependència de desenvolupament,
+  Dependabot revisa npm i Actions, i les releases validen versions i attesten el manifest.
 ## 0.5.2
 
 ### Changed

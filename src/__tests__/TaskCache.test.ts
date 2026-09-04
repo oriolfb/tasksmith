@@ -1,4 +1,4 @@
-import { deserializeTaskCache, serializeTaskCache } from "../index/TaskCache";
+import { deserializeTaskCache, serializeTaskCache, taskCacheFor } from "../index/TaskCache";
 import { parseTaskLine, priorityOf } from "../index/TaskParser";
 import { effectiveDate } from "../index/Buckets";
 import type { Task } from "../types/task";
@@ -53,5 +53,17 @@ describe("serializeTaskCache / deserializeTaskCache", () => {
     expect(deserializeTaskCache({ tasks: "not an array" })).toBeNull();
     expect(deserializeTaskCache("garbage")).toBeNull();
     expect(deserializeTaskCache(42)).toBeNull();
+  });
+
+  it("rejects invalid dates instead of leaking Invalid Date into queries", () => {
+    const original = task("- [ ] amb data 📅 2026-08-20");
+    const cache = serializeTaskCache([original], new Date(2026, 7, 12));
+    cache.tasks[0]!.effectiveDate = "not-a-date";
+    expect(deserializeTaskCache(cache)).toBeNull();
+  });
+
+  it("can opt out without retaining task text", () => {
+    const original = task("- [ ] informació sensible");
+    expect(taskCacheFor([original], new Date(2026, 7, 12), false)).toBeNull();
   });
 });

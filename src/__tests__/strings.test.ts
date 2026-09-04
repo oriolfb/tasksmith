@@ -1,27 +1,28 @@
 import { resolveLocale, detectLocale, t, tn, setLocale, getLocale } from "../i18n/strings";
-
 describe("detectLocale", () => {
-  const originalNavigator = (globalThis as { navigator?: unknown }).navigator;
-  const originalLocalStorage = (globalThis as { localStorage?: unknown }).localStorage;
+  const originalNavigator = global.navigator;
+  const originalLocalStorage = global.localStorage;
 
   afterEach(() => {
-    (globalThis as { navigator?: unknown }).navigator = originalNavigator;
-    (globalThis as { localStorage?: unknown }).localStorage = originalLocalStorage;
+    Object.defineProperty(global, "navigator", { configurable: true, value: originalNavigator });
+    Object.defineProperty(global, "localStorage", { configurable: true, value: originalLocalStorage });
   });
 
-  it("prefers Obsidian's own configured language over the OS locale", () => {
-    (globalThis as { navigator?: unknown }).navigator = { language: "es-ES" };
-    (globalThis as { localStorage?: unknown }).localStorage = {
-      getItem: (key: string) => (key === "language" ? "ca" : null),
-    };
+  it("prefers Obsidian's configured language over the OS locale", () => {
+    Object.defineProperty(global, "navigator", { configurable: true, value: { language: "es-ES" } });
+    Object.defineProperty(global, "localStorage", {
+      configurable: true,
+      value: { getItem: (key: string) => (key === "language" ? "ca" : null) },
+    });
     expect(detectLocale()).toBe("ca");
   });
 
   it("falls back to the OS locale when Obsidian has no language stored", () => {
-    (globalThis as { navigator?: unknown }).navigator = { language: "es-ES" };
-    (globalThis as { localStorage?: unknown }).localStorage = {
-      getItem: () => null,
-    };
+    Object.defineProperty(global, "navigator", { configurable: true, value: { language: "es-ES" } });
+    Object.defineProperty(global, "localStorage", {
+      configurable: true,
+      value: { getItem: () => null },
+    });
     expect(detectLocale()).toBe("es");
   });
 });

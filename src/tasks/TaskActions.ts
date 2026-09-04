@@ -7,6 +7,7 @@ import type { TasksInterop } from "./TasksPluginSettings";
 import { statusTypeOf } from "./TasksPluginSettings";
 import type { TaskWriter, UndoResult, WriteResult } from "./TaskWriter";
 import { undoableNotice } from "../views/UndoNotice";
+import { t } from "../i18n/strings";
 
 /**
  * Quick actions used by both views. Every one goes through TaskWriter, so a stale row can
@@ -80,9 +81,7 @@ export class TaskActions {
 
   async complete(task: Task): Promise<WriteResult | null> {
     if (this.isRecurring(task)) {
-      new Notice(
-        "Tasca recurrent: completa-la des de la nota perquè el plugin Tasks generi la següent repetició."
-      );
+      new Notice(t("notice.recurringTask"));
       return null;
     }
     return this.apply(

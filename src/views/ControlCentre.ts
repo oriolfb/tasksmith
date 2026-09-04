@@ -37,6 +37,7 @@ import {
 import { healthFindings, type Finding } from "../query/Health";
 import { startOfToday } from "../index/dates";
 import { t, tn } from "../i18n/strings";
+import { makeKeyboardButton } from "./keyboard";
 
 /** Still `-triage`: the tab grew into a control centre, but the stored id is API for saved layouts. */
 export const CONTROL_CENTRE_VIEW = "task-smith-triage";
@@ -927,20 +928,24 @@ export class ControlCentreView extends BaseTaskView {
       const word = bar.createSpan({ cls: "tcc-act", text: label });
       word.setAttribute("role", "button");
       word.addEventListener("click", () => void run());
+      makeKeyboardButton(word, () => void run());
     }
 
     // Cancelling and deleting sit apart from the reschedules, and read as warnings.
     const cancel = bar.createSpan({ cls: "tcc-act tcc-act-warn", text: t("dateMenu.wontDo") });
     cancel.setAttribute("role", "button");
     cancel.addEventListener("click", () => void this.bulkCancel(selected));
+    makeKeyboardButton(cancel, () => void this.bulkCancel(selected));
 
     const remove = bar.createSpan({ cls: "tcc-act tcc-act-warn", text: t("button.delete") });
     remove.setAttribute("role", "button");
     remove.addEventListener("click", () => void this.bulkDelete(selected));
+    makeKeyboardButton(remove, () => void this.bulkDelete(selected));
 
     const clear = bar.createSpan({ cls: "tcc-act tcc-bulk-clear", text: t("action.clearSelection") });
     clear.setAttribute("role", "button");
     clear.addEventListener("click", () => this.table.clearSelection());
+    makeKeyboardButton(clear, () => this.table.clearSelection());
   }
 
   private async bulkCancel(tasks: Task[]): Promise<void> {

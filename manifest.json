@@ -1,8 +1,9 @@
 {
 	"id": "task-smith",
 	"name": "TaskSmith",
+	"version": "0.7.0",
 	"minAppVersion": "1.6.0",
 	"description": "Vault-wide task console: a focus sidebar and a control centre over Tasks-compatible markdown.",
 	"author": "Oriol Farré",
-	"isDesktopOnly": false
+	"isDesktopOnly": true
 }

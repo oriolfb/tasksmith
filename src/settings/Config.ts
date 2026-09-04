@@ -61,6 +61,8 @@ export interface TaskSmithSettings {
    * the list it opens can never disagree.
    */
   showWeekends: boolean;
+  /** Keep task text in plugin data so views can paint immediately on the next launch. */
+  persistTaskCache: boolean;
   /**
    * The last full scan, painted on the very next launch until the real one finishes — an
    * Obsidian vault this size shares disk I/O with every other indexing plugin at startup, and
@@ -84,6 +86,7 @@ export const DEFAULT_SETTINGS: TaskSmithSettings = {
   showHistory: false,
   healthPanel: "auto",
   showWeekends: true,
+  persistTaskCache: true,
   taskCache: null,
 };
 

@@ -178,9 +178,14 @@ exist. `TaskWriter.undo()` pops the newest entry and reverses its records:
 | { ok: false; reason: "empty" }
 ```
 
-Reversal keeps the same conflict guard as a forward write, so a line touched since is left
-alone and counted in `skipped`. `TaskActions.beginGroup(label)` / `endGroup()` fold a bulk
+For deleted lines, reversal uses the original neighbouring lines to relocate the insertion after
+other edits; ambiguous context is left alone and counted in `skipped`. Edited lines keep the same
+conflict guard as a forward write. `TaskActions.beginGroup(label)` / `endGroup()` fold a bulk
 action's writes into a single entry, so twenty rescheduled tasks are one undo step.
+
+`settings.persistTaskCache` controls whether the last scan, including task text, is kept in plugin
+data for an immediate first paint. Turning it off clears that cache and shows the loading skeleton
+until the live scan completes.
 
 Destructive actions (delete, bulk delete, cancel, empty-task cleaning) show their notice
 through `undoableNotice`, which puts a **Desfés** button inside the notice itself.

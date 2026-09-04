@@ -1,7 +1,7 @@
 import { Notice, Plugin, TFile, type WorkspaceLeaf } from "obsidian";
 import { TaskIndex } from "./index/TaskIndex";
 import { ScopeFilter, parseObsidianIgnoreFilters } from "./index/ScopeFilter";
-import { serializeTaskCache } from "./index/TaskCache";
+import { taskCacheFor } from "./index/TaskCache";
 import { DEFAULT_INTEROP, TASKS_PLUGIN_DATA, parseTasksData, type TasksInterop } from "./tasks/TasksPluginSettings";
 import { TaskWriter } from "./tasks/TaskWriter";
 import { TaskActions } from "./tasks/TaskActions";
@@ -137,17 +137,26 @@ export default class TaskSmithPlugin extends Plugin {
     this.settings = { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
   }
 
-  async saveSettings(): Promise<void> {
+  async saveSettings(rebuildIndex = true): Promise<void> {
     await this.saveData(this.settings);
+    if (rebuildIndex) await this.refreshSettingsIndex();
+    this.refreshViews();
+  }
+
+  async refreshSettingsIndex(): Promise<void> {
     this.index.setScope(await this.buildScope());
     this.index.setContextRules(contextRulesOf(this.settings));
     await this.rebuild();
+  }
+
+  private refreshViews(): void {
     for (const type of [SIDEBAR_VIEW, CONTROL_CENTRE_VIEW]) {
       for (const leaf of this.app.workspace.getLeavesOfType(type)) {
         const view = leaf.view;
         if (view instanceof SidebarView || view instanceof ControlCentreView) view.setSettings(this.settings);
       }
     }
+    this.updateBadge();
   }
 
   private async undoLastWrite(): Promise<void> {
@@ -170,9 +179,12 @@ export default class TaskSmithPlugin extends Plugin {
     await this.index.rebuild();
     // Not `saveSettings()`: that also re-triggers `rebuild()` itself. This is the same
     // `saveData` primitive the views' own `persist` callbacks use.
-    this.settings.taskCache = serializeTaskCache(this.index.all(), new Date());
+    this.settings.taskCache = taskCacheFor(this.index.all(), new Date(), this.settings.persistTaskCache);
     await this.saveData(this.settings);
     this.updateBadge();
+    if (this.index.failures.length > 0) {
+      new Notice(t("notice.partialIndex", { count: this.index.failures.length }));
+    }
     await this.cleaner.clean(this.index.all());
   }
 

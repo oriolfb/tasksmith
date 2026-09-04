@@ -7,6 +7,7 @@ import { addDays } from "../index/dates";
 import { openDateMenu } from "./DateMenu";
 import { noteName, relativeLabel, shortDate } from "./format";
 import { t } from "../i18n/strings";
+import { makeKeyboardButton } from "./keyboard";
 
 export interface Section {
   key: string;
@@ -149,9 +150,9 @@ export class FocusRenderer {
     if (hidden > 0) {
       const more = host.createDiv({ cls: "tcf-more" });
       more.setAttribute("role", "button");
-      more.tabIndex = 0;
       more.setText(t("row.more", { count: hidden }));
       more.addEventListener("click", () => this.callbacks.onMore(section));
+      makeKeyboardButton(more, () => this.callbacks.onMore(section));
     }
 
     for (const slot of section.emptySlots ?? []) {
@@ -196,6 +197,7 @@ export class FocusRenderer {
       event.stopPropagation();
       this.callbacks.onReopen(task);
     });
+    makeKeyboardButton(box, () => this.callbacks.onReopen(task));
 
     const main = row.createDiv({ cls: "tcf-main" });
     const text = main.createDiv({ cls: "tcf-text", text: task.description || t("row.noDescription") });
@@ -233,6 +235,7 @@ export class FocusRenderer {
         event.stopPropagation();
         this.callbacks.onComplete(task, section);
       });
+      makeKeyboardButton(box, () => this.callbacks.onComplete(task, section));
     } else {
       box.addClass("tcf-mark-on");
       setIcon(box, "check");
@@ -242,6 +245,7 @@ export class FocusRenderer {
         event.stopPropagation();
         this.callbacks.onReopen(task);
       });
+      makeKeyboardButton(box, () => this.callbacks.onReopen(task));
     }
 
     const main = row.createDiv({ cls: "tcf-main" });

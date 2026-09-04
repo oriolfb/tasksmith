@@ -9,11 +9,8 @@ export function resolveLocale(tag: string | undefined | null): Locale {
 }
 
 /**
- * The plugin's language follows Obsidian's own configured language, not the OS locale:
- * Obsidian stores the user's choice from Settings → General → Language in localStorage
- * under "language" (empty when left on "Default"). Only when Obsidian has no explicit
- * choice do we fall back to the OS locale via navigator.language, matching what
- * Obsidian itself does for "Default".
+ * The plugin's language follows Obsidian's configured language. Obsidian versions before 1.8.7
+ * expose that choice through localStorage rather than the later public `getLanguage()` API.
  */
 export function detectLocale(): Locale {
   const obsidianLanguage = typeof localStorage !== "undefined" ? localStorage.getItem("language") : null;
@@ -31,6 +28,8 @@ const ca: Dict = {
   "notice.undoWithSkipped": "Desfet: {{label}} · {{skipped}} línies ja havien canviat",
   "button.undo": "Desfés",
   "notice.cantOpenSidebar": "No he pogut obrir la barra lateral dreta",
+  "notice.partialIndex": "Índex parcial: no s'han pogut llegir {{count}} notes; es conserven les últimes dades conegudes.",
+  "notice.recurringTask": "Tasca recurrent: completa-la des de la nota perquè el plugin Tasks generi la següent repetició.",
   "notice.dayLimitReached": "Ja tens {{limit}} tasques per avui. Treu-ne una abans d'afegir-hi cap altra.",
   "notice.noneOfType": "Cap {{type}} a les tasques obertes",
   "notice.viewSaved": 'Vista "{{name}}" desada',
@@ -143,6 +142,9 @@ const ca: Dict = {
   "settings.weekendsInStrip.desc":
     "Activat, la tira del centre de control ensenya set dies naturals. Desactivat, ensenya set dies laborables i les tasques amb data en dissabte o diumenge es compten al dilluns següent: el tooltip de la columna ho diu i clicar-la també les obre. Cap tasca queda amagada.",
   "settings.overdueBadge.name": "Comptador d'endarrerides a la barra lateral d'icones",
+  "settings.persistTaskCache.name": "Recordar les tasques per accelerar l'inici",
+  "settings.persistTaskCache.desc":
+    "Desa una còpia local de les tasques dins les dades del plugin. Desactiva-ho si prefereixes no duplicar-ne el text; l'inici mostrarà un esquelet fins que acabi l'escaneig.",
 
   "controlCentre.title": "Centre de control",
   "lens.bucket": "Per data",
@@ -444,6 +446,8 @@ const es: Dict = {
   "notice.undoWithSkipped": "Deshecho: {{label}} · {{skipped}} líneas ya habían cambiado",
   "button.undo": "Deshacer",
   "notice.cantOpenSidebar": "No se ha podido abrir la barra lateral derecha",
+  "notice.partialIndex": "Índice parcial: no se han podido leer {{count}} notas; se conservan los últimos datos conocidos.",
+  "notice.recurringTask": "Tarea recurrente: complétala desde la nota para que el plugin Tasks genere la siguiente repetición.",
   "notice.dayLimitReached": "Ya tienes {{limit}} tareas para hoy. Quita una antes de añadir otra.",
   "notice.noneOfType": "Ningún {{type}} en las tareas abiertas",
   "notice.viewSaved": 'Vista "{{name}}" guardada',
@@ -556,6 +560,9 @@ const es: Dict = {
   "settings.weekendsInStrip.desc":
     "Activado, la tira del centro de control muestra siete días naturales. Desactivado, muestra siete días laborables y las tareas con fecha en sábado o domingo se cuentan el lunes siguiente: el tooltip de la columna lo indica y hacer clic en ella también las abre. Ninguna tarea queda oculta.",
   "settings.overdueBadge.name": "Contador de atrasadas en la barra lateral de iconos",
+  "settings.persistTaskCache.name": "Recordar las tareas para acelerar el inicio",
+  "settings.persistTaskCache.desc":
+    "Guarda una copia local de las tareas en los datos del plugin. Desactívalo si prefieres no duplicar su texto; al iniciar se mostrará un esqueleto hasta que termine el escaneo.",
 
   "controlCentre.title": "Centro de control",
   "lens.bucket": "Por fecha",
@@ -857,6 +864,8 @@ const en: Dict = {
   "notice.undoWithSkipped": "Undone: {{label}} · {{skipped}} lines had already changed",
   "button.undo": "Undo",
   "notice.cantOpenSidebar": "Couldn't open the right sidebar",
+  "notice.partialIndex": "Partial index: {{count}} notes could not be read; their last known data was kept.",
+  "notice.recurringTask": "Recurring task: complete it from the note so the Tasks plugin can create the next occurrence.",
   "notice.dayLimitReached": "You already have {{limit}} tasks for today. Remove one before adding another.",
   "notice.noneOfType": "No {{type}} in open tasks",
   "notice.viewSaved": 'View "{{name}}" saved',
@@ -969,6 +978,9 @@ const en: Dict = {
   "settings.weekendsInStrip.desc":
     "On, the control centre strip shows seven calendar days. Off, it shows seven working days and tasks due on Saturday or Sunday count on the following Monday: the column's tooltip says so and clicking it opens them too. No task is ever hidden.",
   "settings.overdueBadge.name": "Overdue counter on the sidebar ribbon icon",
+  "settings.persistTaskCache.name": "Remember tasks for faster startup",
+  "settings.persistTaskCache.desc":
+    "Stores a local copy of tasks in the plugin data. Turn it off if you prefer not to duplicate task text; startup will show a skeleton until scanning finishes.",
 
   "controlCentre.title": "Control centre",
   "lens.bucket": "By date",

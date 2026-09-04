@@ -12,6 +12,9 @@ export interface WriteRecord {
   line: number;
   before: string | null;
   after: string | null;
+  /** Neighbouring lines used to safely relocate a deletion if line numbers later move. */
+  anchorBefore?: string | null;
+  anchorAfter?: string | null;
 }
 
 export interface HistoryEntry {

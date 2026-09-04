@@ -363,7 +363,7 @@ aggressively: reload the stylesheet's URL, not just the page.
 - **Recurring tasks are not completed by the plugin.** Generating the next instance is the
   Tasks plugin's job; completing a `🔁` task here would silently break the series, so the
   action shows a notice and asks the user to tick it in the note instead.
-- No mobile-specific layout yet; the plugin loads on mobile but is designed for desktop.
+- No mobile-specific layout yet; the manifest therefore marks the plugin as desktop-only.
 - Existing ` ```tasks ` query blocks are untouched and unmanaged.
 - **The rendered views cannot be verified from outside Obsidian.** Unit tests cover the pure
   section logic (`Focus.ts`) and the harness above covers the stylesheet, but nothing exercises

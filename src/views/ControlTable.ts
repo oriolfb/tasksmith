@@ -4,6 +4,7 @@ import { bucketOf } from "../index/Buckets";
 import type { SortKey, TaskGroup } from "../query/Query";
 import { noteName, relativeLabel, shortDate } from "./format";
 import { t } from "../i18n/strings";
+import { makeKeyboardButton } from "./keyboard";
 
 /**
  * The detailed table: Tasca · Termini · Amb qui · Àrea · Origen · Accions.
@@ -174,6 +175,7 @@ export class ControlTable {
         event.stopPropagation();
         this.callbacks.onComplete(task);
       });
+      makeKeyboardButton(mark, () => this.callbacks.onComplete(task));
     } else {
       mark.addClass("tcc-mark-on");
       setIcon(mark, "check");
@@ -183,6 +185,7 @@ export class ControlTable {
         event.stopPropagation();
         this.callbacks.onReopen(task);
       });
+      makeKeyboardButton(mark, () => this.callbacks.onReopen(task));
     }
 
     const text = row.createSpan({
