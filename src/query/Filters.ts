@@ -70,10 +70,6 @@ export function describeFilters(query: QueryState, ctx: ChipContext): FilterChip
     chips.push({ key: "dueOn", label: daysLabel(query.dueOn, ctx.today), clear: { dueOn: null } });
   }
 
-  if (query.text.trim()) {
-    chips.push({ key: "text", label: t("chip.text", { text: query.text.trim() }), clear: { text: "" } });
-  }
-
   if (query.project !== null) {
     chips.push({
       key: "project",

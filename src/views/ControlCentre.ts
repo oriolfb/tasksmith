@@ -93,6 +93,7 @@ export class ControlCentreView extends BaseTaskView {
   private historyToggle!: HTMLElement;
   private historyHost!: HTMLElement;
   private searchInput!: HTMLInputElement;
+  private searchClear!: HTMLButtonElement;
   private chipHost!: HTMLElement;
   private summaryEl!: HTMLElement;
   private tableHost!: HTMLElement;
@@ -182,12 +183,25 @@ export class ControlCentreView extends BaseTaskView {
     this.historyHost = history.createDiv({ cls: "tcc-history-body" });
 
     const filters = root.createDiv({ cls: "tcc-filters" });
-    this.searchInput = filters.createEl("input", { cls: "tcc-search", type: "search" });
+    const search = filters.createDiv({ cls: "tcc-search-wrap" });
+    this.searchInput = search.createEl("input", { cls: "tcc-search", type: "search" });
     this.searchInput.placeholder = t("controlCentre.search");
     this.searchInput.addEventListener("input", () => {
       this.query = { ...this.query, text: this.searchInput.value };
+      this.updateSearchClear();
       this.refresh();
     });
+    this.searchClear = search.createEl("button", {
+      cls: "tcc-search-clear",
+      attr: { type: "button", "aria-label": t("search.clear") },
+    });
+    setIcon(this.searchClear, "x");
+    this.searchClear.addEventListener("click", () => {
+      this.searchInput.value = "";
+      this.applyFilter({ text: "" });
+      this.searchInput.focus();
+    });
+    this.updateSearchClear();
     this.chipHost = filters.createDiv({ cls: "tcc-chips" });
     this.summaryEl = filters.createSpan({ cls: "tcc-summary" });
 
@@ -266,6 +280,11 @@ export class ControlCentreView extends BaseTaskView {
     this.renderFooter();
 
     if (this.searchInput.value !== this.query.text) this.searchInput.value = this.query.text;
+    this.updateSearchClear();
+  }
+
+  private updateSearchClear(): void {
+    this.searchClear.hidden = this.searchInput.value.length === 0;
   }
 
   /* ── the strip ─────────────────────────────────────────── */

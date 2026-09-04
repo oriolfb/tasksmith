@@ -52,8 +52,8 @@ describe("describeFilters", () => {
     );
   });
 
-  it("shows the search text as its own chip", () => {
-    expect(labels({ text: "  drive  " })).toContain("«drive»");
+  it("keeps search text out of the filter chips", () => {
+    expect(labels({ text: "  drive  " })).toEqual(labels({}));
   });
 
   it("distinguishes a named project from the missing one", () => {

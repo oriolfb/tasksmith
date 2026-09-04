@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.2
+
+### Changed
+
+- **La creu de cerca adopta el patró visual nadiu d'Obsidian.** La icona és una rodona discreta
+  de 14 px amb la creu en negatiu i una zona clicable de 20 px. Els estils tenen prou especificitat
+  per evitar que els temes la converteixin en un botó gran.
+
+## 0.5.1
+
+### Changed
+
+- **La cerca ja no sembla un filtre duplicat.** El text cercat només apareix dins del camp de
+  cerca, que ara mostra una creu mentre conté text per buidar-lo d'un clic i tornar a veure tota
+  la llista. El botó també té una etiqueta accessible per als lectors de pantalla.
+
 ## 0.5.0 — the week ahead, dates in words, and five things that did not work
 
 ### Added

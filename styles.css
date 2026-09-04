@@ -994,9 +994,74 @@
   padding: 10px 0;
 }
 
-.tcc-search {
+.tcc-search-wrap {
+  position: relative;
   width: 170px;
+}
+
+.tcc-search {
+  width: 100%;
+  padding-inline-end: 28px;
   font-size: var(--font-ui-smaller);
+}
+
+/* The query lives in the search field, not in the filter sentence. Keep its one-step reset in
+   that same field even on hosts whose native search cancel button is suppressed by the theme. */
+.tcc-search::-webkit-search-cancel-button {
+  display: none;
+}
+
+.tcc-search-wrap .tcc-search-clear {
+  position: absolute;
+  inset-inline-end: 4px;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  min-width: 0;
+  height: 20px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--background-primary);
+  box-shadow: none;
+  transform: translateY(-50%);
+  cursor: pointer;
+  appearance: none;
+  transition: background-color 100ms ease;
+}
+
+.tcc-search-wrap .tcc-search-clear[hidden] {
+  display: none;
+}
+
+.tcc-search-wrap .tcc-search-clear:hover,
+.tcc-search-wrap .tcc-search-clear:focus-visible {
+  background: var(--background-modifier-hover);
+}
+
+.tcc-search-wrap .tcc-search-clear:focus-visible {
+  outline: 1px solid var(--background-modifier-border-focus);
+  outline-offset: 1px;
+}
+
+.tcc-search-wrap .tcc-search-clear svg {
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  stroke-width: 2.5;
+  transition: background-color 100ms ease;
+}
+
+.tcc-search-wrap .tcc-search-clear:hover svg {
+  background: var(--text-normal);
 }
 
 .tcc-chips {

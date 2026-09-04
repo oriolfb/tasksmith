@@ -233,6 +233,7 @@ const ca: Dict = {
 
   "sidebar.title": "Avui",
   "search.label": "Cercar",
+  "search.clear": "Esborrar la cerca",
   "search.tooltipWithKey": "Cercar  /",
   "sidebar.openCount": "{{count}} obertes",
 
@@ -355,7 +356,6 @@ const ca: Dict = {
   "chip.status.open": "obertes",
   "chip.status.closed": "tancades",
   "chip.status.all": "obertes i tancades",
-  "chip.text": "«{{text}}»",
   "chip.noProject": "sense projecte",
   "chip.project": "projecte: {{project}}",
   "chip.area": "àrea: {{area}}",
@@ -605,6 +605,7 @@ const es: Dict = {
 
   "sidebar.title": "Hoy",
   "search.label": "Buscar",
+  "search.clear": "Borrar la búsqueda",
   "search.tooltipWithKey": "Buscar  /",
   "sidebar.openCount": "{{count}} abiertas",
 
@@ -727,7 +728,6 @@ const es: Dict = {
   "chip.status.open": "abiertas",
   "chip.status.closed": "cerradas",
   "chip.status.all": "abiertas y cerradas",
-  "chip.text": "«{{text}}»",
   "chip.noProject": "sin proyecto",
   "chip.project": "proyecto: {{project}}",
   "chip.area": "área: {{area}}",
@@ -977,6 +977,7 @@ const en: Dict = {
 
   "sidebar.title": "Today",
   "search.label": "Search",
+  "search.clear": "Clear search",
   "search.tooltipWithKey": "Search  /",
   "sidebar.openCount": "{{count}} open",
 
@@ -1099,7 +1100,6 @@ const en: Dict = {
   "chip.status.open": "open",
   "chip.status.closed": "closed",
   "chip.status.all": "open and closed",
-  "chip.text": "\"{{text}}\"",
   "chip.noProject": "no project",
   "chip.project": "project: {{project}}",
   "chip.area": "area: {{area}}",
