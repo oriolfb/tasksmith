@@ -54,6 +54,20 @@ export class DaySelection {
     }
   }
 
+  /**
+   * Takes on a plan written elsewhere. The sidebar and the planner modal each build their own
+   * `DaySelection` over the same `settings.dayPlan`; whichever one writes last is the truth, and
+   * the other holds a snapshot from its constructor. Without this, planning the day in the modal
+   * left the dock painting an empty plan — the picks were saved, just never read back.
+   *
+   * Deliberately does not persist: the writer already did, and re-saving here would bounce the
+   * same plan between the two views.
+   */
+  adopt(stored: DayPlan, today: Date = startOfToday()): void {
+    if (stored === this.plan) return;
+    this.plan = forToday(withSlotted(withDone(stored)), today);
+  }
+
   keys(): string[] {
     return this.plan.keys;
   }

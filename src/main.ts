@@ -253,11 +253,10 @@ export default class TaskSmithPlugin extends Plugin {
       this.actions,
       this.settings,
       () => this.saveData(this.settings),
-      () => {
-        for (const leaf of this.app.workspace.getLeavesOfType(SIDEBAR_VIEW)) {
-          if (leaf.view instanceof SidebarView) leaf.view.refresh();
-        }
-      }
+      // The same repaint every other write goes through: both views and the ribbon badge. The
+      // planner used to refresh only the dock, so the control centre's counters and the badge
+      // kept yesterday's numbers after a task was dated or cancelled from here.
+      () => this.refreshViews()
     ).open();
   }
 

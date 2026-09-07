@@ -1,7 +1,7 @@
 import { ageInDays, bucketOf } from "../index/Buckets";
 import { isEmptyTask } from "../index/EmptyTasks";
 import type { Task } from "../types/task";
-import { dayKey, isUrgent } from "./Focus";
+import { DAY_LIMIT, dayKey, isUrgent } from "./Focus";
 
 export type DayPlannerReason = "overdue" | "undated";
 
@@ -39,7 +39,7 @@ export function dayPlannerDataSource(
  */
 export function dayPlannerStage(chosen: number, planningRest: boolean): DayPlannerStage {
   if (planningRest) return "planning-rest";
-  return chosen >= 3 ? "day-ready" : "choosing-today";
+  return chosen >= DAY_LIMIT ? "day-ready" : "choosing-today";
 }
 
 /**

@@ -221,6 +221,9 @@ export class SidebarView extends ItemView {
 
   refresh(): void {
     if (!this.listHost) return;
+    // `settings.dayPlan` is the shared truth: the planner modal writes its picks there through its
+    // own `DaySelection`, so pick them up before painting instead of trusting our snapshot.
+    this.day.adopt(this.settings.dayPlan);
     if (!this.index.ready) {
       const cached = deserializeTaskCache(this.settings.taskCache);
       if (!cached) {

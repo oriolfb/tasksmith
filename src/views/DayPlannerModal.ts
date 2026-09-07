@@ -40,12 +40,13 @@ export class DayPlannerModal extends Modal {
     private readonly actions: TaskActions,
     private readonly settings: TaskSmithSettings,
     private readonly persist: () => Promise<void>,
-    private readonly onPlanChanged: () => void
+    /** Repaints the other views. Called for every write, not only when the plan itself moves. */
+    private readonly refreshViews: () => void
   ) {
     super(app);
     this.day = new DaySelection(settings.dayPlan, (plan) => {
       this.settings.dayPlan = plan;
-      this.onPlanChanged();
+      this.refreshViews();
       void this.persist();
     });
   }
@@ -79,6 +80,10 @@ export class DayPlannerModal extends Modal {
 
     const today = startOfToday();
     const all = source.tasks;
+    // Same reason the dock adopts: `settings.dayPlan` is the shared truth, and the dock's own
+    // `prune` can persist a new one while this modal is open (an index change from a sync, say).
+    // Writing from a snapshot taken at construction would put pruned keys back.
+    this.day.adopt(this.settings.dayPlan, today);
     this.day.refresh(today);
     if (source.live) this.day.prune(all, today);
     if (this.day.size < DAY_LIMIT) this.planningRest = false;
@@ -89,10 +94,20 @@ export class DayPlannerModal extends Modal {
 
     const conversation = root.createEl("main", { cls: "tsp-conversation" });
     const stage = dayPlannerStage(this.day.size, this.planningRest);
-    this.renderAssistant(conversation, stage, all, today);
+    // Computed once and shared: the opening line and the footer are two readings of the same
+    // queue, and they disagreed — the intro ignored what you had already skipped, so it kept
+    // claiming three tasks needed a decision while the footer counted down to one.
+    const rest = stage === "planning-rest";
+    const candidates = dayPlannerCandidates(
+      all,
+      this.day.keys(),
+      rest ? [...this.decidedRest] : [...this.skippedToday],
+      today
+    );
+    this.renderAssistant(conversation, stage, candidates.length);
 
     if (stage === "day-ready") this.renderDayReady(conversation);
-    else this.renderCandidate(conversation, all, today, stage === "planning-rest");
+    else this.renderCandidate(conversation, candidates, today, rest);
 
     const status = conversation.createDiv({ cls: "tsp-status", attr: { "aria-live": "polite" } });
     status.createSpan({ text: this.status });
@@ -104,14 +119,23 @@ export class DayPlannerModal extends Modal {
     host.createEl("p", { cls: "tsp-plan-hint", text: t("planner.limitHint") });
 
     const byKey = new Map(all.map((task) => [dayKey(task), task]));
-    const chosen = this.day.keys().map((key) => byKey.get(key)).filter((task): task is Task => task !== undefined);
+    /*
+     * A key the snapshot has no task for keeps its slot and its text. The plan is not pruned
+     * against an index that has not finished its first scan — rightly, that is how a day's picks
+     * used to vanish on startup — so those seconds would otherwise paint a numbered slot as
+     * "Encara lliure" while the counter above says it is taken. The description is recovered from
+     * the key itself; there is nothing else to show, and it is the half the user recognises.
+     */
+    const chosen = this.day.keys().map((key) => ({ key, task: byKey.get(key) }));
 
     for (let index = 0; index < DAY_LIMIT; index++) {
-      const task = chosen[index];
-      const row = host.createDiv({ cls: `tsp-slot${task ? "" : " tsp-slot-empty"}` });
+      const slot = chosen[index];
+      const task = slot?.task;
+      const label = task?.description ?? (slot ? descriptionOf(slot.key) : t("planner.emptySlot"));
+      const row = host.createDiv({ cls: `tsp-slot${slot ? "" : " tsp-slot-empty"}` });
       row.createSpan({ cls: "tsp-slot-number", text: String(index + 1) });
       const copy = row.createDiv({ cls: "tsp-slot-copy" });
-      copy.createDiv({ text: task?.description ?? t("planner.emptySlot") });
+      copy.createDiv({ text: label });
       if (task) copy.createDiv({ cls: "tsp-slot-meta", text: this.context(task) });
       if (task) {
         const remove = row.createEl("button", { cls: "clickable-icon tsp-slot-remove", text: "×" });
@@ -132,18 +156,14 @@ export class DayPlannerModal extends Modal {
   private renderAssistant(
     host: HTMLElement,
     stage: ReturnType<typeof dayPlannerStage>,
-    all: Task[],
-    today: Date
+    unresolved: number
   ): void {
     const assistant = host.createDiv({ cls: "tsp-assistant" });
     assistant.createSpan({ cls: "tsp-mark", text: "T" });
     const copy = assistant.createEl("p");
     if (stage === "day-ready") copy.setText(t("planner.readyIntro"));
     else if (stage === "planning-rest") copy.setText(t("planner.restIntro"));
-    else {
-      const unresolved = dayPlannerCandidates(all, this.day.keys(), [], today).length;
-      copy.setText(t("planner.intro", { count: unresolved }));
-    }
+    else copy.setText(t("planner.intro", { count: unresolved }));
   }
 
   private renderDayReady(host: HTMLElement): void {
@@ -166,9 +186,12 @@ export class DayPlannerModal extends Modal {
     });
   }
 
-  private renderCandidate(host: HTMLElement, all: Task[], today: Date, rest: boolean): void {
-    const decided = rest ? [...this.decidedRest] : [...this.skippedToday];
-    const candidates = dayPlannerCandidates(all, this.day.keys(), decided, today);
+  private renderCandidate(
+    host: HTMLElement,
+    candidates: DayPlannerCandidate[],
+    today: Date,
+    rest: boolean
+  ): void {
     const candidate = candidates[0];
 
     if (!candidate) {
@@ -208,8 +231,11 @@ export class DayPlannerModal extends Modal {
 
   private renderTodayActions(host: HTMLElement, task: Task, today: Date): void {
     this.button(host, t("planner.addToday"), "mod-cta", () => {
-      if (!this.day.add(task, today)) return;
-      this.status = t("planner.addedToday");
+      // Unreachable while the stage gate holds — three picks replace this card with "day ready"
+      // — but a button that can fail has to say so, the way the dock's own «Avui» does.
+      this.status = this.day.add(task, today)
+        ? t("planner.addedToday")
+        : t("notice.dayLimitReached", { limit: DAY_LIMIT });
       this.render();
     });
     this.button(host, t("planner.complete"), "", () => void this.complete(task, false));
@@ -241,9 +267,7 @@ export class DayPlannerModal extends Modal {
   private async schedule(task: Task, write: () => ReturnType<TaskActions["scheduleOn"]>, rest = true): Promise<void> {
     const result = await write();
     if (!result.ok) return;
-    this.decided(task, rest);
-    this.status = t("planner.dated");
-    this.render();
+    this.wrote(task, rest, t("planner.dated"));
   }
 
   private async cancel(task: Task, rest: boolean): Promise<void> {
@@ -256,16 +280,31 @@ export class DayPlannerModal extends Modal {
     if (!confirmed) return;
     const result = await this.actions.cancel(task);
     if (!result.ok) return;
-    this.decided(task, rest);
-    this.status = t("planner.cancelled");
-    this.render();
+    this.wrote(task, rest, t("planner.cancelled"));
   }
 
   private async complete(task: Task, rest: boolean): Promise<void> {
     const result = await this.actions.complete(task);
     if (!result?.ok) return;
+    // Ticked off inside a planning session, so it counts as work done today: without this the
+    // line just left the queue and the dock's "Fetes avui" never heard about it, which reads as
+    // a day where the task was never there at all.
+    this.day.markDone(task);
+    this.wrote(task, rest, t("planner.completed"));
+  }
+
+  /**
+   * One landing for every write: mark the task decided, tell the other views, repaint here.
+   *
+   * The dock's own refresh only ever fired when the *plan* was persisted, so dating or
+   * cancelling a task from here left it painting rows the note no longer agrees with until
+   * Obsidian's metadata event happened to arrive. Asking for the repaint costs one render and
+   * removes the wait entirely.
+   */
+  private wrote(task: Task, rest: boolean, status: string): void {
     this.decided(task, rest);
-    this.status = t("planner.completed");
+    this.status = status;
+    this.refreshViews();
     this.render();
   }
 
@@ -295,4 +334,9 @@ export class DayPlannerModal extends Modal {
     button.addEventListener("click", run);
     return button;
   }
+}
+
+/** The task half of a `dayKey` (`path|description`), for a slot the index cannot resolve yet. */
+function descriptionOf(key: string): string {
+  return key.slice(key.indexOf("|") + 1);
 }

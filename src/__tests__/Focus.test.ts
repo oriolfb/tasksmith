@@ -209,6 +209,22 @@ describe("DaySelection", () => {
     return { day, saved };
   }
 
+  it("adopts a plan another view wrote to the same settings", () => {
+    // The sidebar builds its own DaySelection once, at construction; the planner modal builds a
+    // second one and writes the result into `settings.dayPlan`. Without adopting that, the
+    // sidebar keeps painting its own stale snapshot and the day's picks never appear.
+    const { day, saved } = selection();
+    const chosen = task("- [ ] triada al planificador");
+    const elsewhere = new DaySelection(EMPTY_PLAN, () => {}, TODAY);
+    elsewhere.add(chosen, TODAY);
+
+    day.adopt({ ...EMPTY_PLAN, date: formatIsoDate(TODAY), keys: elsewhere.keys(), slotted: elsewhere.slottedKeys() }, TODAY);
+
+    expect(day.has(chosen)).toBe(true);
+    expect(day.keys()).toEqual([dayKey(chosen)]);
+    expect(saved).toHaveLength(0);
+  });
+
   it("holds three and refuses the fourth", () => {
     const { day } = selection();
     const four = [task("- [ ] a"), task("- [ ] b"), task("- [ ] c"), task("- [ ] d")];
